@@ -1,0 +1,10 @@
+django
+django-filter
+django-cors-headers
+djangorestframework
+djangorestframework-simplejwt
+drf-spectacular
+uvicorn
+pytest
+pytest-django
+python-dotenv

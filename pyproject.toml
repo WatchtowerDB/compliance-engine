@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "watchtower-ce"
+dynamic = ["version"]
+license = "GPL-3.0-or-later"
+description = "NU Quran Community platform backend API"
+classifiers = [
+  "Framework :: Django",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+]
+requires-python = ">= 3.12"
+dependencies = [
+  "django",
+  "django-filter",
+  "django-cors-headers",
+  "djangorestframework",
+  "djangorestframework-simplejwt",
+  "drf-spectacular",
+  "python-dotenv",
+  "uvicorn",
+]
+
+[project.optional-dependencies]
+tests = ["pytest", "pytest-django"]
+dev = ["ruff", "black", "mypy", "django-stubs", "djangorestframework-stubs"]
+
+[project.scripts]
+wtce = "watchtower_ce.cli.main:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools_scm]
+
+[tool.mypy]
+disable_error_code = ["import-untyped"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "watchtower_ce.settings"
+pythonpath = ["src"]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
