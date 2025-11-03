@@ -11,4 +11,7 @@ devenv.local.yaml
 .pre-commit-config.yaml
 
 # Python cache
-__pycache__
+**/__pycache__
+
+# Development DB
+**/*.sqlite3
