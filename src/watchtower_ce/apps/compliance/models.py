@@ -1,3 +1,5 @@
+import typing as t
+
 from django.db import models
 
 
@@ -9,6 +11,5 @@ class ComplianceFramework(models.Model):
     def __str__(self) -> str:
         return str(self.name)
 
-
-class ComplianceAssertion(models.Model):
-    pass
+    class Meta:
+        ordering: t.Iterable[str] = ("id",)
