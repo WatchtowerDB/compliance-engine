@@ -1,12 +1,16 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import HttpResponse
 from django.urls import URLPattern, URLResolver, include, path
 from drf_spectacular.views import SpectacularSwaggerView
 from rest_framework_simplejwt.views import (TokenObtainPairView,
                                             TokenRefreshView)
+def home(request):
+    return HttpResponse("Welcome to Watchtower CE!")
 
 urlpatterns: list[URLPattern | URLResolver] = [
+    path("", home, name="home"),
     path("admin/", admin.site.urls),
     path("docs/", SpectacularSwaggerView.as_view(), name="docs"),
     path("auth/", TokenObtainPairView.as_view(), name="authtoken"),
