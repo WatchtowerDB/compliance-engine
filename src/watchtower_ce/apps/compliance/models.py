@@ -1,9 +1,15 @@
+import typing as t
+
 from django.db import models
 
 
-class ComplianceAssertion(models.Model):
-    pass
+class ComplianceFramework(models.Model):
+    name: models.CharField = models.CharField(max_length=200)
+    description: models.TextField = models.TextField()
+    version: models.CharField = models.CharField(max_length=50)
 
+    def __str__(self) -> str:
+        return str(self.name)
 
-class ComplianceStandard(models.Model):
-    pass
+    class Meta:
+        ordering: t.Iterable[str] = ("id",)
