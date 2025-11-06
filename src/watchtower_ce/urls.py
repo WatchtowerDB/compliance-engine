@@ -6,15 +6,15 @@ from django.urls import URLPattern, URLResolver, include, path
 from drf_spectacular.views import SpectacularSwaggerView
 from rest_framework_simplejwt.views import (TokenObtainPairView,
                                             TokenRefreshView)
-def home(request):
-    return HttpResponse("Welcome to Watchtower CE!")
 
-urlpatterns: list[URLPattern | URLResolver] = [
-    path("", home, name="home"),
+
+urlpatterns: list[URLPattern | URLResolver] = [ 
+    path("", include("watchtower_ce.apps.compliance.urls")),
     path("admin/", admin.site.urls),
     path("docs/", SpectacularSwaggerView.as_view(), name="docs"),
     path("auth/", TokenObtainPairView.as_view(), name="authtoken"),
     path("auth/refresh/", TokenRefreshView.as_view(), name="authtoken-refresh"),
     path("api/", include("watchtower_ce.apps.urls")),
+    path("users/", include("watchtower_ce.apps.users.urls"))
 ]
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
