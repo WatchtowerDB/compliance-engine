@@ -8,8 +8,7 @@ from rest_framework_simplejwt.views import (TokenObtainPairView,
                                             TokenRefreshView)
 
 
-urlpatterns: list[URLPattern | URLResolver] = [ 
-    path("", include("watchtower_ce.apps.compliance.urls")),
+urlpatterns: list[URLPattern | URLResolver] = [  
     path("admin/", admin.site.urls),
     path("docs/", SpectacularSwaggerView.as_view(), name="docs"),
     path("auth/", TokenObtainPairView.as_view(), name="authtoken"),
