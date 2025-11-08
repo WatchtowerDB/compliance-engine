@@ -8,4 +8,6 @@ router.register("frameworks", views.ComplianceFrameworkViewSet)
 router.register("clientdb", views.ClientDBViewSet)
 router.register("clientdbschema", views.ClientDBSchemaViewSet)
 router.register("assertions", views.ComplianceAssertionViewSet)
+router.register("checks", views.ComplianceCheckViewSet)
+
 urlpatterns: list[URLPattern | URLResolver] = router.urls

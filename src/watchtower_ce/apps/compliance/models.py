@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -53,6 +54,31 @@ class ComplianceAssertion(models.Model):
 
     def __str__(self) -> str:
         return f"Assertion for {self.client_db.name} on {self.compliance_framework.name}"
+
+    class Meta:
+        ordering: tuple[str, ...] = ("id",)
+
+
+class ComplianceCheck(models.Model):
+    framework: models.ForeignKey = models.ForeignKey(
+        "ComplianceFramework", on_delete=models.CASCADE, related_name="checks"
+    )
+    client_db: models.ForeignKey = models.ForeignKey(
+        "ClientDB", on_delete=models.CASCADE, related_name="checks"
+    )
+    schema: models.ForeignKey = models.ForeignKey(
+        "ClientDBSchema", on_delete=models.CASCADE, related_name="checks"
+    )
+    date: models.DateTimeField = models.DateTimeField(auto_now_add=True)
+    user: models.ForeignKey = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="compliance_checks",
+    )
+
+    def __str__(self) -> str:
+        return f"Check for {self.client_db.name} on {self.framework.name} at {self.date}"
 
     class Meta:
         ordering: tuple[str, ...] = ("id",)

@@ -15,3 +15,9 @@ devenv.local.yaml
 
 # Development DB
 **/*.sqlite3
+
+# GitHub specific
+.github/
+
+# macOS system file
+.DS_Store
