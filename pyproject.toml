@@ -6,13 +6,13 @@ build-backend = "setuptools.build_meta"
 name = "watchtower-ce"
 dynamic = ["version"]
 license = "GPL-3.0-or-later"
-description = "NU Quran Community platform backend API"
+description = "Watchtower Compliance Engine API"
 classifiers = [
   "Framework :: Django",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
 ]
-requires-python = ">= 3.12"
+requires-python = ">= 3.13"
 dependencies = [
   "django~=5.2",
   "django-filter~=25.2",

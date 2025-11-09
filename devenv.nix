@@ -5,11 +5,14 @@
   languages.python = {
     enable = true;
     version = "3.13";
-    uv.enable = true;
-    venv = {
+    uv = {
       enable = true;
-      requirements = builtins.readFile ./deps/dev.requirements.txt;
+      sync = {
+        enable = true;
+        allGroups = true;
+        allExtras = true;
+      };
     };
+    venv.enable = true;
   };
-
 }
