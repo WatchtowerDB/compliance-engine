@@ -66,3 +66,14 @@ class ComplianceAssertionViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset: QuerySet = models.ComplianceAssertion.objects.all()
     serializer_class: type[Serializer] = serializers.ComplianceAssertionSerializer
+
+
+class ComplianceCheckViewSet(viewsets.ModelViewSet):
+    """
+    This viewset allows creating and reading compliance check records.
+    Update and delete operations are explicitly disallowed.
+    """
+
+    queryset: QuerySet = models.ComplianceCheck.objects.all()
+    serializer_class: type[Serializer] = serializers.ComplianceCheckSerializer
+    http_method_names: list[str] = ["get", "post", "head", "options"]
