@@ -33,6 +33,39 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
     """
     queryset: QuerySet = models.ClientDBSchema.objects.all()
     serializer_class: type[Serializer] = serializers.ClientDBSchemaSerializer
+     
+    def create(self, request, *args, **kwargs):
+        serializers=self.get_serializer(data=request.data)
+        serializers.is_valid(raise_exception=True)
+        schema_object = serializers.save()
+        self
+        headers = self.get_success_headers(serializers.data)
+        return Response (
+            {
+            "message":"Schema uploaded successfully. Assertions have been auto-generated",
+            "data":serializers.data,
+        },
+        status=status.HTTP_201_CREATED, headers=headers,
+        )
+    def generate_assertions(self, schema_object):
+        """
+        Generate compliance assertions based on the provided schema object.
+        This is a placeholder for the actual implementation.
+        """
+        client_db = schema_object.client_db
+        schema_json = schema_object.schema_json
+        frameworks=models.ComplianceFramework.objects.all()
+        for framework in frameworks:
+            sql_list=self.build_asserations(schema_json,framework)
+            for sql in sql_list:
+                models.ComplianceAssertion.objects.create(
+                    client_db=client_db,
+                    framework=framework,
+                    sql_query=sql,
+                    schema=schema_object,
+                    description=f"Auto-generated assertion for {framework.name}",
+                )
+
 
     def get_queryset(self):
         """Return the queryset for client database schemas."""
