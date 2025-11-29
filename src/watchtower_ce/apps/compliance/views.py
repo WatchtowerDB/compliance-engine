@@ -4,8 +4,8 @@ from rest_framework.serializers import Serializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-
 from . import models, serializers
+from.assertion_builders import BUILDERS, DefaultAssertionBuilder
 
 
 class ComplianceFrameworkViewSet(viewsets.ReadOnlyModelViewSet):
@@ -38,38 +38,38 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
         serializers=self.get_serializer(data=request.data)
         serializers.is_valid(raise_exception=True)
         schema_object = serializers.save()
-        self
+        self.generate_assertions(schema_object)
         headers = self.get_success_headers(serializers.data)
         return Response (
             {
             "message":"Schema uploaded successfully. Assertions have been auto-generated",
             "data":serializers.data,
-        },
+            },
+        
         status=status.HTTP_201_CREATED, headers=headers,
         )
     def generate_assertions(self, schema_object):
+         """
+        Generate and store compliance assertions for all frameworks.
+
+        Args:
+            schema_object: The saved ClientDBSchema instance.
         """
-        Generate compliance assertions based on the provided schema object.
-        This is a placeholder for the actual implementation.
-        """
-        client_db = schema_object.client_db
-        schema_json = schema_object.schema_json
-        frameworks=models.ComplianceFramework.objects.all()
-        for framework in frameworks:
-            sql_list=self.build_asserations(schema_json,framework)
-            for sql in sql_list:
+         client_db= schema_object.client_db
+         chema_json = schema_object.schema_json
+         frameworks=models.ComplianceFramework.objects.all()
+         for framework in frameworks:
+            builder_class = BUILDERS.get(framework.name, DefaultAssertionBuilder)
+            builder = builder_class(framework)
+            sql_assertions = builder.build(schema_json)
+            for sql, description in sql_assertions:
                 models.ComplianceAssertion.objects.create(
-                    client_db=client_db,
+                    client_db_schema=schema_object,
                     framework=framework,
-                    sql_query=sql,
                     schema=schema_object,
-                    description=f"Auto-generated assertion for {framework.name}",
+                    sql_query=sql,
+                    description=description,
                 )
-
-
-    def get_queryset(self):
-        """Return the queryset for client database schemas."""
-        return super().get_queryset()
 
     def update(self, request, *args, **kwargs):
         """Disallow update operation for client database schemas."""
