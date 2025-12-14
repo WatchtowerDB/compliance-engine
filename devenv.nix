@@ -15,6 +15,8 @@
     DJANGO_DB_PASSWORD = "dev";
   };
 
+  packages = with pkgs; [ dockerfmt ];
+
   languages.python = {
     enable = true;
     version = "3.13";
