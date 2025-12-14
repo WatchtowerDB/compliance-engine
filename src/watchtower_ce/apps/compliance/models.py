@@ -53,7 +53,9 @@ class ComplianceAssertion(models.Model):
     result: models.BooleanField = models.BooleanField(null=True)
 
     def __str__(self) -> str:
-        return f"Assertion for {self.client_db.name} on {self.compliance_framework.name}"
+        return (
+            f"Assertion for {self.client_db.name} on {self.compliance_framework.name}"
+        )
 
     class Meta:
         ordering: tuple[str, ...] = ("id",)
@@ -78,7 +80,9 @@ class ComplianceCheck(models.Model):
     )
 
     def __str__(self) -> str:
-        return f"Check for {self.client_db.name} on {self.framework.name} at {self.date}"
+        return (
+            f"Check for {self.client_db.name} on {self.framework.name} at {self.date}"
+        )
 
     class Meta:
         ordering: tuple[str, ...] = ("id",)

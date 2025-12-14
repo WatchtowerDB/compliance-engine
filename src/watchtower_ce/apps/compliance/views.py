@@ -1,9 +1,8 @@
 from django.db.models import QuerySet
-from rest_framework import viewsets
-from rest_framework.serializers import Serializer
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import status, viewsets
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework.serializers import Serializer
+
 from . import models, serializers
 from .assertion_builders import BUILDERS, DefaultAssertionBuilder
 
@@ -58,7 +57,6 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
         Args:
             schema_object: The saved ClientDBSchema instance.
         """
-        client_db = schema_object.client_db
         schema_json = schema_object.schema_json
         frameworks = models.ComplianceFramework.objects.all()
         for framework in frameworks:

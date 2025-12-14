@@ -4,14 +4,13 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('compliance', '0001_initial'),
+        ("compliance", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='complianceframework',
-            options={'ordering': ('id',)},
+            name="complianceframework",
+            options={"ordering": ("id",)},
         ),
     ]

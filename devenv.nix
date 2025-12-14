@@ -58,10 +58,21 @@
     };
   };
 
+  treefmt = {
+    enable = true;
+    config.programs = {
+      ruff-check.enable = true;
+      ruff-format.enable = true;
+      dockerfmt.enable = true;
+      prettier.enable = true;
+      nixfmt.enable = true;
+      taplo.enable = true;
+      shellcheck.enable = true;
+      shfmt.enable = true;
+    };
+  };
+
   git-hooks.hooks = {
-    nixfmt.enable = true;
-    ruff.enable = true;
-    ruff-format.enable = true;
-    prettier.enable = true;
+    treefmt.enable = true;
   };
 }
