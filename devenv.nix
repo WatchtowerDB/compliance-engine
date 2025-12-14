@@ -1,10 +1,21 @@
-{ pkgs, lib, config, inputs, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  inputs,
+  ...
+}:
 
 {
-  # https://devenv.sh/languages/
+  env = {
+    PYTHONPATH = "${config.git.root}/src";
+    DJANGO_SETTINGS_MODULE = "watchtower_ce.settings";
+  };
+
   languages.python = {
     enable = true;
     version = "3.13";
+    venv.enable = true;
     uv = {
       enable = true;
       sync = {
@@ -13,6 +24,5 @@
         allExtras = true;
       };
     };
-    venv.enable = true;
   };
 }
