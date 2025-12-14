@@ -25,9 +25,9 @@ _DB_CONFIG: dict[str, dict[str, str | Path]] = {
     },
     "PROD": {
         "ENGINE": "django.db.backends.postgresql",
-        "HOST": os.getenv("DJANGO_DB_HOST", ""),
-        "PORT": os.getenv("DJANGO_DB_PORT", ""),
-        "NAME": os.getenv("DJANGO_DB_NAME", ""),
+        "HOST": os.getenv("DJANGO_DB_HOST", "localhost"),
+        "PORT": os.getenv("DJANGO_DB_PORT", "5432"),
+        "NAME": os.getenv("DJANGO_DB_NAME", "watchtower_ce"),
         "USER": os.getenv("DJANGO_DB_USER", ""),
         "PASSWORD": os.getenv("DJANGO_DB_PASSWORD", ""),
     },
