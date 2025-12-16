@@ -1,4 +1,0 @@
-[pep8]
-indent-size = 4
-select = E101
-ignore = E111,E114
