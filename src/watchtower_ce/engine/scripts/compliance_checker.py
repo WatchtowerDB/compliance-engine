@@ -24,10 +24,10 @@ class ComplianceChecker(ABC):
     Subclasses must implement standard-specific prompt engineering and analysis logic.
 
     Attributes:
-            context_retriever (ContextRetriever):
-                    Vector store interface for document retrieval.
-            llm (LLMInference):
-                    Language model interface for generation tasks.
+        context_retriever (ContextRetriever):
+            Vector store interface for document retrieval.
+        llm (LLMInference):
+            Language model interface for generation tasks.
     """
 
     def __init__(
@@ -46,26 +46,26 @@ class ComplianceChecker(ABC):
         Initialize the compliance checker with RAG components.
 
         Args:
-                model_path (Path | str):
-                        Path to the GGUF model file for LLM inference.
-                chroma_dir (Path | str):
-                        Directory containing the Chroma vector database.
-                collection_name (str):
-                        Name of the Chroma collection with compliance documents.
-                embedding_model (str):
-                        HuggingFace model for text embeddings.
-                        Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`.
-                retrieval_k (int):
-                        Number of similar documents to retrieve per query. Defaults to `4`.
-                context_window (int):
-                        Maximum context length for the LLM in tokens. Defaults to `4096`.
-                n_gpu_layers (int):
-                        GPU layers to offload. `-1` for all, `0` for CPU only. Defaults to `-1`.
-                prompt_template (str):
-                        Template for formatting LLM prompts. Should include `{prompt}`
-                        placeholder. Defaults to Mistral format: `"[INST] {prompt} [/INST]"`.
-                stop (str | list[str] | None):
-                        Stop sequences for generation. Defaults to `["[INST]", "[/INST]"]`.
+            model_path (Path | str):
+                Path to the GGUF model file for LLM inference.
+            chroma_dir (Path | str):
+                Directory containing the Chroma vector database.
+            collection_name (str):
+                Name of the Chroma collection with compliance documents.
+            embedding_model (str):
+                HuggingFace model for text embeddings.
+                Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`.
+            retrieval_k (int):
+                Number of similar documents to retrieve per query. Defaults to `4`.
+            context_window (int):
+                Maximum context length for the LLM in tokens. Defaults to `4096`.
+            n_gpu_layers (int):
+                GPU layers to offload. `-1` for all, `0` for CPU only. Defaults to `-1`.
+            prompt_template (str):
+                Template for formatting LLM prompts. Should include `{prompt}`
+                placeholder. Defaults to Mistral format: `"[INST] {prompt} [/INST]"`.
+            stop (str | list[str] | None):
+                Stop sequences for generation. Defaults to `["[INST]", "[/INST]"]`.
         """
         self.context_retriever = ContextRetriever(
             chroma_dir=chroma_dir,
@@ -91,14 +91,14 @@ class ComplianceChecker(ABC):
         used to retrieve relevant compliance documentation.
 
         Args:
-                schema (str):
-                        The artifact to analyze (SQL schema, config file, etc.).
+            schema (str):
+                The artifact to analyze (SQL schema, config file, etc.).
 
         Returns:
-                str: A prompt instructing the LLM to generate compliance questions.
+            str: A prompt instructing the LLM to generate compliance questions.
 
         Note:
-                Subclasses should instruct the model to return a Python list of strings.
+            Subclasses should instruct the model to return a Python list of strings.
         """
         pass
 
@@ -114,13 +114,13 @@ class ComplianceChecker(ABC):
         - Expected output format
 
         Args:
-                context (str):
-                        Retrieved compliance documentation relevant to the artifact.
-                schema (str):
-                        The artifact to analyze (SQL schema, config file, etc.).
+            context (str):
+                Retrieved compliance documentation relevant to the artifact.
+            schema (str):
+                The artifact to analyze (SQL schema, config file, etc.).
 
         Returns:
-                str: A complete prompt for compliance analysis.
+            str: A complete prompt for compliance analysis.
         """
         pass
 
@@ -137,11 +137,11 @@ class ComplianceChecker(ABC):
         4. Return formatted results
 
         Args:
-                schema (str):
-                        The artifact to analyze (SQL schema, config, policy, etc.).
+            schema (str):
+                The artifact to analyze (SQL schema, config, policy, etc.).
 
         Returns:
-                str: A formatted compliance analysis report.
+            str: A formatted compliance analysis report.
         """
         pass
 
@@ -216,19 +216,19 @@ class ComplianceChecker(ABC):
         than direct schema-based queries.
 
         Args:
-                schema (str):
-                        The artifact to analyze (SQL schema, configuration, etc.).
+            schema (str):
+                The artifact to analyze (SQL schema, configuration, etc.).
 
         Returns:
-                list[str]: A list of compliance question strings. Returns up to 6 questions,
-                        even if JSON parsing fails (fallback to text extraction).
+            list[str]: A list of compliance question strings. Returns up to 6 questions,
+                       even if JSON parsing fails (fallback to text extraction).
 
         Raises:
-                No exceptions are raised - parsing failures trigger fallback logic.
+            No exceptions are raised - parsing failures trigger fallback logic.
 
         Note:
-                The method expects JSON output from the LLM but has robust fallback
-                handling for malformed responses, including stripping markdown code blocks.
+            The method expects JSON output from the LLM but has robust fallback
+            handling for malformed responses, including stripping markdown code blocks.
         """
         print("[INFO] Generating compliance questions from schema...")
         prompt = self._build_query_generation_prompt(schema)
@@ -249,12 +249,12 @@ class ComplianceChecker(ABC):
         Uses a set to automatically deduplicate retrieved document chunks.
 
         Args:
-                questions (list[str]):
-                        List of compliance-related questions to search for.
+            questions (list[str]):
+                List of compliance-related questions to search for.
 
         Returns:
-                str: Combined context from all retrievals, with double-newline separators
-                        between unique document chunks.
+            str: Combined context from all retrievals, with double-newline separators
+                 between unique document chunks.
         """
         print(f"[INFO] Retrieving context for {len(questions)} questions...")
         all_contexts = set()  # Using sets for automatic de-duplication of contexts
@@ -276,10 +276,10 @@ class ComplianceChecker(ABC):
         Should be called when the compliance checker is no longer needed.
 
         Example:
-                >>> checker = PCIComplianceChecker(model_path, chroma_dir)
-                >>> try:
-                ...     result = checker.analyze(schema)
-                ... finally:
-                ... 	checker.close()
+            >>> checker = PCIComplianceChecker(model_path, chroma_dir)
+            >>> try:
+            ...     result = checker.analyze(schema)
+            ... finally:
+            ...     checker.close()
         """
         self.llm.close()

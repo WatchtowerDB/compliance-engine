@@ -24,8 +24,8 @@ class PCIComplianceChecker(ComplianceChecker):
     - Ambiguous column names that might contain payment data
 
     Attributes:
-            standard (str):
-                    The compliance standard being checked ("PCI-DSS v4.0.1").
+        standard (str):
+            The compliance standard being checked ("PCI-DSS v4.0.1").
     """
 
     def __init__(
@@ -41,25 +41,25 @@ class PCIComplianceChecker(ComplianceChecker):
         Initialize the PCI-DSS compliance checker.
 
         Args:
-                model_path (Path | str):
-                        Path to the GGUF model file for LLM inference.
-                chroma_dir (Path | str):
-                        Directory containing the Chroma vector database with PCI-DSS documentation.
-                collection_name (str):
-                        Name of the Chroma collection. Defaults to `"PCI-DSS-v4.0.1"`.
-                retrieval_k (int):
-                        Number of document chunks to retrieve per question.
-                        Defaults to `2` (more focused retrieval for PCI-DSS specific queries).
-                context_window (int):
-                        Maximum context length in tokens. Defaults to `5120`
-                        (the maximum comfortable size for Ministral 8B on 8GB GPU).
-                n_gpu_layers (int):
-                        GPU layer offloading. `-1` for all layers (recommended).
-                        Defaults to `-1`.
+            model_path (Path | str):
+                Path to the GGUF model file for LLM inference.
+        chroma_dir (Path | str):
+            Directory containing the Chroma vector database with PCI-DSS documentation.
+        collection_name (str):
+            Name of the Chroma collection. Defaults to `"PCI-DSS-v4.0.1"`.
+        retrieval_k (int):
+            Number of document chunks to retrieve per question.
+            Defaults to `2` (more focused retrieval for PCI-DSS specific queries).
+        context_window (int):
+            Maximum context length in tokens. Defaults to `5120`
+            (the maximum comfortable size for Ministral 8B on 8GB GPU).
+        n_gpu_layers (int):
+            GPU layer offloading. `-1` for all layers (recommended).
+            Defaults to `-1`.
 
         Note:
-                The default `context_window` of `5120` is optimized for Ministral 8B on
-                consumer GPUs with 8GB VRAM. Adjust based on your hardware.
+            The default `context_window` of `5120` is optimized for Ministral 8B on
+            consumer GPUs with 8GB VRAM. Adjust based on your hardware.
         """
         super().__init__(
             model_path=model_path,
@@ -81,17 +81,17 @@ class PCIComplianceChecker(ComplianceChecker):
         potential ambiguous columns.
 
         Args:
-                schema (str):
-                        The SQL schema to analyze.
+            schema (str):
+                The SQL schema to analyze.
 
         Returns:
-                str: A formatted prompt instructing the LLM to generate 3-6 comprehensive
-                        questions as a Python list of strings. Questions are designed to work
-                        well with vector store retrieval of PCI-DSS documentation.
+            str: A formatted prompt instructing the LLM to generate 3-6 comprehensive
+                 questions as a Python list of strings. Questions are designed to work
+                 well with vector store retrieval of PCI-DSS documentation.
 
         Note:
-                The prompt explicitly asks for inference about ambiguous column names,
-                as compliance issues may exist even when naming isn't explicit.
+            The prompt explicitly asks for inference about ambiguous column names,
+            as compliance issues may exist even when naming isn't explicit.
         """
         return textwrap.dedent(
             f"""
@@ -124,21 +124,21 @@ class PCIComplianceChecker(ComplianceChecker):
         expert auditor and provide structured compliance findings.
 
         Args:
-                context (str):
-                        Retrieved excerpts from PCI-DSS v4.0.1 documentation relevant
-                        to the schema's compliance concerns.
-                schema (str):
-                        The SQL database schema to analyze for compliance.
+            context (str):
+                Retrieved excerpts from PCI-DSS v4.0.1 documentation relevant
+                to the schema's compliance concerns.
+            schema (str):
+                The SQL database schema to analyze for compliance.
 
         Returns:
-                str: A formatted prompt requesting:
-                        1. Compliance summary (Compliant/Non-compliant)
-                        2. Specific violations with corresponding PCI-DSS clause references
-                        3. Concrete remediation recommendations with SQL examples where applicable
+            str: A formatted prompt requesting:
+                 1. Compliance summary (Compliant/Non-compliant)
+                 2. Specific violations with corresponding PCI-DSS clause references
+                 3. Concrete remediation recommendations with SQL examples where applicable
 
         Note:
-                The prompt explicitly asks for SQL queries in remediation suggestions,
-                making the output immediately actionable for developers.
+            The prompt explicitly asks for SQL queries in remediation suggestions,
+            making the output immediately actionable for developers.
         """
         return textwrap.dedent(
             f"""
@@ -173,22 +173,22 @@ class PCIComplianceChecker(ComplianceChecker):
         4. Return a structured compliance report
 
         Args:
-                schema (str):
-                        The SQL database schema to analyze. Should be valid SQL DDL (CREATE TABLE statements, etc.).
+            schema (str):
+                The SQL database schema to analyze. Should be valid SQL DDL (CREATE TABLE statements, etc.).
 
         Returns:
-                str: A detailed compliance report containing:
-                        - Overall compliance verdict
-                        - Specific violations with PCI-DSS clause references
-                        - Actionable remediation recommendations
-                        - SQL query examples for fixes (when applicable)
+            str: A detailed compliance report containing:
+                 - Overall compliance verdict
+                 - Specific violations with PCI-DSS clause references
+                 - Actionable remediation recommendations
+                 - SQL query examples for fixes (when applicable)
 
         Example:
-                >>> checker = PCIComplianceChecker(model_path, chroma_dir)
-                >>> schema = "CREATE TABLE users (id INT, cc_number VARCHAR(16));"
-                >>> report = checker.analyze(schema)
-                >>> print(report)
-                >>> checker.close()
+            >>> checker = PCIComplianceChecker(model_path, chroma_dir)
+            >>> schema = "CREATE TABLE users (id INT, cc_number VARCHAR(16));"
+            >>> report = checker.analyze(schema)
+            >>> print(report)
+            >>> checker.close()
         """
         questions = self._generate_compliance_questions(schema)
         context = self._retrieve_context_for_questions(questions)

@@ -20,27 +20,27 @@ class PDFToChroma:
 
     This class automates the end-to-end pipeline of preparing a PDF for semantic search or
     Retrieval-Augmented Generation (RAG) workflows. It handles:
-            1. Loading PDF pages into LangChain `Document` objects.
-            2. Splitting text into manageable, overlapping chunks.
-            3. Generating dense vector embeddings using a Hugging Face model.
-            4. Persisting the vectors in a Chroma database collection.
+        1. Loading PDF pages into LangChain `Document` objects.
+        2. Splitting text into manageable, overlapping chunks.
+        3. Generating dense vector embeddings using a Hugging Face model.
+        4. Persisting the vectors in a Chroma database collection.
 
     Workflow:
-            1. Load the PDF into LangChain document objects.
-            2. Split the text into overlapping chunks using a recursive character splitter.
-            3. Create embeddings for each text chunk using a specified Hugging Face model.
-            4. Store the resulting vectors in a Chroma database collection.
+        1. Load the PDF into LangChain document objects.
+        2. Split the text into overlapping chunks using a recursive character splitter.
+        3. Create embeddings for each text chunk using a specified Hugging Face model.
+        4. Store the resulting vectors in a Chroma database collection.
 
     Example:
-            >>> builder = PDFToChroma(
-            ...     pdf_path="data/pdfs/example.pdf",
-            ...     persist_dir="data/chroma_db",
-            ...     collection_name="example_collection"
-            ... )
-            >>> builder.build()
-            [INFO] Successfully loaded 397 pages from example.pdf
-            [INFO] Created 1303 text chunks
-            [INFO] Collection "example_collection" successfully created and saved in /absolute/path/to/data/chroma_db
+        >>> builder = PDFToChroma(
+        ...     pdf_path="data/pdfs/example.pdf",
+        ...     persist_dir="data/chroma_db",
+        ...     collection_name="example_collection"
+        ... )
+        >>> builder.build()
+        [INFO] Successfully loaded 397 pages from example.pdf
+        [INFO] Created 1303 text chunks
+        [INFO] Collection "example_collection" successfully created and saved in /absolute/path/to/data/chroma_db
     """
 
     def __init__(
@@ -57,21 +57,21 @@ class PDFToChroma:
         Initializes the PDFToChroma builder.
 
         Args:
-                pdf_path (str | Path):
-                        Path to the input PDF file to be processed.
-                persist_dir (str | Path):
-                        Path to the directory where the Chroma database will be persisted.
-                collection_name (str | None, optional):
-                        Name of the Chroma collection to create. Defaults to the PDF filename (without extension).
-                overwrite (bool, optional):
-                        If `True`, any existing collection with the same name will be deleted and recreated.
-                        Defaults to `False`.
-                model_name (str, optional):
-                        Name of the Hugging Face embedding model to use. Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`.
-                chunk_size (int, optional):
-                        Maximum number of characters per text chunk before embedding. Defaults to `800`.
-                chunk_overlap (int, optional):
-                        Number of overlapping characters between consecutive chunks. Defaults to `100`.
+            pdf_path (str | Path):
+                Path to the input PDF file to be processed.
+            persist_dir (str | Path):
+                Path to the directory where the Chroma database will be persisted.
+            collection_name (str | None, optional):
+                Name of the Chroma collection to create. Defaults to the PDF filename (without extension).
+            overwrite (bool, optional):
+                If `True`, any existing collection with the same name will be deleted and recreated.
+                Defaults to `False`.
+            model_name (str, optional):
+                Name of the Hugging Face embedding model to use. Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`.
+            chunk_size (int, optional):
+                Maximum number of characters per text chunk before embedding. Defaults to `800`.
+            chunk_overlap (int, optional):
+                Number of overlapping characters between consecutive chunks. Defaults to `100`.
         """
         self.pdf_path = Path(pdf_path)
         self.persist_dir = Path(persist_dir)
@@ -89,7 +89,7 @@ class PDFToChroma:
         Initializes and return a Hugging Face embedding model.
 
         Returns:
-                HuggingFaceEmbeddings: The initialized embedding model.
+            HuggingFaceEmbeddings: The initialized embedding model.
         """
         if self._embedding_model is None:
             with yaspin(Spinners.arc, text="[INFO] Loading embedding model..."):
@@ -107,7 +107,7 @@ class PDFToChroma:
         Each page of the PDF is converted into a single `Document` instance containing text and metadata.
 
         Returns:
-                list[Document]: A list of `Document` objects, one per PDF page.
+            list[Document]: A list of `Document` objects, one per PDF page.
         """
         with yaspin(Spinners.arc, text="[INFO] Loading PDF..."):
             loader = PyPDFLoader(str(self.pdf_path))
@@ -126,10 +126,10 @@ class PDFToChroma:
         while preserving some context between chunks.
 
         Args:
-                documents (list[Document]): The loaded PDF pages as `Document` objects.
+            documents (list[Document]): The loaded PDF pages as `Document` objects.
 
         Returns:
-                list[Document]: The list of split text chunks.
+            list[Document]: The list of split text chunks.
         """
         with yaspin(Spinners.arc, text="[INFO] Splitting text into chunks..."):
             splitter = RecursiveCharacterTextSplitter(
@@ -146,11 +146,11 @@ class PDFToChroma:
         Check if the Chroma collection already exists and handle overwrite behavior.
 
         If the collection exists:
-                - Deletes it if `overwrite=True`.
-                - Issues a warning otherwise.
+            - Deletes it if `overwrite=True`.
+            - Issues a warning otherwise.
 
         Returns:
-                bool: True if the collection previously existed, False otherwise.
+            bool: True if the collection previously existed, False otherwise.
         """
         client = chromadb.PersistentClient(path=str(self.persist_dir))
         exists: bool

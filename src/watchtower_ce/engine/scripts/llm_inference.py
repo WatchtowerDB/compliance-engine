@@ -18,15 +18,15 @@ class LLMInference:
     prompt templates.
 
     Attributes:
-            model_path (Path):
-                    Path to the GGUF model file.
-            prompt_template (str):
-                    Template string for formatting prompts. Use `{prompt}`
-                    as a placeholder for the actual prompt text.
-            stop (str | list[str] | None):
-                    Stop sequences that halt generation.
-            model (Llama):
-                    The loaded `llama.cpp` model instance.
+        model_path (Path):
+            Path to the GGUF model file.
+        prompt_template (str):
+            Template string for formatting prompts. Use `{prompt}`
+            as a placeholder for the actual prompt text.
+        stop (str | list[str] | None):
+            Stop sequences that halt generation.
+        model (Llama):
+            The loaded `llama.cpp` model instance.
     """
 
     def __init__(
@@ -41,27 +41,27 @@ class LLMInference:
         Initialize the LLM inference engine with a GGUF model.
 
         Args:
-                model_path (Path | str):
-                        Path to the GGUF format model file.
-                context_window (int):
-                        Maximum context length (in tokens) the model can handle.
-                        Defaults to `4096`. Larger values require more memory.
-                n_gpu_layers (int):
-                        Number of model layers to offload to GPU. Use `-1` to offload
-                        all layers (recommended for GPU acceleration). Use `0` for CPU-only mode.
-                        Defaults to `-1`.
-                prompt_template (str):
-                        Format string for structuring prompts. Should contain
-                        `{prompt}` placeholder. For example, Mistral uses `"[INST] {prompt} [/INST]"`.
-                        Defaults to `"{prompt}"` (no formatting).
-                stop (str | list[str] | None):
-                        Stop sequence(s) that signal the model to stop generating. Can be
-                        a single string or list of strings. Common examples include special
-                        tokens like `"[INST]"`, `"</s>"`, or custom markers. Defaults to `None`.
+            model_path (Path | str):
+                Path to the GGUF format model file.
+            context_window (int):
+                Maximum context length (in tokens) the model can handle.
+                Defaults to `4096`. Larger values require more memory.
+            n_gpu_layers (int):
+                Number of model layers to offload to GPU. Use `-1` to offload
+                all layers (recommended for GPU acceleration). Use `0` for CPU-only mode.
+                Defaults to `-1`.
+            prompt_template (str):
+                Format string for structuring prompts. Should contain
+                `{prompt}` placeholder. For example, Mistral uses `"[INST] {prompt} [/INST]"`.
+                Defaults to `"{prompt}"` (no formatting).
+            stop (str | list[str] | None):
+                Stop sequence(s) that signal the model to stop generating. Can be
+                a single string or list of strings. Common examples include special
+                tokens like `"[INST]"`, `"</s>"`, or custom markers. Defaults to `None`.
 
         Raises:
-                FileNotFoundError: If the model file doesn't exist.
-                ValueError: If the model file is not in valid GGUF format.
+            FileNotFoundError: If the model file doesn't exist.
+            ValueError: If the model file is not in valid GGUF format.
         """
         self.model_path = Path(model_path)
         self.prompt_template = prompt_template
@@ -88,29 +88,30 @@ class LLMInference:
         real-time applications). It returns the raw `llama.cpp` iterator.
 
         Args:
-                prompt (str):
-                        The input text prompt to generate from.
-                max_tokens (int):
-                        Maximum number of tokens to generate. Note: this is a
-                        soft limit - generation may stop earlier due to stop sequences
-                        or end-of-text tokens. Defaults to `1024`.
-                temperature (float):
-                        Sampling temperature controlling randomness. Lower values
-                        (e.g., `0.1`-`0.4`) produce more focused/deterministic output. Higher
-                        values (e.g., `0.8`-`1.0`) produce more creative/diverse output.
-                        Defaults to `0.4`.
+            prompt (str):
+                The input text prompt to generate from.
+            max_tokens (int):
+                Maximum number of tokens to generate. Note: this is a
+                soft limit - generation may stop earlier due to stop sequences
+                or end-of-text tokens. Defaults to `1024`.
+            temperature (float):
+                Sampling temperature controlling randomness. Lower values
+                (e.g., `0.1`-`0.4`) produce more focused/deterministic output. Higher
+                values (e.g., `0.8`-`1.0`) produce more creative/diverse output.
+                Defaults to `0.4`.
 
         Returns:
-                Iterator[CreateCompletionStreamResponse]: An iterator yielding completion
-                        chunks. Each chunk is a dictionary object containing:
-                        - choices[0]["text"]: The generated text token/fragment
-                        - choices[0]["finish_reason"]: Why generation stopped (if finished)
+            Iterator[CreateCompletionStreamResponse]:
+                An iterator yielding completion chunks.
+                Each chunk is a dictionary object containing:
+                - choices[0]["text"]: The generated text token/fragment
+                - choices[0]["finish_reason"]: Why generation stopped (if finished)
 
         Example:
-                >>> llm = LLMInference("model.gguf")
-                >>> for chunk in llm.stream_chunks("Hello"):
-                ... 	token = chunk["choices"][0]["text"]
-                ... 	print(token, end="", flush=True)
+            >>> llm = LLMInference("model.gguf")
+            >>> for chunk in llm.stream_chunks("Hello"):
+            ...     token = chunk["choices"][0]["text"]
+            ...     print(token, end="", flush=True)
         """
         formatted_prompt = self.prompt_template.format(prompt=prompt)
         return self.model(
@@ -131,19 +132,19 @@ class LLMInference:
         all tokens and returns the complete response.
 
         Args:
-                prompt (str):
-                        The input text prompt to generate from.
-                max_tokens (int):
-                        Maximum number of tokens to generate.
-                temperature (float):
-                        Sampling temperature for generation randomness.
+            prompt (str):
+                The input text prompt to generate from.
+            max_tokens (int):
+                Maximum number of tokens to generate.
+            temperature (float):
+                Sampling temperature for generation randomness.
 
         Returns:
-                str: The complete generated text, with leading/trailing whitespace removed.
+            str: The complete generated text, with leading/trailing whitespace removed.
 
         Note:
-                This method prints to stdout as generation occurs. Use `generate()` with
-                `stream=False` if you need silent generation.
+            This method prints to stdout as generation occurs. Use `generate()` with
+            `stream=False` if you need silent generation.
         """
         response_tokens = []
         print()
@@ -167,19 +168,19 @@ class LLMInference:
         when you don't need real-time feedback.
 
         Args:
-                prompt (str):
-                        The input text prompt to generate from.
-                max_tokens (int):
-                        Maximum number of tokens to generate.
-                temperature (float):
-                        Sampling temperature for generation randomness.
+            prompt (str):
+                The input text prompt to generate from.
+            max_tokens (int):
+                Maximum number of tokens to generate.
+            temperature (float):
+                Sampling temperature for generation randomness.
 
         Returns:
-                str: The complete generated text, with leading/trailing whitespace removed.
+            str: The complete generated text, with leading/trailing whitespace removed.
 
         Note:
-                No output is printed during generation. This is faster than streaming
-                for small generations.
+            No output is printed during generation. This is faster than streaming
+            for small generations.
         """
         formatted_prompt = self.prompt_template.format(prompt=prompt)
         output = self.model(
@@ -206,32 +207,32 @@ class LLMInference:
         routes to the appropriate internal method based on the streaming preference.
 
         Args:
-                prompt (str):
-                        The input text prompt to generate from. Will be formatted using
-                        the `prompt_template` specified during initialization.
-                max_tokens (int):
-                        Maximum number of tokens to generate. Defaults to `1024`.
-                temperature (float):
-                        Controls randomness in generation. Range is typically `0.0`-`2.0`.
-                        - `0.0`-`0.3`: Very focused, deterministic (good for factual tasks)
-                        - `0.4`-`0.7`: Balanced creativity and coherence (default range)
-                        - `0.8`-`1.0`: More creative and diverse
-                        - `1.0`+: Very random (rarely useful)
-                        Defaults to `0.4`.
-                stream (bool):
-                        Whether to stream output to `stdout` as it's generated.
-                        - `True`: Displays real-time generation (typewriter effect)
-                        - `False`: Silent generation, returns complete text at end
-                        Defaults to `True`.
+            prompt (str):
+                The input text prompt to generate from. Will be formatted using
+                the `prompt_template` specified during initialization.
+            max_tokens (int):
+                Maximum number of tokens to generate. Defaults to `1024`.
+            temperature (float):
+                Controls randomness in generation. Range is typically `0.0`-`2.0`.
+                - `0.0`-`0.3`: Very focused, deterministic (good for factual tasks)
+                - `0.4`-`0.7`: Balanced creativity and coherence (default range)
+                - `0.8`-`1.0`: More creative and diverse
+                - `1.0`+: Very random (rarely useful)
+                Defaults to `0.4`.
+            stream (bool):
+                Whether to stream output to `stdout` as it's generated.
+                - `True`: Displays real-time generation (typewriter effect)
+                - `False`: Silent generation, returns complete text at end
+                Defaults to `True`.
 
         Returns:
-                str: The complete generated text response, stripped of leading/trailing
-                        whitespace.
+            str: The complete generated text response, stripped of leading/trailing
+                 whitespace.
 
         Example:
-                >>> llm = LLMInference("model.gguf", prompt_template="[INST] {prompt} [/INST]")
-                >>> response = llm.generate("Explain quantum computing", max_tokens=500)
-                >>> print(response)
+            >>> llm = LLMInference("model.gguf", prompt_template="[INST] {prompt} [/INST]")
+            >>> response = llm.generate("Explain quantum computing", max_tokens=500)
+            >>> print(response)
         """
         if stream:
             return self._generate_stream(prompt, max_tokens, temperature)
@@ -250,11 +251,11 @@ class LLMInference:
         that occur during cleanup.
 
         Example:
-                >>> llm = LLMInference("model.gguf")
-                >>> try:
-                ... 	response = llm.generate("Hello")
-                ... finally:
-                ... 	llm.close()	# Ensure cleanup happens
+            >>> llm = LLMInference("model.gguf")
+            >>> try:
+            ...     response = llm.generate("Hello")
+            ... finally:
+            ...     llm.close()	# Ensure cleanup happens
         """
         if self.model is not None:
             try:

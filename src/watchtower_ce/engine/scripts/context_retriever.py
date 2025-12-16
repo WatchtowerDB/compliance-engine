@@ -20,16 +20,16 @@ class ContextRetriever:
     to convert queries into vector representations for comparison with stored documents.
 
     Attributes:
-            chroma_dir (Path):
-                    Directory path where the Chroma database is persisted.
-            collection_name (str):
-                    Name of the Chroma collection to query.
-            retrieval_k (int):
-                    Number of top similar documents to retrieve per query.
-            _embedding_model (HuggingFaceEmbeddings):
-                    The embedding model used for vectorization.
-            _retriever (Chroma):
-                    The Chroma vector store instance.
+        chroma_dir (Path):
+            Directory path where the Chroma database is persisted.
+        collection_name (str):
+            Name of the Chroma collection to query.
+        retrieval_k (int):
+            Number of top similar documents to retrieve per query.
+        _embedding_model (HuggingFaceEmbeddings):
+            The embedding model used for vectorization.
+        _retriever (Chroma):
+            The Chroma vector store instance.
     """
 
     def __init__(
@@ -43,21 +43,21 @@ class ContextRetriever:
         Initialize the ContextRetriever with a Chroma vector store and embedding model.
 
         Args:
-                chroma_dir (Path | str):
-                        Path to the directory containing the persisted Chroma database.
-                collection_name (str):
-                        Name of the collection within the Chroma database to use.
-                embedding_model (str):
-                        HuggingFace model identifier for text embeddings.
-                        Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`, a lightweight
-                        but effective sentence embedding model.
-                retrieval_k (int):
-                        Number of most similar documents to retrieve for each query.
-                        Defaults to `4`.
+            chroma_dir (Path | str):
+                Path to the directory containing the persisted Chroma database.
+            collection_name (str):
+                Name of the collection within the Chroma database to use.
+            embedding_model (str):
+                HuggingFace model identifier for text embeddings.
+                Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`, a lightweight
+                but effective sentence embedding model.
+            retrieval_k (int):
+                Number of most similar documents to retrieve for each query.
+                Defaults to `4`.
 
         Raises:
-                ValueError: If the Chroma directory or collection doesn't exist.
-                OSError: If there are file system access issues.
+            ValueError: If the Chroma directory or collection doesn't exist.
+            OSError: If there are file system access issues.
         """
         self.chroma_dir = Path(chroma_dir)
         self.collection_name = collection_name
@@ -86,17 +86,17 @@ class ContextRetriever:
         Each document contains the retrieved text content along with metadata.
 
         Args:
-                query (str):
-                        The search query string to find similar documents for.
+            query (str):
+                The search query string to find similar documents for.
 
         Yields:
-                Document: LangChain Document objects containing `page_content` (`str`) and
-                        `metadata` (`dict`). Documents are yielded in order of decreasing similarity.
+            Document: LangChain Document objects containing `page_content` (`str`) and
+                      `metadata` (`dict`). Documents are yielded in order of decreasing similarity.
 
         Example:
-                >>> retriever = ContextRetriever("./chroma_db", "my_collection")
-                >>> for doc in retriever.context("What is encryption?"):
-                ... 	print(doc.page_content)
+            >>> retriever = ContextRetriever("./chroma_db", "my_collection")
+            >>> for doc in retriever.context("What is encryption?"):
+            ...     print(doc.page_content)
         """
         with yaspin(
             Spinners.arc, text=f"[INFO] Retrieving top {self.retrieval_k} chunks..."
@@ -116,18 +116,18 @@ class ContextRetriever:
         readability. Useful for when you need all context as a single string.
 
         Args:
-                query (str):
-                        The search query string to find similar documents for.
+            query (str):
+                The search query string to find similar documents for.
 
         Returns:
-                str: A single string containing all retrieved document contents,
-                        separated by double newlines. The string is dedented to remove
-                        common leading whitespace.
+            str: A single string containing all retrieved document contents,
+                 separated by double newlines. The string is dedented to remove
+                 common leading whitespace.
 
         Example:
-                >>> retriever = ContextRetriever("./chroma_db", "my_collection")
-                >>> context = retriever.retrieve("encryption requirements")
-                >>> print(context)	# Prints all retrieved documents as one string
+            >>> retriever = ContextRetriever("./chroma_db", "my_collection")
+            >>> context = retriever.retrieve("encryption requirements")
+            >>> print(context)  # Prints all retrieved documents as one string
         """
         return textwrap.dedent(
             "\n\n".join([doc.page_content for doc in self.context(query)])
