@@ -28,7 +28,7 @@ dependencies = [
 
 [project.optional-dependencies]
 tests = ["pytest", "pytest-django"]
-dev = ["ruff", "black", "mypy", "django-stubs", "djangorestframework-stubs"]
+dev = ["django-stubs", "djangorestframework-stubs"]
 
 [project.scripts]
 wtce = "watchtower_ce.cli.main:main"
