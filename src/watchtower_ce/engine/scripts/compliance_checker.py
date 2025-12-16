@@ -145,6 +145,67 @@ class ComplianceChecker(ABC):
         """
         pass
 
+    def _parse_list_response(
+        self, response: str, fallback_item_limit: int = 6
+    ) -> list[str]:
+        """
+        Parse a response string that should contain a JSON list of strings.
+
+        Args:
+            response (str): The response string to parse, potentially containing markdown formatting
+            fallback_item_limit (int): Maximum number of items to return when using fallback parsing
+
+        Returns:
+            list[str]: A list of strings extracted from the response
+        """
+        try:
+            # Clean up potential markdown formatting
+            cleaned_response = response.strip()
+            if cleaned_response.startswith("```python3"):
+                cleaned_response = cleaned_response[10:]
+            elif cleaned_response.startswith("```python"):
+                cleaned_response = cleaned_response[9:]
+            elif cleaned_response.startswith("```py"):
+                cleaned_response = cleaned_response[5:]
+            elif cleaned_response.startswith("```"):
+                cleaned_response = cleaned_response[3:]
+
+            if cleaned_response.endswith("```"):
+                cleaned_response = cleaned_response[:-3]
+
+            cleaned_response = cleaned_response.strip()
+
+            items = json.loads(cleaned_response)
+
+            if not isinstance(items, list):
+                raise ValueError("[ERROR] Response is not a list.")
+
+            print(f"[INFO] Successfully parsed {len(items)} items from JSON.")
+            return items
+
+        except (json.JSONDecodeError, ValueError) as e:
+            print(f"[WARNING] Failed to parse response as JSON: {e}")
+            print(f"[WARNING] Raw response: {response}")
+
+            # Fallback: extract items from text (one per line)
+            lines = response.strip().split("\n")
+            items = []
+
+            for line in lines:
+                cleaned_line = line.strip(" -\"[]'")
+                # Only include non-empty lines with reasonable content
+                if cleaned_line and len(cleaned_line) > 10:
+                    items.append(cleaned_line)
+
+            # Limit to fallback_item_limit if we have too many items
+            if len(items) > fallback_item_limit:
+                items = items[:fallback_item_limit]
+                print(f"[INFO] Extracted and limited to {len(items)} items from text.")
+            else:
+                print(f"[INFO] Extracted {len(items)} items from text.")
+
+            return items
+
     def _generate_compliance_questions(self, schema: str) -> list[str]:
         """
         Generate targeted compliance questions from the artifact using the LLM.
@@ -177,43 +238,7 @@ class ComplianceChecker(ABC):
             prompt, max_tokens=1024, temperature=0.3, stream=False
         )
 
-        # Parse JSON response
-        try:
-            # Clean up potential markdown formatting
-            cleaned_response = response.strip()
-            if cleaned_response.startswith("```python3"):
-                cleaned_response = cleaned_response[10:]
-            if cleaned_response.startswith("```python"):
-                cleaned_response = cleaned_response[9:]
-            if cleaned_response.startswith("```py"):
-                cleaned_response = cleaned_response[5:]
-            if cleaned_response.startswith("```"):
-                cleaned_response = cleaned_response[3:]
-            if cleaned_response.endswith("```"):
-                cleaned_response = cleaned_response[:-3]
-            cleaned_response = cleaned_response.strip()
-
-            questions = json.loads(cleaned_response)
-
-            if not isinstance(questions, list):
-                raise ValueError("[ERROR] Compliance questions response is not a list.")
-
-            print(f"[INFO] Generated {len(questions)} compliance questions.")
-            return questions
-
-        except (json.JSONDecodeError, ValueError) as e:
-            print(f"[WARNING] Failed to parse questions as JSON: {e}")
-            print(f"[WARNING] Raw response: {response}")
-
-            # Fallback: try to extract questions from text
-            lines = response.strip().split("\n")
-            questions = [
-                line.strip(" -\"[]'")
-                for line in lines
-                if line.strip() and len(line.strip()) > 10
-            ]
-            print(f"[INFO] Extracted {len(questions)} questions from text.")
-            return questions[:6]  # Limit to 6 questions
+        return self._parse_list_response(response)
 
     def _retrieve_context_for_questions(self, questions: list[str]) -> str:
         """
@@ -253,7 +278,7 @@ class ComplianceChecker(ABC):
         Example:
                 >>> checker = PCIComplianceChecker(model_path, chroma_dir)
                 >>> try:
-                ... 	result = checker.analyze(schema)
+                ...     result = checker.analyze(schema)
                 ... finally:
                 ... 	checker.close()
         """
