@@ -34,6 +34,18 @@ FROM base AS runtime
 
 ENV DJANGO_SETTINGS_MODULE=watchtower_ce.settings
 
+ARG SOURCE_URL=https://github.com/watchtowerdb/compliance-engine \
+  VCS_REF=HEAD \
+  VERSION=0.0.0 \
+  LICENSE=GPL-3.0-or-later
+
+LABEL org.opencontainers.image.title="Watchtower Compliance Engine" \
+  org.opencontainers.image.description="Watchtower database compliance engine" \
+  org.opencontainers.image.source="${SOURCE_URL}" \
+  org.opencontainers.image.version="${VERSION}" \
+  org.opencontainers.image.revision="${VCS_REF}" \
+  org.opencontainers.image.licenses="${LICENSE}"
+
 RUN --mount=type=bind,from=build,source=/home/watchtower/app/dist,destination=/app/dist \
   uv pip install --find-links=/app/dist watchtower-ce
 
