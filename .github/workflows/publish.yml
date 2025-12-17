@@ -87,7 +87,7 @@ jobs:
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
         with:
-          containerfiles: Dockerfile
+          containerfiles: docker/Dockerfile
           platforms: ${{ env.IMAGE_PLATFORMS }}
           image: ${{ env.IMAGE_NAME }}
           tags: ${{ env.VERSION }} latest
