@@ -25,8 +25,10 @@
       enable = true;
       sync = {
         enable = true;
-        allGroups = true;
-        allExtras = true;
+        extras = [
+          "dev"
+          "tests"
+        ];
       };
     };
   };
@@ -76,5 +78,19 @@
 
   git-hooks.hooks = {
     treefmt.enable = true;
+  };
+
+  profiles = {
+    ai.module = {
+      env = {
+        # WARN: Required for llama-cpp-python to enable CUDA backend
+        CMAKE_ARGS = "-DGGML_CUDA=on";
+      };
+
+      languages.python.uv.sync = {
+        groups = [ "ai" ];
+        extras = [ "models" ];
+      };
+    };
   };
 }

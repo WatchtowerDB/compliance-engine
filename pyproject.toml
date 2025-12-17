@@ -14,35 +14,38 @@ classifiers = [
 ]
 requires-python = ">= 3.13"
 dependencies = [
-  # NOTE: Backend
   "psycopg[binary,pool]~=3.0",
   "django~=5.2",
+  "django-stubs~=5.2",
   "django-filter~=25.2",
   "django-cors-headers",
   "djangorestframework~=3.16",
+  "djangorestframework-stubs~=3.16",
   "djangorestframework-simplejwt~=5.5",
   "drf-spectacular~=0.28",
   "python-dotenv~=1.1",
   "uvicorn~=0.38",
   "click~=8.3",
+]
+
+[dependency-groups]
+ai = [
   "yaspin~=3.3.0",
-  # NOTE: AI
   "torch~=2.9.0",
   "torchvision~=0.24.0",
   "torchaudio~=2.9.0",
-  "hf_xet~=1.2.0",
   "chromadb~=1.3.4",
-  "huggingface-hub~=0.35.3",
   "langchain-chroma~=1.0.0",
   "langchain-community~=0.4.1",
   "langchain-huggingface~=1.0.1",
   "sentence-transformers~=5.1.2",
-  "llama-cpp-python~=0.3",        # WARN: Must set environment variable CMAKE_ARGS="-DGGML_CUDA=on" to enable CUDA backend
+  "llama-cpp-python~=0.3",
 ]
 
 [project.optional-dependencies]
-tests = ["pytest", "pytest-django"]
-dev = ["django-stubs", "djangorestframework-stubs", "pypdf"]
+models = ["hf_xet~=1.2.0", "huggingface-hub~=0.35.3"]
+tests = ["pytest~=9.0", "pytest-django~=4.11"]
+dev = ["pypdf~=6.4"]
 
 [project.scripts]
 wtce = "watchtower_ce.cli.main:main"
