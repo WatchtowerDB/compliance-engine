@@ -15,8 +15,6 @@
     DJANGO_DB_PASSWORD = "dev";
   };
 
-  packages = with pkgs; [ dockerfmt ];
-
   languages.python = {
     enable = true;
     version = "3.13";
@@ -67,7 +65,6 @@
     config.programs = {
       ruff-check.enable = true;
       ruff-format.enable = true;
-      dockerfmt.enable = true;
       prettier.enable = true;
       nixfmt.enable = true;
       taplo.enable = true;
