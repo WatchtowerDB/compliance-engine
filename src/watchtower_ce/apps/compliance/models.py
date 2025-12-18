@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from typing import Optional
 
 
 class ComplianceFramework(models.Model):
@@ -51,6 +52,7 @@ class ComplianceAssertion(models.Model):
     )
     sql_query: models.TextField = models.TextField()
     result: models.BooleanField = models.BooleanField(null=True)
+    recommendation: Optional[str] = models.TextField(null=True)
 
     def __str__(self) -> str:
         return (
