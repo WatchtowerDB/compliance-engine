@@ -2,6 +2,8 @@ from django.db.models import QuerySet
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework.serializers import Serializer
+from .tasks import schedule_sql_assertions_inference, schedule_compliance_recommendation
+
 
 from . import models, serializers
 from .assertion_builders import BUILDERS, DefaultAssertionBuilder
@@ -40,6 +42,12 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
         serializers.is_valid(raise_exception=True)
         schema_object = serializers.save()
         self.generate_assertions(schema_object)
+        """
+        Trigger asynchronous tasks to run SQL assertions and generate recommendations.
+        """
+        schedule_sql_assertions_inference.delay(schema_id=schema_object.id)
+        schedule_compliance_recommendation.delay(schema_id=schema_object.id)
+
         headers = self.get_success_headers(serializers.data)
         return Response(
             {
