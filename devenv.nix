@@ -31,16 +31,23 @@
     };
   };
 
-  services.postgres = {
-    enable = true;
-    listen_addresses = "localhost";
-    initialDatabases = [
-      {
-        name = "watchtower_ce";
-        user = "dev";
-        pass = "dev";
-      }
-    ];
+  services = {
+    # NOTE: Database
+    postgres = {
+      enable = true;
+      listen_addresses = "localhost";
+      initialDatabases = [
+        {
+          name = "watchtower_ce";
+          user = "dev";
+          pass = "dev";
+        }
+      ];
+    };
+    # NOTE: Celery broker
+    redis = {
+      enable = true;
+    };
   };
 
   processes = {
@@ -78,16 +85,32 @@
   };
 
   profiles = {
-    ai.module = {
-      env = {
-        # WARN: Required for llama-cpp-python to enable CUDA backend
-        CMAKE_ARGS = "-DGGML_CUDA=on";
-      };
+    ai.module =
+      let
+        buildInputs = with pkgs; [
+          cudaPackages.cudatoolkit
+          cudaPackages.cuda_cudart
+          cudaPackages.cudnn
+          libuv
+          zlib
+        ];
+      in
+      {
+        packages = with pkgs; [ cudaPackages.cuda_nvcc ];
 
-      languages.python.uv.sync = {
-        groups = [ "ai" ];
-        extras = [ "models" ];
+        env = {
+          LD_LIBRARY_PATH = "${lib.makeLibraryPath buildInputs}:/run/opengl-driver/lib:/run/opengl-driver-32/lib";
+          XLA_FLAGS = "--xla_gpu_cuda_data_dir=${pkgs.cudaPackages.cudatoolkit}";
+          CUDA_PATH = pkgs.cudaPackages.cudatoolkit;
+          # WARN: Required for llama-cpp-python to enable CUDA backend
+          CMAKE_ARGS = "-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=\"75;86;89;120\"";
+        };
+
+        languages.python.uv.sync = {
+          enable = false;
+          groups = [ "ai" ];
+          extras = [ "models" ];
+        };
       };
-    };
   };
 }
