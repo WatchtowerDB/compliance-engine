@@ -6,6 +6,7 @@ def run_sql_assertion_inference(connection_string, sql_query):
     # TODO: implement real inference logic
     return True
 
+
 def generate_compliance_recommendations(sql_query):
     """
     Generates remediation recommendations for failed assertions.
