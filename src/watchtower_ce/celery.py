@@ -6,7 +6,7 @@ Set default Django settings module
 """
 os.environ.setdefault(
     "DJANGO_SETTINGS_MODULE",
-    "watchtower_ce.settings.base"
+    "watchtower_ce.settings"
 )
 
 """
