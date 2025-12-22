@@ -4,7 +4,10 @@ from celery import Celery
 """
 Set default Django settings module
 """
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "watchtower_ce.settings")
+os.environ.setdefault(
+    "DJANGO_SETTINGS_MODULE",
+    "watchtower_ce.settings.base"
+)
 
 """
 Create Celery app instance
