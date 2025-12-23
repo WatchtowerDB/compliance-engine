@@ -1,52 +1,85 @@
-from celery import shared_task, group
+from celery import shared_task, chain, group
+
 from . import models
 from .ml_inference import (
-    run_sql_assertion_inference,
+    infer_sql_assertions,
+    execute_sql_assertion,
     generate_compliance_recommendations,
 )
 
 
 @shared_task
-def schedule_sql_assertions_inference(schema_id=None, client_db_id=None):
-    assertions = models.ComplianceAssertion.objects.filter(result__isnull=True)
-    if schema_id:
-        assertions = assertions.filter(schema_id=schema_id)
-    if client_db_id:
-        assertions = assertions.filter(client_db_id=client_db_id)
+def infer_sql_assertions_task(schema_id: int, client_db_id: int) -> list[int]:
+    """Infer SQL compliance assertions .
 
-    task_group = group(run_sql_assertion_task.s(a.id) for a in assertions)
-    task_group.apply_async()
-    return f"Scheduled {assertions.count()} SQL assertion tasks."
+    Args:
+        schema_id (int): ID of the client database schema.
+        client_db_id (int): ID of the client database.
+
+    Returns:
+        list[int]: IDs of created ComplianceAssertion records.
+    """
+    schema = models.ClientDBSchema.objects.get(id=schema_id)
+
+    sql_assertions = infer_sql_assertions(schema)
+
+    assertion_ids: list[int] = []
+
+    for sql in sql_assertions:
+        assertion = models.ComplianceAssertion.objects.create(
+            schema_id=schema_id,
+            client_db_id=client_db_id,
+            sql_query=sql,
+        )
+        assertion_ids.append(assertion.id)
+
+    return assertion_ids
 
 
 @shared_task
-def run_sql_assertion_task(assertion_id):
+def execute_sql_assertion_task(assertion_id: int) -> int:
+    """Execute a single SQL assertion and store the result."""
     assertion = models.ComplianceAssertion.objects.get(id=assertion_id)
-    result = run_sql_assertion_inference(
-        assertion.client_db.connection_string, assertion.sql_query
+
+    result = execute_sql_assertion(
+        assertion.client_db.connection_string,
+        assertion.sql_query,
     )
+
     assertion.result = result
-    assertion.save()
-    return f"Assertion {assertion_id} done."
+    assertion.save(update_fields=["result"])
+
+    return assertion_id
 
 
 @shared_task
-def schedule_compliance_recommendation(schema_id=None, client_db_id=None):
-    violations = models.ComplianceAssertion.objects.filter(result=False)
-    if schema_id:
-        violations = violations.filter(schema_id=schema_id)
-    if client_db_id:
-        violations = violations.filter(client_db_id=client_db_id)
-
-    task_group = group(run_compliance_recommendation_task.s(v.id) for v in violations)
-    task_group.apply_async()
-    return f"Scheduled {violations.count()} recommendation tasks."
+def execute_sql_assertions_group(assertion_ids: list[int]):
+    """Execute SQL assertions in parallel."""
+    return group(
+        execute_sql_assertion_task.s(assertion_id) for assertion_id in assertion_ids
+    )()
 
 
 @shared_task
-def run_compliance_recommendation_task(assertion_id):
+def generate_compliance_recommendation_task(assertion_id: int) -> int:
+    """Generate remediation recommendation for a failed assertion."""
     assertion = models.ComplianceAssertion.objects.get(id=assertion_id)
+
     recommendation = generate_compliance_recommendations(assertion.sql_query)
+
     assertion.recommendation = recommendation
-    assertion.save()
-    return f"Recommendation generated for {assertion_id}"
+    assertion.save(update_fields=["recommendation"])
+
+    return assertion_id
+
+
+@shared_task
+def schedule_sql_assertion_pipeline(schema_id: int, client_db_id: int):
+    """Run full SQL compliance pipeline: inference → execution."""
+
+    workflow = chain(
+        infer_sql_assertions_task.s(schema_id, client_db_id),
+        execute_sql_assertions_group.s(),
+    )
+
+    workflow.apply_async()
