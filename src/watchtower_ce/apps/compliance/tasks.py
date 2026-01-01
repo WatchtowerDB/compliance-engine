@@ -10,21 +10,23 @@ from .ml_inference import (
 
 @shared_task
 def infer_sql_assertions_task(schema_id: int, client_db_id: int) -> list[int]:
-    """Infer SQL compliance assertions .
+    """Infer SQL compliance assertions for a database schema.
+
+    Generates SQL compliance assertions using the inference layer and persists
+    them as ComplianceAssertion records.
 
     Args:
         schema_id (int): ID of the client database schema.
         client_db_id (int): ID of the client database.
 
     Returns:
-        list[int]: IDs of created ComplianceAssertion records.
+        list[int]: List of created ComplianceAssertion IDs.
     """
     schema = models.ClientDBSchema.objects.get(id=schema_id)
 
     sql_assertions = infer_sql_assertions(schema)
 
     assertion_ids: list[int] = []
-
     for sql in sql_assertions:
         assertion = models.ComplianceAssertion.objects.create(
             schema_id=schema_id,
@@ -38,7 +40,16 @@ def infer_sql_assertions_task(schema_id: int, client_db_id: int) -> list[int]:
 
 @shared_task
 def execute_sql_assertion_task(assertion_id: int) -> int:
-    """Execute a single SQL assertion and store the result."""
+    """Execute a single SQL compliance assertion.
+
+    Runs the assertion SQL against the client database and stores the result.
+
+    Args:
+        assertion_id (int): ID of the ComplianceAssertion to execute.
+
+    Returns:
+        int: ID of the executed ComplianceAssertion.
+    """
     assertion = models.ComplianceAssertion.objects.get(id=assertion_id)
 
     result = execute_sql_assertion(
@@ -54,15 +65,26 @@ def execute_sql_assertion_task(assertion_id: int) -> int:
 
 @shared_task
 def execute_sql_assertions_group(assertion_ids: list[int]):
-    """Execute SQL assertions in parallel."""
+    """Execute multiple SQL assertions in parallel.
+
+    Args:
+        assertion_ids (list[int]): IDs of ComplianceAssertions to execute.
+    """
     return group(
         execute_sql_assertion_task.s(assertion_id) for assertion_id in assertion_ids
-    )()
+    ).apply_async()
 
 
 @shared_task
 def generate_compliance_recommendation_task(assertion_id: int) -> int:
-    """Generate remediation recommendation for a failed assertion."""
+    """Generate a remediation recommendation for a failed assertion.
+
+    Args:
+        assertion_id (int): ID of the failed ComplianceAssertion.
+
+    Returns:
+        int: ID of the ComplianceAssertion with generated recommendation.
+    """
     assertion = models.ComplianceAssertion.objects.get(id=assertion_id)
 
     recommendation = generate_compliance_recommendations(assertion.sql_query)
@@ -75,11 +97,18 @@ def generate_compliance_recommendation_task(assertion_id: int) -> int:
 
 @shared_task
 def schedule_sql_assertion_pipeline(schema_id: int, client_db_id: int):
-    """Run full SQL compliance pipeline: inference → execution."""
+    """Run the full SQL compliance pipeline.
 
+    Pipeline steps:
+        1. Infer SQL compliance assertions.
+        2. Execute inferred assertions in parallel.
+
+    Args:
+        schema_id (int): ID of the client database schema.
+        client_db_id (int): ID of the client database.
+    """
     workflow = chain(
         infer_sql_assertions_task.s(schema_id, client_db_id),
         execute_sql_assertions_group.s(),
     )
-
     workflow.apply_async()
