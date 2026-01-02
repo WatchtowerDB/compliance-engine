@@ -30,7 +30,6 @@ dependencies = [
 
 [dependency-groups]
 ai = [
-  "yaspin~=3.3.0",
   "torch~=2.9.0",
   "torchvision~=0.24.0",
   "torchaudio~=2.9.0",
@@ -43,7 +42,7 @@ ai = [
 ]
 
 [project.optional-dependencies]
-models = ["hf_xet~=1.2.0", "huggingface-hub~=0.35.3"]
+models = ["hf_xet~=1.2.0", "huggingface-hub~=0.35.3", "yaspin~=3.3.0"]
 tests = ["pytest~=9.0", "pytest-django~=4.11"]
 dev = ["pypdf~=6.4"]
 
