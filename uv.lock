@@ -3282,6 +3282,7 @@ dev = [
 models = [
     { name = "hf-xet" },
     { name = "huggingface-hub" },
+    { name = "yaspin" },
 ]
 tests = [
     { name = "pytest" },
@@ -3307,7 +3308,6 @@ ai = [
     { name = "torchvision", version = "0.24.1", source = { registry = "https://download.pytorch.org/whl/cu129" }, marker = "python_full_version < '3.15' and platform_machine == 'aarch64' and platform_python_implementation == 'CPython' and sys_platform == 'linux'" },
     { name = "torchvision", version = "0.24.1", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32'" },
     { name = "torchvision", version = "0.24.1+cu129", source = { registry = "https://download.pytorch.org/whl/cu129" }, marker = "(python_full_version >= '3.15' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (platform_python_implementation != 'CPython' and sys_platform == 'linux') or sys_platform == 'win32'" },
-    { name = "yaspin" },
 ]
 
 [package.metadata]
@@ -3329,6 +3329,7 @@ requires-dist = [
     { name = "pytest-django", marker = "extra == 'tests'", specifier = "~=4.11" },
     { name = "python-dotenv", specifier = "~=1.1" },
     { name = "uvicorn", specifier = "~=0.38" },
+    { name = "yaspin", marker = "extra == 'models'", specifier = "~=3.3.0" },
 ]
 provides-extras = ["models", "tests", "dev"]
 
@@ -3349,7 +3350,6 @@ ai = [
     { name = "torchvision", marker = "sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32'", specifier = "~=0.24.0" },
     { name = "torchvision", marker = "sys_platform == 'darwin'", specifier = "~=0.24.0", index = "https://download.pytorch.org/whl/cpu" },
     { name = "torchvision", marker = "sys_platform == 'linux' or sys_platform == 'win32'", specifier = "~=0.24.0", index = "https://download.pytorch.org/whl/cu129" },
-    { name = "yaspin", specifier = "~=3.3.0" },
 ]
 
 [[package]]
