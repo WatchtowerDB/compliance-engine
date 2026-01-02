@@ -65,6 +65,11 @@
         django-admin runserver
       '';
     };
+
+    celery-worker = {
+      process-compose.depends_on.redis.condition = "process_healthy";
+      exec = "celery -A watchtower_ce worker -l INFO";
+    };
   };
 
   treefmt = {
