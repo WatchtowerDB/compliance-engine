@@ -2,11 +2,13 @@ from django.db.models import QuerySet
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework.serializers import Serializer
-from .tasks import schedule_sql_assertions_inference, schedule_compliance_recommendation
+from .tasks import (
+    schedule_sql_assertion_pipeline,
+    generate_compliance_recommendation_task,
+)
 
 
 from . import models, serializers
-from .assertion_builders import BUILDERS, DefaultAssertionBuilder
 
 
 class ComplianceFrameworkViewSet(viewsets.ReadOnlyModelViewSet):
@@ -42,11 +44,11 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
         serializers.is_valid(raise_exception=True)
         schema_object = serializers.save()
         self.generate_assertions(schema_object)
-        """
-        Trigger asynchronous tasks to run SQL assertions and generate recommendations.
-        """
-        schedule_sql_assertions_inference.delay(schema_id=schema_object.id)
-        schedule_compliance_recommendation.delay(schema_id=schema_object.id)
+        # Trigger async compliance pipelines
+        schedule_sql_assertion_pipeline.delay(
+            schema_id=schema_object.id,
+        )
+        generate_compliance_recommendation_task.delay(schema_id=schema_object.id)
 
         headers = self.get_success_headers(serializers.data)
         return Response(
@@ -57,28 +59,6 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED,
             headers=headers,
         )
-
-    def generate_assertions(self, schema_object):
-        """
-        Generate and store compliance assertions for all frameworks.
-
-        Args:
-            schema_object: The saved ClientDBSchema instance.
-        """
-        schema_json = schema_object.schema_json
-        frameworks = models.ComplianceFramework.objects.all()
-        for framework in frameworks:
-            builder_class = BUILDERS.get(framework.name, DefaultAssertionBuilder)
-            builder = builder_class(framework)
-            sql_assertions = builder.build(schema_json)
-            for sql, description in sql_assertions:
-                models.ComplianceAssertion.objects.create(
-                    client_db_schema=schema_object,
-                    framework=framework,
-                    schema=schema_object,
-                    sql_query=sql,
-                    description=description,
-                )
 
     def update(self, request, *args, **kwargs):
         """Disallow update operation for client database schemas."""
