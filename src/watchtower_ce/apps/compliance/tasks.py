@@ -72,7 +72,7 @@ def execute_sql_assertions_group(assertion_ids: list[int]):
     """
     return group(
         execute_sql_assertion_task.s(assertion_id) for assertion_id in assertion_ids
-    ).apply_async()
+    )
 
 
 @shared_task
@@ -108,7 +108,7 @@ def schedule_sql_assertion_pipeline(schema_id: int, client_db_id: int):
         client_db_id (int): ID of the client database.
     """
     workflow = chain(
-        infer_sql_assertions_task.s(schema_id, client_db_id),
-        execute_sql_assertions_group.s(),
+        infer_sql_assertions_task.s(schema_id, client_db_id)
+        | execute_sql_assertions_group.s(),
     )
     workflow.apply_async()
