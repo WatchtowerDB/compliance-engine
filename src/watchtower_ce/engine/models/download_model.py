@@ -33,3 +33,11 @@ def download_model(
         print(f"[INFO] Model downloaded successfully to {local_dir}.")
     else:
         print(f"[INFO] Model {model_name} already downloaded to {local_dir}.")
+
+
+if __name__ == "__main__":
+    download_model(
+        "bartowski/Ministral-8B-Instruct-2410-GGUF",
+        "Ministral-8B-Instruct-2410-GGUF",
+        ["Ministral-8B-Instruct-2410-Q6_K_L.gguf"],
+    )

@@ -92,10 +92,6 @@ EOF
   fi
 }
 
-_collect_staticfiles() {
-  django-admin collectstatic --noinput
-}
-
 _serve() {
   wtce server
 }
@@ -103,7 +99,6 @@ _serve() {
 _main() {
   _migrate
   _check_superuser
-  _collect_staticfiles
   _serve
 }
 
