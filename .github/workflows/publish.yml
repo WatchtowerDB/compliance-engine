@@ -11,7 +11,7 @@ env:
   REGISTRY_USER: ${{ github.actor }}
   REGISTRY_PASS: ${{ github.token }}
   IMAGE_NAME: compliance-engine
-  IMAGE_PLATFORMS: linux/amd64,linux/arm64
+  IMAGE_PLATFORMS: linux/amd64
   LICENSE_SPDX: GPL-3.0-or-later
 jobs:
   prepare:
@@ -75,7 +75,22 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - id: install
+      - id: install-uv
+        name: Install UV
+        uses: astral-sh/setup-uv@v6
+
+      - id: setup-python
+        name: Setup Python
+        run: uv venv -p 3.13 .venv
+
+      - id: download-model
+        name: Download model weights
+        run: |-
+          source .venv/bin/activate
+          uv sync --no-install-project --frozen --active --extra=models
+          python src/watchtower_ce/engine/models/download_model.py
+
+      - id: install-build-deps
         name: Install dependencies
         run: |
           sudo apt-get update
