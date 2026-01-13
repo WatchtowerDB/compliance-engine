@@ -1,10 +1,6 @@
 from celery import shared_task, chain, chord, group
 from . import models
-from .ml_inference import (
-    infer_sql_assertions,
-    execute_sql_assertion,
-    generate_compliance_recommendations,
-)
+from . import ml_inference as ml
 
 
 @shared_task
@@ -14,7 +10,7 @@ def infer_sql_assertions_task(schema_id: int, client_db_id: int) -> list[int]:
     Returns a list of created assertion IDs.
     """
     schema = models.ClientDBSchema.objects.get(id=schema_id)
-    sql_assertions = infer_sql_assertions(schema)
+    sql_assertions = ml.infer_sql_assertions(schema)
 
     assertion_ids = [
         models.ComplianceAssertion.objects.create(
@@ -30,7 +26,7 @@ def infer_sql_assertions_task(schema_id: int, client_db_id: int) -> list[int]:
 def execute_sql_assertion_task(assertion_id: int) -> int:
     """Execute a single SQL compliance assertion and store the result."""
     assertion = models.ComplianceAssertion.objects.get(id=assertion_id)
-    result = execute_sql_assertion(
+    result = ml.infer_sql_assertions(
         assertion.client_db.connection_string, assertion.sql_query
     )
     assertion.result = result
@@ -42,7 +38,9 @@ def execute_sql_assertion_task(assertion_id: int) -> int:
 def generate_compliance_recommendation_task(assertion_id: int) -> int:
     """Generate a recommendation for a single assertion."""
     assertion = models.ComplianceAssertion.objects.get(id=assertion_id)
-    assertion.recommendation = generate_compliance_recommendations(assertion.sql_query)
+    assertion.recommendation = ml.generate_compliance_recommendations(
+        assertion.sql_query
+    )
     assertion.save(update_fields=["recommendation"])
     return assertion_id
 
@@ -52,7 +50,14 @@ def generate_recommendations_group(assertion_ids: list[int]):
     """Generate recommendations for multiple assertions in parallel."""
     if not assertion_ids:
         return []
-    job = group(generate_compliance_recommendation_task.s(aid) for aid in assertion_ids)
+    failed_assertions_ids = list(
+        models.ComplianceAssertion.objects.filter(
+            recommendation__isnull=True, id__in=assertion_ids
+        ).values_list("id", flat=True)
+    )
+    job = group(
+        generate_compliance_recommendation_task.s(aid) for aid in failed_assertions_ids
+    )
     job.apply_async()
 
 
