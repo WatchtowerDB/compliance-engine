@@ -4,7 +4,6 @@ from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 from .tasks import (
     schedule_sql_assertion_pipeline,
-    generate_compliance_recommendation_task,
 )
 
 
@@ -43,12 +42,10 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
         serializers = self.get_serializer(data=request.data)
         serializers.is_valid(raise_exception=True)
         schema_object = serializers.save()
-        self.generate_assertions(schema_object)
         # Trigger async compliance pipelines
         schedule_sql_assertion_pipeline.delay(
-            schema_id=schema_object.id,
+            schema_id=schema_object.id, client_db_id=schema_object.client_db.id
         )
-        generate_compliance_recommendation_task.delay(schema_id=schema_object.id)
 
         headers = self.get_success_headers(serializers.data)
         return Response(
