@@ -77,7 +77,9 @@ class ContextRetriever:
             )
         print("[INFO] Successfully initialized Chroma retriever.")
 
-    def context(self, query: str) -> Generator[Document, None, None]:
+    def context(
+        self, query: str, retrieval_k: int | None = None
+    ) -> Generator[Document, None, None]:
         """
         Retrieve the most semantically similar documents to a query as a generator.
 
@@ -88,6 +90,9 @@ class ContextRetriever:
         Args:
             query (str):
                 The search query string to find similar documents for.
+            retrieval_k (int | None):
+                Number of top similar documents to retrieve per query.
+                Defaults to the class `retrieval_k` if not specified.
 
         Yields:
             Document: LangChain Document objects containing `page_content` (`str`) and
@@ -98,16 +103,16 @@ class ContextRetriever:
             >>> for doc in retriever.context("What is encryption?"):
             ...     print(doc.page_content)
         """
-        with yaspin(
-            Spinners.arc, text=f"[INFO] Retrieving top {self.retrieval_k} chunks..."
-        ):
-            results = self._retriever.similarity_search(query, k=self.retrieval_k)
+        current_k = retrieval_k if retrieval_k else self.retrieval_k
+
+        with yaspin(Spinners.arc, text=f"[INFO] Retrieving top {current_k} chunks..."):
+            results = self._retriever.similarity_search(query, k=current_k)
         print(f"[INFO] Retrieved context from {self.collection_name} collection.")
 
         for doc in results:
             yield doc
 
-    def retrieve(self, query: str) -> str:
+    def retrieve(self, query: str, retrieval_k: int | None = None) -> str:
         """
         Retrieve the most similar documents and return them as a concatenated string.
 
@@ -118,6 +123,9 @@ class ContextRetriever:
         Args:
             query (str):
                 The search query string to find similar documents for.
+            retrieval_k (int | None):
+                Number of top similar documents to retrieve per query.
+                Defaults to the class `retrieval_k` if not specified.
 
         Returns:
             str: A single string containing all retrieved document contents,
@@ -130,5 +138,5 @@ class ContextRetriever:
             >>> print(context)  # Prints all retrieved documents as one string
         """
         return textwrap.dedent(
-            "\n\n".join([doc.page_content for doc in self.context(query)])
+            "\n\n".join([doc.page_content for doc in self.context(query, retrieval_k)])
         )
