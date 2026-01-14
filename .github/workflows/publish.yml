@@ -75,21 +75,6 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - id: install-uv
-        name: Install UV
-        uses: astral-sh/setup-uv@v6
-
-      - id: setup-python
-        name: Setup Python
-        run: uv venv -p 3.13 .venv
-
-      - id: download-model
-        name: Download model weights
-        run: |-
-          source .venv/bin/activate
-          uv sync --no-install-project --frozen --active --extra=models
-          python src/watchtower_ce/engine/models/download_model.py
-
       - id: install-build-deps
         name: Install dependencies
         run: |
