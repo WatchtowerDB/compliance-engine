@@ -3,8 +3,8 @@
 import os
 from pathlib import Path
 
-from models.download_model import download_model
-from scripts.pci_compliance_checker import PCIComplianceChecker
+from .models.download_model import download_model
+from .scripts.pci_compliance_checker import PCIComplianceChecker
 
 download_model(
     "bartowski/Ministral-8B-Instruct-2410-GGUF",
@@ -15,13 +15,13 @@ download_model(
 SCRIPT_DIR = Path(__file__).parent
 MODEL_PATH: Path = Path(
     os.getenv(
-        "MODEL_PATH",
+        "WTCE_MODEL_PATH",
         SCRIPT_DIR.parent
         / "engine/models/base/Ministral-8B-Instruct-2410-GGUF/Ministral-8B-Instruct-2410-Q6_K_L.gguf",
     )
 )
 CHROMA_DIR: Path = Path(
-    os.getenv("CHROMA_DIR", SCRIPT_DIR.parent.parent.parent / "data/chroma_db")
+    os.getenv("WTCE_CHROMA_DIR", SCRIPT_DIR.parent.parent.parent / "data/chroma_db")
 )
 print(CHROMA_DIR)
 # Example schema with multiple PCI-DSS violations
