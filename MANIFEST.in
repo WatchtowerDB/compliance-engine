@@ -6,9 +6,3 @@ prune tests
 # NOTE: Django staticfiles
 graft src/watchtower_ce/staticfiles
 graft watchtower_ce/staticfiles
-# NOTE: ChromaDB
-graft src/watchtower_ce/engine/data/chroma_db
-graft watchtower_ce/engine/data/chroma_db
-# NOTE: Model weights
-graft src/watchtower_ce/engine/models
-graft watchtower_ce/engine/models
