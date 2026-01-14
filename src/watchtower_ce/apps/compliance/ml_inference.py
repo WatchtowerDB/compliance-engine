@@ -1,18 +1,18 @@
 from typing import List
 
 
-def infer_sql_assertions(schema) -> List[str]:
-    """Infer SQL compliance assertions for a given database schema.
+def generate_assertions(schema: str) -> List[str]:
+    """Generate SQL compliance assertions from schema metadata.
 
-    This function is responsible for generating SQL assertion queries
-    based on the provided schema metadata. The assertions are later
-    executed independently.
+    This function represents the ML / rules-based inference layer.
+    It analyzes a serialized database schema and produces SQL
+    assertion queries that can be executed independently.
 
     Args:
-        schema: ClientDBSchema instance containing schema metadata.
+        schema (str): Serialized database schema (e.g., SQL DDL, JSON).
 
     Returns:
-        list[str]: A list of SQL assertion queries.
+        List[str]: A list of SQL assertion queries.
     """
     # TODO: Replace with real ML / rules-based inference logic
     return []
@@ -35,11 +35,15 @@ def execute_sql_assertion(connection_string: str, sql_query: str) -> bool:
     return True
 
 
-def generate_compliance_recommendations(sql_query: str) -> str:
-    """Generate remediation recommendations for a failed SQL assertion.
+def analyze_failed_assertion(assertion: str, failure_result: str) -> str:
+    """Analyze a failed SQL assertion and generate remediation guidance.
+
+    This function represents the ML / LLM-based reasoning layer that
+    explains why an assertion failed and how to fix it.
 
     Args:
-        sql_query (str): The SQL assertion that failed.
+        assertion (str): The SQL assertion that failed.
+        failure_result (str): Execution error or failure output.
 
     Returns:
         str: Human-readable compliance recommendation.
