@@ -13,8 +13,6 @@ app = Celery("watchtower_ce")
 
 
 # Load settings from Django settings.py, prefix CELERY_
-
-
 app.config_from_object("django.conf:settings", namespace="CELERY")
 
 

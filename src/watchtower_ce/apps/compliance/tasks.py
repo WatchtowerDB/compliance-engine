@@ -4,19 +4,25 @@ from . import ml_inference as ml
 
 
 @shared_task
-def infer_sql_assertions_task(schema_id: int, client_db_id: int) -> list[int]:
+def infer_sql_assertions_task(
+    schema_id: int,
+    client_db_id: int,
+    framework_id: int,
+) -> list[int]:
     """
     Infer SQL compliance assertions for a database schema.
     Returns a list of created assertion IDs.
     """
     schema = models.ClientDBSchema.objects.get(id=schema_id)
+    framework = models.ComplianceFramework.objects.get(id=framework_id)
 
     sql_assertions = ml.generate_assertions(schema.schema_json)
 
     assertion_ids = [
         models.ComplianceAssertion.objects.create(
-            schema_id=schema_id,
+            schema=schema,
             client_db_id=client_db_id,
+            compliance_framework=framework,
             sql_query=sql,
         ).id
         for sql in sql_assertions
@@ -50,6 +56,7 @@ def generate_compliance_recommendation_task(assertion_id: int) -> int:
     """
     assertion = models.ComplianceAssertion.objects.get(id=assertion_id)
 
+    # Only generate recommendations for failed assertions
     if assertion.result:
         return assertion_id
 
@@ -103,7 +110,11 @@ def execute_then_recommendations(assertion_ids: list[int]):
 
 
 @shared_task
-def schedule_sql_assertion_pipeline(schema_id: int, client_db_id: int):
+def schedule_sql_assertion_pipeline(
+    schema_id: int,
+    client_db_id: int,
+    framework_id: int,
+):
     """
     Full compliance pipeline:
     1. Generate assertions
@@ -111,6 +122,10 @@ def schedule_sql_assertion_pipeline(schema_id: int, client_db_id: int):
     3. Analyze failures
     """
     chain(
-        infer_sql_assertions_task.s(schema_id, client_db_id),
+        infer_sql_assertions_task.s(
+            schema_id,
+            client_db_id,
+            framework_id,
+        ),
         execute_then_recommendations.s(),
     ).apply_async()

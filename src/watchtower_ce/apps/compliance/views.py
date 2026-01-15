@@ -10,7 +10,7 @@ from .tasks import (
 from . import models, serializers
 
 
-class ComplianceFrameworkViewSet(viewsets.ReadOnlyModelViewSet):
+class ComplianceFrameworkViewSet(viewsets.ModelViewSe):
     """
     This viewset provides read-only access to compliance framework records.
     """
@@ -30,53 +30,63 @@ class ClientDBViewSet(viewsets.ModelViewSet):
 
 
 class ClientDBSchemaViewSet(viewsets.ModelViewSet):
-    """
-    This viewset allows listing, creating, and retrieving schema records.
-    Update, partial update, and delete operations are explicitly disallowed.
-    """
-
     queryset: QuerySet = models.ClientDBSchema.objects.all()
     serializer_class: type[Serializer] = serializers.ClientDBSchemaSerializer
 
     def create(self, request, *args, **kwargs):
-        serializers = self.get_serializer(data=request.data)
-        serializers.is_valid(raise_exception=True)
-        schema_object = serializers.save()
-        # Trigger async compliance pipelines
-        schedule_sql_assertion_pipeline.delay(
-            schema_id=schema_object.id, client_db_id=schema_object.client_db.id
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        schema_object = serializer.save()
+
+        framework_id = request.data.get("framework_id")
+        if not framework_id:
+            return Response(
+                {"detail": "framework_id is required to run compliance checks."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            framework = models.ComplianceFramework.objects.get(id=framework_id)
+        except models.ComplianceFramework.DoesNotExist:
+            return Response(
+                {"detail": "Invalid framework_id."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        compliance_check = models.ComplianceCheck.objects.create(
+            framework=framework,
+            client_db=schema_object.client_db,
+            schema=schema_object,
         )
 
-        headers = self.get_success_headers(serializers.data)
+        # Trigger Celery async pipeline
+        schedule_sql_assertion_pipeline.delay(
+            schema_id=schema_object.id,
+            client_db_id=schema_object.client_db.id,
+            framework_id=framework.id,
+        )
+
+        headers = self.get_success_headers(serializer.data)
         return Response(
             {
-                "message": "Schema uploaded successfully. Assertions have been auto-generated",
-                "data": serializers.data,
+                "message": "Schema uploaded successfully. Compliance assertions are being processed asynchronously.",
+                "status": "PENDING",
+                "compliance_check_id": compliance_check.id,
+                "data": serializer.data,
             },
             status=status.HTTP_201_CREATED,
             headers=headers,
         )
 
+    # Disallow updates/deletes
     def update(self, request, *args, **kwargs):
-        """Disallow update operation for client database schemas."""
-        return Response(
-            {"detail": "Update not allowed."},
-            status=status.HTTP_405_METHOD_NOT_ALLOWED,
-        )
+        return Response({"detail": "Update not allowed."}, status=405)
 
     def partial_update(self, request, *args, **kwargs):
-        """Disallow partial update operation for client database schemas."""
-        return Response(
-            {"detail": "Partial update not allowed."},
-            status=status.HTTP_405_METHOD_NOT_ALLOWED,
-        )
+        return Response({"detail": "Partial update not allowed."}, status=405)
 
     def destroy(self, request, *args, **kwargs):
-        """Disallow delete operation for client database schemas."""
-        return Response(
-            {"detail": "Delete not allowed."},
-            status=status.HTTP_405_METHOD_NOT_ALLOWED,
-        )
+        return Response({"detail": "Delete not allowed."}, status=405)
 
 
 class ComplianceAssertionViewSet(viewsets.ReadOnlyModelViewSet):
