@@ -1,41 +1,63 @@
-FROM python:3.13-slim AS base
+FROM nvidia/cuda:12.9.1-cudnn-runtime-ubuntu24.04 AS base
 
 # NOTE: Install UV
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
-RUN useradd -ms /usr/bin/bash watchtower
+ENV VIRTUAL_ENV="/usr/local/venv" \
+  PATH="/usr/local/venv/bin:${PATH}" \
+  UV_PYTHON_INSTALL_DIR="/usr/local/share/uv/python"
 
-USER watchtower:watchtower
-
-WORKDIR /home/watchtower
-
-RUN uv venv -p 3.13 .venv
-
-ENV VIRTUAL_ENV=/home/watchtower/.venv \
-    PATH=/home/watchtower/.venv/bin:${PATH}
+RUN uv venv -p 3.13 /usr/local/venv
 
 FROM base AS build
 
-WORKDIR /home/watchtower/app
+ARG VERSION=0.0.0
 
-USER root:root
+ENV SETUPTOOLS_SCM_PRETEND_VERSION="${VERSION}"
 
-RUN apt-get update \
-    && apt-get install --no-install-recommends -y git='1:2.47.3-*'
+WORKDIR /app
 
-COPY src ./src
-COPY pyproject.toml uv.lock ./
+RUN apt-get update && \
+  apt-get install --no-install-recommends -y gcc='4:13.2.0-*' g++='4:13.2.0-*'
 
-RUN --mount=type=bind,source=.git,destination=.git uv sync --active \
-    && uv build
+COPY src src/
+COPY pyproject.toml uv.lock MANIFEST.in ./
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+  uv sync --no-install-project --frozen --active --group=ai --extra=models && \
+  python src/manage.py collectstatic --noinput && \
+  uv pip install .
 
 FROM base AS runtime
 
-ENV DJANGO_SETTINGS_MODULE=watchtower_ce.settings
+ENV DJANGO_SETTINGS_MODULE=watchtower_ce.settings \
+  DJANGO_DB_PATH=/home/watchtower/db.sqlite3 \
+  WTCE_CHROMA_DIR=/home/watchtower/chroma
 
-RUN --mount=type=bind,from=build,source=/home/watchtower/app/dist,destination=/app/dist uv pip install --find-links=/app/dist watchtower-ce
+ARG SOURCE_URL=https://github.com/watchtowerdb/compliance-engine \
+  VCS_REF=HEAD \
+  VERSION=0.0.0 \
+  LICENSE=GPL-3.0-or-later
+
+LABEL org.opencontainers.image.title="Watchtower Compliance Engine" \
+  org.opencontainers.image.description="Watchtower database compliance engine" \
+  org.opencontainers.image.source="${SOURCE_URL}" \
+  org.opencontainers.image.version="${VERSION}" \
+  org.opencontainers.image.revision="${VCS_REF}" \
+  org.opencontainers.image.licenses="${LICENSE}"
+
+COPY --from=build /usr/local/venv /usr/local/venv
 
 COPY --chmod=0755 ./docker/docker-entrypoint.sh /usr/local/bin/
+
+RUN useradd -ms /usr/bin/bash watchtower && \
+  apt-get update && \
+  apt-get install -y --no-install-recommends tzdata && \
+  rm -rf /var/lib/apt/lists/*
+
+COPY data/ /home/watchtower/chroma
+
+USER watchtower:watchtower
 
 EXPOSE 8000
 

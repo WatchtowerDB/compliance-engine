@@ -1,4 +1,5 @@
 import os
+import typing as t
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -21,7 +22,7 @@ SECRET_KEY: str = os.getenv(
 _DB_CONFIG: dict[str, dict[str, str | Path]] = {
     "DEV": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": os.getenv("DJANGO_DB_PATH", BASE_DIR / "db.sqlite3"),
     },
     "PROD": {
         "ENGINE": "django.db.backends.postgresql",
@@ -38,3 +39,11 @@ DATABASES: dict[str, dict[str, str | Path]] = {
         os.getenv("DJANGO_ENVIRONMENT", "").upper(), _DB_CONFIG["DEV"]
     )
 }
+
+MODEL_PATH: t.Optional[Path] = (
+    Path(os.environ["WTCE_MODEL_PATH"]) if os.getenv("WTCE_MODEL_PATH") else None
+)
+
+CHROMA_DIR: t.Optional[Path] = (
+    Path(os.environ["WTCE_CHROMA_DIR"]) if os.getenv("WTCE_CHROMA_DIR") else None
+)

@@ -1,0 +1,8 @@
+# NOTE: Exclude unnecessary Git-tracked files
+exclude .gitignore uv.lock
+prune .github
+prune docker
+prune tests
+# NOTE: Django staticfiles
+graft src/watchtower_ce/staticfiles
+graft watchtower_ce/staticfiles

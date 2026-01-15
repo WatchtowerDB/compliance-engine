@@ -19,8 +19,8 @@ devenv.local.yaml
 # Development DB
 **/*.sqlite3
 
-# GitHub specific
-.github/
+# Track ChromaDB DB
+!data/chroma_db/chroma.sqlite3
 
 # macOS system file
 .DS_Store
