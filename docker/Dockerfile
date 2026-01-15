@@ -31,7 +31,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 FROM base AS runtime
 
 ENV DJANGO_SETTINGS_MODULE=watchtower_ce.settings \
-  DJANGO_DB_PATH=/home/watchtower/db.sqlite3
+  DJANGO_DB_PATH=/home/watchtower/db.sqlite3 \
+  WTCE_CHROMA_DIR=/home/watchtower/chroma
 
 ARG SOURCE_URL=https://github.com/watchtowerdb/compliance-engine \
   VCS_REF=HEAD \
@@ -53,6 +54,8 @@ RUN useradd -ms /usr/bin/bash watchtower && \
   apt-get update && \
   apt-get install -y --no-install-recommends tzdata && \
   rm -rf /var/lib/apt/lists/*
+
+COPY data/ /home/watchtower/chroma
 
 USER watchtower:watchtower
 
