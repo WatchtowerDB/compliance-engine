@@ -50,7 +50,7 @@ def generate_compliance_recommendation_task(assertion_id: int) -> int:
     """
     assertion = models.ComplianceAssertion.objects.get(id=assertion_id)
 
-    if assertion.result is True:
+    if assertion.result:
         return assertion_id
 
     recommendation = ml.analyze_failed_assertion(
@@ -75,7 +75,7 @@ def generate_recommendations_group(assertion_ids: list[int]):
     failed_assertion_ids = list(
         models.ComplianceAssertion.objects.filter(
             id__in=assertion_ids,
-            result=False,
+            result__in=[False, None],
             recommendation__isnull=True,
         ).values_list("id", flat=True)
     )
