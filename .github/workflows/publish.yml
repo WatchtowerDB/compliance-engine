@@ -127,11 +127,8 @@ jobs:
 
       - id: login
         name: Login to registry
-        uses: redhat-actions/podman-login@v1
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ env.REGISTRY_USER }}
-          password: ${{ env.REGISTRY_PASS }}
+        run: |-
+          podman login "${REGISTRY}" -u "${REGISTRY_USER}" -p "${REGISTRY_PASS}" --verbose
 
       - id: push
         name: Push image to registry
