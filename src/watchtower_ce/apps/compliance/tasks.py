@@ -1,6 +1,9 @@
 from celery import shared_task, chain, chord, group
+import logging
 from . import models
 from . import ml_inference as ml
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task
@@ -13,8 +16,23 @@ def infer_sql_assertions_task(
     Infer SQL compliance assertions for a database schema.
     Returns a list of created assertion IDs.
     """
-    schema = models.ClientDBSchema.objects.get(id=schema_id)
-    framework = models.ComplianceFramework.objects.get(id=framework_id)
+    try:
+        schema = models.ClientDBSchema.objects.get(id=schema_id)
+    except models.ClientDBSchema.DoesNotExist:
+        logger.warning(
+            "ClientDBSchema %s not found. Skipping assertion inference.",
+            schema_id,
+        )
+        return []
+
+    try:
+        framework = models.ComplianceFramework.objects.get(id=framework_id)
+    except models.ComplianceFramework.DoesNotExist:
+        logger.warning(
+            "ComplianceFramework %s not found. Skipping assertion inference.",
+            framework_id,
+        )
+        return []
 
     sql_assertions = ml.generate_assertions(schema.schema_json)
 
@@ -50,20 +68,29 @@ def execute_sql_assertion_task(assertion_id: int) -> int:
 
 
 @shared_task
-def generate_compliance_recommendation_task(assertion_id: int) -> int:
-    """
-    Generate a recommendation for a single failed assertion.
-    """
-    assertion = models.ComplianceAssertion.objects.get(id=assertion_id)
+def generate_compliance_recommendation_task(self, assertion_id: int) -> int | None:
+    try:
+        assertion = models.ComplianceAssertion.objects.get(id=assertion_id)
+    except models.ComplianceAssertion.DoesNotExist:
+        logger.warning(
+            "ComplianceAssertion %s not found. Skipping recommendation task.",
+            assertion_id,
+        )
+        return None
 
-    # Only generate recommendations for failed assertions
     if assertion.result:
         return assertion_id
 
-    recommendation = ml.analyze_failed_assertion(
-        assertion=assertion.sql_query,
-        failure_result=str(assertion.result),
-    )
+    try:
+        recommendation = ml.analyze_failed_assertion(
+            assertion=assertion.sql_query,
+            failure_result=str(assertion.result),
+        )
+    except Exception as exc:
+        logger.exception(
+            "Failed to generate recommendation for assertion %s", assertion_id
+        )
+        raise exc
 
     assertion.recommendation = recommendation
     assertion.save(update_fields=["recommendation"])
