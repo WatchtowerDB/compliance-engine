@@ -24,7 +24,7 @@ COPY src src/
 COPY pyproject.toml uv.lock MANIFEST.in ./
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-  uv sync --no-install-project --frozen --active --group=ai --extra=models && \
+  uv sync --no-install-project --frozen --active --group=ai --extra=models --link-mode=hardlink && \
   python src/manage.py collectstatic --noinput && \
   uv pip install .
 
