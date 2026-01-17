@@ -6,12 +6,6 @@ from pathlib import Path
 from .models.download_model import download_model
 from .scripts.pci_compliance_checker import PCIComplianceChecker
 
-download_model(
-    "bartowski/Ministral-8B-Instruct-2410-GGUF",
-    "Ministral-8B-Instruct-2410-GGUF",
-    ["Ministral-8B-Instruct-2410-Q6_K_L.gguf"],
-)
-
 SCRIPT_DIR = Path(__file__).parent
 MODEL_PATH: Path = Path(
     os.getenv(
@@ -23,7 +17,16 @@ MODEL_PATH: Path = Path(
 CHROMA_DIR: Path = Path(
     os.getenv("WTCE_CHROMA_DIR", SCRIPT_DIR.parent.parent.parent / "data/chroma_db")
 )
-print(CHROMA_DIR)
+
+if not MODEL_PATH.exists():
+    # There already are guardrails within this function but container logic is a little hard to predict.
+    download_model(
+        "bartowski/Ministral-8B-Instruct-2410-GGUF",
+        "Ministral-8B-Instruct-2410-GGUF",
+        ["Ministral-8B-Instruct-2410-Q6_K_L.gguf"],
+    )
+
+
 # Example schema with multiple PCI-DSS violations
 """
     The violations:
