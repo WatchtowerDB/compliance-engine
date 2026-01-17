@@ -42,9 +42,23 @@ class ComplianceCheckSerializer(serializers.ModelSerializer):
     """
 
     framework = serializers.PrimaryKeyRelatedField(
-        queryset=ComplianceFramework.objects.all()
+        queryset=ComplianceFramework.objects.all(),
+        required=True,
+        error_messages={
+            "required": "framework_id is required.",
+            "does_not_exist": "Invalid framework_id.",
+            "incorrect_type": "Invalid framework_id type.",
+        },
     )
-    schema = serializers.PrimaryKeyRelatedField(queryset=ClientDBSchema.objects.all())
+    schema = serializers.PrimaryKeyRelatedField(
+        queryset=ClientDBSchema.objects.all(),
+        required=True,
+        error_messages={
+            "required": "schema_id is required.",
+            "does_not_exist": "Invalid schema_id.",
+            "incorrect_type": "Invalid schema_id type.",
+        },
+    )
     client_db = ClientDBSerializer(read_only=True)
 
     class Meta:
