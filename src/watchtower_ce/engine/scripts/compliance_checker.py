@@ -1,8 +1,10 @@
-#!/usr/bin/env python3
-
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
+from warnings import deprecated
+
+from yaspin import yaspin
+from yaspin.spinners import Spinners
 
 from .context_retriever import ContextRetriever
 from .llm_inference import LLMInference
@@ -10,16 +12,16 @@ from .llm_inference import LLMInference
 
 class ComplianceChecker(ABC):
     """
-    Abstract base class for RAG-powered compliance analysis systems.
+    Abstract base class for RAG-powered compliance analysis systems using assertions.
 
     This class provides a framework for building compliance checkers that use
     Retrieval Augmented Generation (RAG) to analyze schemas, configurations, or
     other artifacts against specific compliance standards (PCI-DSS, HIPAA, GDPR, etc.).
 
     The workflow:
-    1. Generate targeted compliance questions from the artifact being analyzed
-    2. Use vector search to retrieve relevant standard documentation
-    3. Perform LLM-powered analysis using the retrieved context
+    1. Generate SQL assertions to verify compliance (executed externally)
+    2. Analyze failed assertions using retrieved context
+    3. Provide specific remediation recommendations
 
     Subclasses must implement standard-specific prompt engineering and analysis logic.
 
@@ -39,8 +41,8 @@ class ComplianceChecker(ABC):
         retrieval_k: int = 4,
         context_window: int = 4096,
         n_gpu_layers: int = -1,
-        prompt_template: str = "[INST] {prompt} [/INST]",  # The ministral template
-        stop: str | list[str] | None = ["[INST]", "[/INST]"],  # The ministral stops
+        prompt_template: str = "[INST] {prompt} [/INST]",
+        stop: str | list[str] | None = ["[INST]", "[/INST]"],
     ) -> None:
         """
         Initialize the compliance checker with RAG components.
@@ -82,7 +84,7 @@ class ComplianceChecker(ABC):
         )
 
     @abstractmethod
-    def _build_query_generation_prompt(self, schema: str) -> str:
+    def _build_questions_prompt(self, schema: str) -> str:
         """
         Construct a prompt for generating compliance-specific questions.
 
@@ -103,15 +105,77 @@ class ComplianceChecker(ABC):
         pass
 
     @abstractmethod
+    def _build_assertions_prompt(self, context: str, schema: str) -> str:
+        """
+        Construct a prompt for generating SQL assertions to verify compliance.
+
+        This method should create a prompt that instructs the LLM to generate
+        executable SQL queries that check for compliance violations. Each assertion
+        should return rows that represent violations (empty results mean compliance).
+
+        The assertions will be executed by an external API or team against the actual database.
+
+        Args:
+            context (str):
+                Retrieved compliance documentation relevant to the schema.
+            schema (str):
+                The SQL schema to generate assertions for.
+
+        Returns:
+            str: A prompt instructing the LLM to generate a list of SQL assertion queries.
+
+        Note:
+            Each assertion should:
+            - Be a valid SQL SELECT query
+            - Return rows only when violations exist
+            - Include descriptive column aliases explaining the violation
+            - Be self-contained and executable against the schema
+        """
+        pass
+
+    @abstractmethod
+    def _build_assertion_analysis_prompt(
+        self, context: str, assertion: str, failure_result: str
+    ) -> str:
+        """
+        Construct a prompt for analyzing a failed assertion and providing remediation.
+
+        This method should create a prompt that helps the LLM understand why an
+        assertion failed and provide specific, actionable recommendations to fix
+        the compliance violation.
+
+        Args:
+            context (str):
+                Retrieved compliance documentation relevant to the failed assertion.
+            assertion (str):
+                The SQL assertion query that failed.
+            failure_result (str):
+                The result returned by the failed assertion (the violating rows/data).
+
+        Returns:
+            str: A prompt instructing the LLM to analyze the failure and provide
+                 specific remediation steps, including SQL fixes where applicable.
+
+        Note:
+            The prompt should guide the LLM to:
+            - Explain which compliance requirement was violated
+            - Reference specific clauses from the standard
+            - Provide concrete SQL statements to fix the issue
+            - Explain the security implications
+        """
+        pass
+
+    # TODO: Remove deprecated method after the new methods work
+    @deprecated(
+        "Use _build_assertions_prompt() and _build_assertion_analysis_prompt() instead."
+    )
+    @abstractmethod
     def _build_prompt(self, context: str, schema: str) -> str:
         """
-        Construct the main compliance analysis prompt.
+        [DEPRECATED] Construct the main compliance analysis prompt.
 
-        This method should create a comprehensive prompt that includes:
-        - The retrieved context from compliance documentation
-        - The artifact being analyzed
-        - Specific instructions for compliance assessment
-        - Expected output format
+        This method is being deprecated in favor of the assertion-based approach.
+        It remains for backward compatibility but should not be used in new code.
 
         Args:
             context (str):
@@ -124,6 +188,8 @@ class ComplianceChecker(ABC):
         """
         pass
 
+    # TODO: Remove deprecated method after the new methods work
+    @deprecated("Use generate_assertions() and analyze_failed_assertion() instead.")
     @abstractmethod
     def analyze(self, schema: str) -> str:
         """
@@ -133,15 +199,15 @@ class ComplianceChecker(ABC):
         implement the full analysis workflow:
         1. Generate compliance questions
         2. Retrieve relevant documentation
-        3. Perform analysis with the LLM
-        4. Return formatted results
+        3. Generate SQL assertions
+        4. Return assertions for external execution
 
         Args:
             schema (str):
                 The artifact to analyze (SQL schema, config, policy, etc.).
 
         Returns:
-            str: A formatted compliance analysis report.
+            str: The generated SQL assertions as a formatted string or JSON.
         """
         pass
 
@@ -167,6 +233,8 @@ class ComplianceChecker(ABC):
                 cleaned_response = cleaned_response[9:]
             elif cleaned_response.startswith("```py"):
                 cleaned_response = cleaned_response[5:]
+            elif cleaned_response.startswith("```sql"):
+                cleaned_response = cleaned_response[6:]
             elif cleaned_response.startswith("```"):
                 cleaned_response = cleaned_response[3:]
 
@@ -185,7 +253,7 @@ class ComplianceChecker(ABC):
 
         except (json.JSONDecodeError, ValueError) as e:
             print(f"[WARNING] Failed to parse response as JSON: {e}")
-            print(f"[WARNING] Raw response: {response}")
+            print(f"[WARNING] Raw response: {repr(response)}")
 
             # Fallback: extract items from text (one per line)
             lines = response.strip().split("\n")
@@ -230,13 +298,15 @@ class ComplianceChecker(ABC):
             The method expects JSON output from the LLM but has robust fallback
             handling for malformed responses, including stripping markdown code blocks.
         """
-        print("[INFO] Generating compliance questions from schema...")
-        prompt = self._build_query_generation_prompt(schema)
+        prompt = self._build_questions_prompt(schema)
 
-        # Use lower temperature for more consistent, focused question generation
-        response = self.llm.generate(
-            prompt, max_tokens=1024, temperature=0.3, stream=False
-        )
+        with yaspin(
+            Spinners.arc, text="[INFO] Generating compliance questions from schema..."
+        ):
+            # Use lower temperature for more consistent, focused question generation
+            response = self.llm.generate(
+                prompt, max_tokens=1024, temperature=0.3, stream=False
+            )
 
         return self._parse_list_response(response)
 
@@ -264,9 +334,126 @@ class ComplianceChecker(ABC):
             for context in self.context_retriever.context(question):
                 all_contexts.add(context.page_content)
 
-        combined_context = "\n\n".join(all_contexts)
+        combined_context = "\n\n--- Context chunks seperator ---\n\n".join(all_contexts)
+
         print("[INFO] Retrieved and combined all contexts.")
         return combined_context
+
+    def generate_assertions(self, schema: str) -> list[str]:
+        """
+        Generate SQL assertions to verify compliance.
+
+        This method implements the assertion generation workflow:
+        1. Generate targeted compliance questions from the schema
+        2. Retrieve relevant compliance documentation
+        3. Generate SQL assertions based on context and schema
+
+        Args:
+            schema (str):
+                The SQL database schema to generate assertions for.
+
+        Returns:
+            list[str]: A list of SQL assertion queries. Each query should return
+                      rows only when violations exist (empty = compliant).
+
+        Example:
+            >>> checker = PCIComplianceChecker(model_path, chroma_dir)
+            >>> assertions = checker.generate_assertions(schema)
+            >>> # Execute assertions externally
+            >>> for assertion in assertions:
+            ...     print(assertion)
+        """
+        questions = self._generate_compliance_questions(schema)
+        context = self._retrieve_context_for_questions(questions)
+
+        prompt = self._build_assertions_prompt(context, schema)
+
+        with yaspin(Spinners.arc, text="[INFO] Generating SQL assertions..."):
+            response = self.llm.generate(
+                prompt, max_tokens=2048, temperature=0.3, stream=False
+            )
+
+        assertions = self._parse_list_response(response, fallback_item_limit=10)
+        print(f"[INFO] Generated {len(assertions)} SQL assertions.")
+
+        return assertions
+
+    def analyze_failed_assertion(self, assertion: str, failure_result: str) -> str:
+        """
+        Analyze a failed assertion and provide remediation recommendations.
+
+        This method analyzes why a specific assertion failed and provides
+        actionable recommendations to fix the compliance violation.
+
+        Args:
+            assertion (str):
+                The SQL assertion query that failed.
+            failure_result (str):
+                The result returned by the failed assertion (violating rows/data).
+
+        Returns:
+            str: A detailed analysis containing:
+                 - Explanation of the compliance violation
+                 - Relevant standard clauses
+                 - Specific remediation steps
+                 - SQL fixes where applicable
+
+        Example:
+            >>> checker = PCIComplianceChecker(model_path, chroma_dir)
+            >>> assertion = "SELECT * FROM customers WHERE cvv IS NOT NULL"
+            >>> result = "id: 1, cvv: 123\\nid: 2, cvv: 456"
+            >>> analysis = checker.analyze_failed_assertion(assertion, result)
+            >>> print(analysis)
+        """
+        # Generate a question to retrieve relevant context for this specific violation
+        question = f"What are the compliance requirements related to: {assertion}"
+
+        print("[INFO] Retrieving context for failed assertion...")
+        context = self.context_retriever.retrieve(question, 4)
+
+        print("[INFO] Analyzing failed assertion...")
+        prompt = self._build_assertion_analysis_prompt(
+            context, assertion, failure_result
+        )
+
+        response = self.llm.generate(
+            prompt, max_tokens=2048, temperature=0.4, stream=True
+        )
+        print("[INFO] Analysis complete.")
+
+        return response
+
+    def analyze_all_failed_assertions(
+        self, failed_assertions: dict[str, str]
+    ) -> dict[str, str]:
+        """
+        Analyze multiple failed assertions and provide remediation for each.
+
+        Args:
+            failed_assertions (dict[str, str]):
+                Dictionary mapping assertion queries to their failure results.
+
+        Returns:
+            dict[str, str]: Dictionary mapping each assertion to its analysis.
+
+        Example:
+            >>> failed = {
+            ...     "SELECT * FROM customers WHERE cvv IS NOT NULL": "id: 1, cvv: 123",
+            ...     "SELECT * FROM customers WHERE LENGTH(credit_card_number) = 16": "id: 2, cc: 1234567890123456"
+            ... }
+            >>> analyses = checker.analyze_all_failed_assertions(failed)
+        """
+        analyses = {}
+        total = len(failed_assertions)
+
+        for i, (assertion, result) in enumerate(failed_assertions.items(), 1):
+            print(f"\n[INFO] Analyzing failed assertion {i}/{total}")
+            print(f"[INFO] Assertion: {assertion[:80]}...")
+
+            analysis = self.analyze_failed_assertion(assertion, result)
+            analyses[assertion] = analysis
+
+        return analyses
 
     def close(self):
         """
@@ -278,7 +465,7 @@ class ComplianceChecker(ABC):
         Example:
             >>> checker = PCIComplianceChecker(model_path, chroma_dir)
             >>> try:
-            ...     result = checker.analyze(schema)
+            ...     assertions = checker.generate_assertions(schema)
             ... finally:
             ...     checker.close()
         """

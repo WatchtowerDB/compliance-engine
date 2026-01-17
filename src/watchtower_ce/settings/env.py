@@ -1,4 +1,5 @@
 import os
+import typing as t
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -41,3 +42,10 @@ DATABASES: dict[str, dict[str, str | Path]] = {
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
+
+MODEL_PATH: t.Optional[Path] = (
+    Path(os.environ["WTCE_MODEL_PATH"]) if os.getenv("WTCE_MODEL_PATH") else None
+)
+CHROMA_DIR: t.Optional[Path] = (
+    Path(os.environ["WTCE_CHROMA_DIR"]) if os.getenv("WTCE_CHROMA_DIR") else None
+)
