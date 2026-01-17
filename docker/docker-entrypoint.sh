@@ -19,6 +19,11 @@ __STYLE_BRED='\e[31;1m'
 __STYLE_YELLOW='\e[33m'
 __STYLE_BYELLOW='\e[33;1m'
 
+__REQUIRED_ENV_VARS=(
+  WTCE_MODEL_PATH
+  WTCE_CHROMA_DIR
+)
+
 # --------------------
 # ░█░█░▀█▀░▀█▀░█░░░█▀▀
 # ░█░█░░█░░░█░░█░░░▀▀█
@@ -61,6 +66,22 @@ __log() {
   printf "${_level_color}%s, %s:${__STYLE_RESET}${_msg_color} %s${__STYLE_RESET}\n" "$(date '+%F %H:%M:%S')" "${_level}" "${_msg}" >&2
 }
 
+_check_dependencies() {
+  for var in "${__REQUIRED_ENV_VARS[@]}"; do
+    if [ -z "${!var:-}" ]; then
+      __errexit "Required environment variable is not defined: ${var}"
+    fi
+  done
+
+  if [ ! -f "${WTCE_MODEL_PATH:-}" ]; then
+    __errexit "Specified model path is not a regular file: ${WTCE_MODEL_PATH:-}"
+  fi
+
+  if [ ! -d "${WTCE_CHROMA_DIR:-}" ]; then
+    __errexit "WTCE_CHROMA_DIR not a valid directory: ${WTCE_CHROMA_DIR:-}"
+  fi
+}
+
 _migrate() {
   django-admin migrate
 }
@@ -97,6 +118,7 @@ _serve() {
 }
 
 _main() {
+  _check_dependencies
   _migrate
   _check_superuser
   _serve
