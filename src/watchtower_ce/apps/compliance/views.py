@@ -71,7 +71,7 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        check = serializer.save()
+        check = serializer.save(user=request.user)
 
         # Trigger Celery async task
         schedule_sql_assertion_pipeline.delay(

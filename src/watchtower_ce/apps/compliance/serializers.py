@@ -60,11 +60,12 @@ class ComplianceCheckSerializer(serializers.ModelSerializer):
         },
     )
     client_db = serializers.PrimaryKeyRelatedField(read_only=True)
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = ComplianceCheck
         fields = "__all__"
-        read_only_fields = ("date", "client_db")
+        read_only_fields = ("date", "client_db", "user")
 
     def create(self, validated_data):
         schema = validated_data["schema"]
