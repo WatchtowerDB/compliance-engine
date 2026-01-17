@@ -36,40 +36,12 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        schema_object = serializer.save()
-
-        framework_id = request.data.get("framework_id")
-        if not framework_id:
-            return Response(
-                {"detail": "framework_id is required to run compliance checks."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            framework = models.ComplianceFramework.objects.get(id=framework_id)
-        except models.ComplianceFramework.DoesNotExist:
-            return Response(
-                {"detail": "Invalid framework_id."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        models.ComplianceCheck.objects.create(
-            framework=framework,
-            client_db=schema_object.client_db,
-            schema=schema_object,
-        )
-
-        # Trigger Celery async pipeline
-        schedule_sql_assertion_pipeline.delay(
-            schema_id=schema_object.id,
-            client_db_id=schema_object.client_db.id,
-            framework_id=framework.id,
-        )
+        serializer.save()
 
         headers = self.get_success_headers(serializer.data)
         return Response(
             {
-                "message": "Schema uploaded successfully. Compliance assertions are being processed asynchronously.",
+                "message": "Schema uploaded successfully.",
                 "data": serializer.data,
             },
             status=status.HTTP_201_CREATED,
@@ -105,3 +77,46 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
     queryset: QuerySet = models.ComplianceCheck.objects.all()
     serializer_class: type[Serializer] = serializers.ComplianceCheckSerializer
     http_method_names: list[str] = ["get", "post", "head", "options"]
+
+    def create(self, request, *args, **kwargs):
+        framework_id = request.data.get("framework_id")
+        schema_id = request.data.get("schema_id")
+
+        if not framework_id or not schema_id:
+            return Response(
+                {"detail": "framework_id and schema_id are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            framework = models.ComplianceFramework.objects.get(id=framework_id)
+            schema = models.ClientDBSchema.objects.get(id=schema_id)
+        except (
+            models.ComplianceFramework.DoesNotExist,
+            models.ClientDBSchema.DoesNotExist,
+        ):
+            return Response(
+                {"detail": "Invalid framework_id or schema_id."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        check = models.ComplianceCheck.objects.create(
+            framework=framework,
+            client_db=schema.client_db,
+            schema=schema,
+        )
+
+        # Trigger Celery async pipeline
+        schedule_sql_assertion_pipeline.delay(
+            schema_id=schema.id,
+            client_db_id=schema.client_db.id,
+            framework_id=framework.id,
+        )
+
+        return Response(
+            {
+                "message": "Compliance check created. Assertions are processing.",
+                "id": check.id,
+            },
+            status=status.HTTP_201_CREATED,
+        )
