@@ -41,12 +41,11 @@ class ComplianceCheckSerializer(serializers.ModelSerializer):
     The client_db field is read-only and is set automatically from the schema.
     """
 
-    # Validate that framework is a valid foreign key
     framework = serializers.PrimaryKeyRelatedField(
         queryset=ComplianceFramework.objects.all()
     )
-    # Validate that schema is a valid foreign key
     schema = serializers.PrimaryKeyRelatedField(queryset=ClientDBSchema.objects.all())
+    client_db = ClientDBSerializer(read_only=True)
 
     class Meta:
         model = ComplianceCheck
@@ -54,10 +53,6 @@ class ComplianceCheckSerializer(serializers.ModelSerializer):
         read_only_fields = ("date", "client_db")
 
     def create(self, validated_data):
-        """
-        Override create method to automatically assign client_db from the schema.
-        Ensures users do not provide client_db manually.
-        """
         schema = validated_data["schema"]
         validated_data["client_db"] = schema.client_db
         return super().create(validated_data)

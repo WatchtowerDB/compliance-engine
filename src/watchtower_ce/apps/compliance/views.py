@@ -64,14 +64,28 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
     serializer_class: serializers.ComplianceCheckSerializer
     http_method_names: list[str] = ["get", "post", "head", "options"]
 
-    def perform_create(self, serializer):
+    def create(self, request, *args, **kwargs):
         """
-        Save the ComplianceCheck instance and trigger the Celery pipeline.
-        The serializer ensures that framework and schema are valid foreign keys.
+        1. Save the ComplianceCheck instance.
+        2. Trigger the Celery async pipeline.
+        3. Return a custom response with a message and created ID.
         """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
         check = serializer.save()
+
+        # Trigger Celery async task
         schedule_sql_assertion_pipeline.delay(
             schema_id=check.schema.id,
             client_db_id=check.client_db.id,
             framework_id=check.framework.id,
+        )
+
+        return Response(
+            {
+                "message": "Compliance check created. Assertions are processing.",
+                "id": check.id,
+            },
+            status=201,
         )
