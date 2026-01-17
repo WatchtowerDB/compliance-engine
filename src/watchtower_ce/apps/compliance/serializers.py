@@ -59,7 +59,7 @@ class ComplianceCheckSerializer(serializers.ModelSerializer):
             "incorrect_type": "Invalid schema_id type.",
         },
     )
-    client_db = ClientDBSerializer(read_only=True)
+    client_db = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = ComplianceCheck
