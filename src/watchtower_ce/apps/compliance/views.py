@@ -7,7 +7,7 @@ from .tasks import (
 
 from . import models, serializers
 from django_filters.rest_framework import DjangoFilterBackend
-from .filters import ComplianceAssertionFilter
+from .filters import ComplianceAssertionFilter, ClientDBSchemaFilter
 
 
 class ComplianceFrameworkViewSet(viewsets.ReadOnlyModelViewSet):
@@ -32,6 +32,8 @@ class ClientDBViewSet(viewsets.ModelViewSet):
 class ClientDBSchemaViewSet(viewsets.ModelViewSet):
     queryset: QuerySet = models.ClientDBSchema.objects.all()
     serializer_class = serializers.ClientDBSchemaSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ClientDBSchemaFilter
 
     # Disallow updates/deletes
     def update(self, request, *args, **kwargs):
