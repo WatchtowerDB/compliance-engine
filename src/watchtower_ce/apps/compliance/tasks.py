@@ -54,7 +54,14 @@ def execute_sql_assertion_task(assertion_id: int) -> int:
     """
     Execute a single SQL compliance assertion and store the result.
     """
-    assertion = models.ComplianceAssertion.objects.get(id=assertion_id)
+    try:
+        assertion = models.ComplianceAssertion.objects.get(id=assertion_id)
+    except models.ComplianceAssertion.DoesNotExist:
+        logger.warning(
+            "ComplianceAssertion %s not found. Skipping execution.",
+            assertion_id,
+        )
+        return assertion_id
 
     result = ml.execute_sql_assertion(
         assertion.client_db.connection_string,
@@ -68,7 +75,7 @@ def execute_sql_assertion_task(assertion_id: int) -> int:
 
 
 @shared_task
-def generate_compliance_recommendation_task(self, assertion_id: int) -> int | None:
+def generate_compliance_recommendation_task(assertion_id: int) -> int | None:
     try:
         assertion = models.ComplianceAssertion.objects.get(id=assertion_id)
     except models.ComplianceAssertion.DoesNotExist:
@@ -78,7 +85,7 @@ def generate_compliance_recommendation_task(self, assertion_id: int) -> int | No
         )
         return None
 
-    if assertion.result:
+    if assertion.result is not False:
         return assertion_id
 
     try:
