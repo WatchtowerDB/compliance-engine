@@ -10,7 +10,7 @@ from .tasks import (
 from . import models, serializers
 
 
-class ComplianceFrameworkViewSet(viewsets.ModelViewSe):
+class ComplianceFrameworkViewSet(viewsets.ReadOnlyModelViewSet):
     """
     This viewset provides read-only access to compliance framework records.
     """
@@ -53,7 +53,7 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        compliance_check = models.ComplianceCheck.objects.create(
+        models.ComplianceCheck.objects.create(
             framework=framework,
             client_db=schema_object.client_db,
             schema=schema_object,
@@ -70,8 +70,6 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
         return Response(
             {
                 "message": "Schema uploaded successfully. Compliance assertions are being processed asynchronously.",
-                "status": "PENDING",
-                "compliance_check_id": compliance_check.id,
                 "data": serializer.data,
             },
             status=status.HTTP_201_CREATED,
