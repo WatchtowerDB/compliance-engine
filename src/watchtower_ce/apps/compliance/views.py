@@ -6,6 +6,8 @@ from .tasks import (
 )
 
 from . import models, serializers
+from django_filters.rest_framework import DjangoFilterBackend
+from .filters import ComplianceAssertionFilter
 
 
 class ComplianceFrameworkViewSet(viewsets.ReadOnlyModelViewSet):
@@ -49,6 +51,8 @@ class ComplianceAssertionViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset: QuerySet = models.ComplianceAssertion.objects.all()
     serializer_class = serializers.ComplianceAssertionSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ComplianceAssertionFilter
 
 
 class ComplianceCheckViewSet(viewsets.ModelViewSet):
