@@ -4,6 +4,7 @@
     "SELECT * FROM operations.cardholder_data WHERE cvv IS NOT NULL",
     "SELECT * FROM operations.audit_logs WHERE event_timestamp IS NULL OR user_id IS NULL OR event_type IS NULL OR data_accessed IS NULL",
     "SELECT * FROM operations.users WHERE can_view_full_pan = true AND requires_full_pan = false OR access_approved = false",
+    "SELECT * FROM operations.transactions WHERE authorization_code IS NOT NULL AND response_code IS NOT NULL AND sad_data IS NOT NULL",
     "SELECT * FROM operations.cardholder_data WHERE card_number_masked IS NULL OR card_number_masked != card_number",
     "SELECT * FROM operations.transactions WHERE full_pan IS NOT NULL AND (card_number_masked IS NULL OR card_number_masked != full_pan)"
 ]
