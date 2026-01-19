@@ -1,6 +1,5 @@
 services:
   watchtower_ce:
-    container_name: wtce
     build:
       dockerfile: ./docker/Dockerfile
       context: ..
@@ -13,14 +12,12 @@ services:
 
   redis:
     image: redis:latest
-    container_name: redis
 
   celery:
-    container_name: celery
     build:
       dockerfile: ./docker/Dockerfile
       context: ..
-    entrypoint: celery -A project worker -l INFO
+    entrypoint: celery -A watchtower_ce worker -l INFO
     restart: always
     depends_on:
       - redis
