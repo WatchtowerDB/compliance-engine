@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict itFdgHMTAgzqa6reR7crJ5g4NwluOVNblRJ7USYjsWLZWwgbQ7Xr6n7aYkbEHSn
+\restrict 2s6Pxz2LsFFfhvbBj6a5cBBpiygKfBbZgvw6ml9NzLhZoRc0HdseGLCgp30PGhb
 
 -- Dumped from database version 15.15 (Debian 15.15-1.pgdg13+1)
 -- Dumped by pg_dump version 15.15 (Debian 15.15-1.pgdg13+1)
@@ -197,81 +197,6 @@ ALTER SEQUENCE operations.users_user_id_seq OWNED BY operations.users.user_id;
 
 
 --
--- Name: v_violation_1_unrestricted_pan_access; Type: VIEW; Schema: operations; Owner: myuser
---
-
-CREATE VIEW operations.v_violation_1_unrestricted_pan_access AS
- SELECT u.user_id,
-    u.username,
-    u.department,
-    u.job_title,
-    u.can_view_full_pan,
-    u.requires_full_pan AS business_need,
-    u.access_approved,
-    count(a.log_id) AS unauthorized_access_count,
-    max(a.event_timestamp) AS last_unauthorized_access,
-        CASE
-            WHEN ((u.can_view_full_pan = true) AND (u.requires_full_pan = false)) THEN 'VIOLATION: User has full PAN access without business need'::text
-            WHEN ((u.can_view_full_pan = true) AND (u.access_approved = false)) THEN 'VIOLATION: Full PAN access not approved'::text
-            ELSE 'COMPLIANT'::text
-        END AS violation_status
-   FROM (operations.users u
-     LEFT JOIN operations.audit_logs a ON ((((a.user_id)::text = (u.username)::text) AND (a.full_pan_viewed = true))))
-  WHERE ((u.can_view_full_pan = true) AND ((u.requires_full_pan = false) OR (u.access_approved = false)))
-  GROUP BY u.user_id, u.username, u.department, u.job_title, u.can_view_full_pan, u.requires_full_pan, u.access_approved;
-
-
-ALTER TABLE operations.v_violation_1_unrestricted_pan_access OWNER TO myuser;
-
---
--- Name: v_violation_2_sad_storage; Type: VIEW; Schema: operations; Owner: myuser
---
-
-CREATE VIEW operations.v_violation_2_sad_storage AS
- SELECT 'CVV Stored in Cardholder Data'::text AS violation_source,
-    cardholder_data.card_id AS record_id,
-    cardholder_data.customer_id,
-    cardholder_data.cardholder_name,
-    'VIOLATION: CVV/CVV2/CVC stored (forbidden SAD)'::text AS violation_type,
-    cardholder_data.created_at AS violation_date
-   FROM operations.cardholder_data
-  WHERE (cardholder_data.cvv IS NOT NULL)
-UNION ALL
- SELECT 'SAD in Transaction Logs'::text AS violation_source,
-    transactions.transaction_id AS record_id,
-    transactions.card_id AS customer_id,
-    transactions.processed_by_user AS cardholder_name,
-    'VIOLATION: Sensitive Authentication Data stored after authorization'::text AS violation_type,
-    transactions.transaction_date AS violation_date
-   FROM operations.transactions
-  WHERE ((transactions.sad_data IS NOT NULL) OR (transactions.full_pan IS NOT NULL));
-
-
-ALTER TABLE operations.v_violation_2_sad_storage OWNER TO myuser;
-
---
--- Name: v_violation_3_unmasked_pan; Type: VIEW; Schema: operations; Owner: myuser
---
-
-CREATE VIEW operations.v_violation_3_unmasked_pan AS
- SELECT cardholder_data.card_id,
-    cardholder_data.customer_id,
-    cardholder_data.cardholder_name,
-    cardholder_data.card_number,
-    cardholder_data.card_number_masked,
-        CASE
-            WHEN ((cardholder_data.card_number)::text ~ '^[0-9]{13,19}$'::text) THEN 'VIOLATION: Full PAN stored/displayed in clear text'::text
-            WHEN (((cardholder_data.card_number)::text !~~ '%*%'::text) AND (length((cardholder_data.card_number)::text) > 10)) THEN 'VIOLATION: PAN not properly masked'::text
-            ELSE 'COMPLIANT: PAN properly masked'::text
-        END AS violation_status,
-    cardholder_data.created_at
-   FROM operations.cardholder_data
-  WHERE (((cardholder_data.card_number)::text ~ '^[0-9]{13,19}$'::text) OR (((cardholder_data.card_number)::text !~~ '%*%'::text) AND (length((cardholder_data.card_number)::text) > 10)));
-
-
-ALTER TABLE operations.v_violation_3_unmasked_pan OWNER TO myuser;
-
---
 -- Name: audit_logs log_id; Type: DEFAULT; Schema: operations; Owner: myuser
 --
 
@@ -351,5 +276,5 @@ ALTER TABLE ONLY operations.transactions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict itFdgHMTAgzqa6reR7crJ5g4NwluOVNblRJ7USYjsWLZWwgbQ7Xr6n7aYkbEHSn
+\unrestrict 2s6Pxz2LsFFfhvbBj6a5cBBpiygKfBbZgvw6ml9NzLhZoRc0HdseGLCgp30PGhb
 
