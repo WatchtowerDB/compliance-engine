@@ -4,8 +4,8 @@ import sqlite3
 from typing import List, Sequence, Any, Optional
 from urllib.parse import urlparse
 import logging
-from settings.env import MODEL_PATH, CHROMA_DIR
-from engine.scripts.pci_compliance_checker import PCIComplianceChecker
+from .settings.env import MODEL_PATH, CHROMA_DIR
+from .engine.scripts.pci_compliance_checker import PCIComplianceChecker
 
 logger = logging.getLogger(__name__)
 
@@ -24,21 +24,24 @@ def get_pci_checker() -> PCIComplianceChecker:
     - Checks the instance again inside the lock to prevent race conditions.
     """
     global _PCI_CHECKER
-    
+
     if _PCI_CHECKER is None:
         with _CHECKER_LOCK:
             if _PCI_CHECKER is None:
                 _validate_config()
-                
-                logger.info(f"Initializing PCIComplianceChecker (Model: {MODEL_PATH.name})...")
+                model_label = getattr(MODEL_PATH, "name", str(MODEL_PATH))
+                logger.info(
+                    f"Initializing PCIComplianceChecker (Model: {model_label})..."
+                )
                 _PCI_CHECKER = PCIComplianceChecker(
                     model_path=MODEL_PATH,
                     chroma_dir=CHROMA_DIR,
-                    collection_name="PCI-DSS-v4.0.1"
+                    collection_name="PCI-DSS-v4.0.1",
                 )
                 logger.info("PCIComplianceChecker initialized successfully.")
-        
+
     return _PCI_CHECKER
+
 
 def _validate_config() -> None:
     """Ensure environment paths are valid before loading model."""
@@ -48,9 +51,12 @@ def _validate_config() -> None:
         raise ValueError(error_msg)
 
     if not CHROMA_DIR or not CHROMA_DIR.exists():
-        error_msg = f"ChromaDB path invalid: {CHROMA_DIR}. Check WTCE_CHROMA_DIR in env."
+        error_msg = (
+            f"ChromaDB path invalid: {CHROMA_DIR}. Check WTCE_CHROMA_DIR in env."
+        )
         logger.error(error_msg)
         raise ValueError(error_msg)
+
 
 def generate_assertions(schema: str) -> List[str]:
     """Generate SQL compliance assertions from schema metadata.
@@ -73,9 +79,9 @@ def generate_assertions(schema: str) -> List[str]:
 
         checker = get_pci_checker()
         assertions = checker.generate_assertions(schema_str)
-        
+
         return assertions
-        
+
     except Exception as e:
         logger.exception("Failed to generate assertions via ML engine: %s", e)
         return []
@@ -102,7 +108,7 @@ def execute_sql_assertion(connection_string: str, sql_query: str) -> bool:
 
     try:
         db_scheme = _detect_scheme(connection_string)
-        
+
         if db_scheme in ("postgres", "postgresql"):
             return _execute_psql(connection_string, sql_query)
         elif db_scheme == "sqlite":
@@ -110,7 +116,7 @@ def execute_sql_assertion(connection_string: str, sql_query: str) -> bool:
         else:
             logger.error("Unsupported database scheme: %s", db_scheme)
             return False
-            
+
     except Exception as exc:
         logger.exception("Execution Error [%s]: %s", db_scheme, exc)
         return False
@@ -132,11 +138,11 @@ def analyze_failed_assertion(assertion: str, failure_result: str) -> str:
 
     try:
         checker = get_pci_checker()
-        
+
         recommendation = checker.analyze_failed_assertion(assertion, failure_result)
-        
+
         return recommendation
-        
+
     except Exception as e:
         logger.exception("ML Engine Failure (analyze_failed_assertion): %s", e)
         return "Analysis unavailable. Please review the SQL violation manually."
@@ -145,7 +151,7 @@ def analyze_failed_assertion(assertion: str, failure_result: str) -> str:
 def _execute_psql(conn_str: str, sql_query: str) -> bool:
     """
     Executes a query against a PostgreSQL database.
-    
+
     Workflow:
     - Connect -> Cursor -> Execute -> Fetch -> Close (handled by context managers).
     - If query returns rows, check if they indicate a pass/fail.
@@ -171,49 +177,52 @@ def _execute_sqlite(conn_str: str, sql_query: str) -> bool:
 
     Implementation Details:
     - Handles 'sqlite:///path' vs 'path' formats by stripping the prefix.
-    - SQLite needs strict read-only mode if possible, but standard connect is 
+    - SQLite needs strict read-only mode if possible, but standard connect is
       acceptable provided we enforce SELECT-only in the calling function.
     """
     db_path = conn_str.removeprefix("sqlite:///")
-    
+
     try:
         with sqlite3.connect(db_path) as conn:
-            cur = conn.cursor()
-            cur.execute(sql_query)
-            rows = cur.fetchall()
-            return _passes(rows)
+            with conn.cursor() as cur:
+                cur.execute(sql_query)
+                rows = cur.fetchall()
+                return _passes(rows)
     except sqlite3.Error as e:
         logger.error("SQLite Operational Error: %s", e)
         return False
-    
-    
+
+
 def _detect_scheme(conn_str: str) -> str:
     """
     Detect database type from connection string.
-    
+
     Logic:
-    - Checks for SQLite extensions or substrings.
-    - Uses urlparse for standard schemes.
+    - Prefer explicit URL schemes via urlparse.
+    - Only use SQLite file extension heuristics when no scheme is present and the
+      string does not look like a URL.
     - Includes fallback logic for Psycopg DSNs (e.g., 'host=localhost user=admin').
     """
-    if "sqlite" in conn_str.lower() or conn_str.endswith((".db", ".sqlite", ".sqlite3")):
-        return "sqlite"
-        
-    parsed = urlparse(conn_str)
+    normalized = conn_str.strip()
+    lower = normalized.lower()
+    parsed = urlparse(normalized)
     if parsed.scheme:
+        if parsed.scheme in ("sqlite", "sqlite3"):
+            return "sqlite"
         return parsed.scheme
-        
+
+    if "://" not in normalized and lower.endswith((".db", ".sqlite", ".sqlite3")):
+        return "sqlite"
+
     if any(k in conn_str for k in ("host=", "dbname=", "user=")):
         return "postgresql"
-        
-    return "unknown"
 
 
 def _passes(rows: Sequence[Sequence[Any]]) -> bool:
     """
-    Evaluate assertion result. 
-    
-    Convention: 
+    Evaluate assertion result.
+
+    Convention:
     - Empty result set = PASS (No violations found).
     - Rows returned = FAIL (Violations found).
     - Single row with 0/False = PASS (Specifically handles 'SELECT COUNT(*)' cases).
@@ -221,9 +230,21 @@ def _passes(rows: Sequence[Sequence[Any]]) -> bool:
     """
     if not rows:
         return True
-        
+
+    if len(rows) > 1:
+        return False
+
     first_row = rows[0]
-    if len(first_row) == 1 and isinstance(first_row[0], (int, float)):
-        return first_row[0] == 0
-        
+
+    if len(first_row) != 1:
+        return False
+
+    val = first_row[0]
+
+    if isinstance(val, bool):
+        return val is False
+
+    if isinstance(val, (int, float)):
+        return val == 0
+
     return False
