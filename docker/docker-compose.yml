@@ -1,0 +1,27 @@
+services:
+  watchtower_ce:
+    container_name: wtce
+    build:
+      dockerfile: ./docker/Dockerfile
+      context: ..
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../models:/data/models:ro
+    environment:
+      WTCE_MODEL_PATH: /data/models/model.gguf
+
+  redis:
+    image: redis:latest
+    container_name: redis
+
+  celery:
+    container_name: celery
+    build:
+      dockerfile: ./docker/Dockerfile
+      context: ..
+    entrypoint: celery -A project worker -l INFO
+    restart: always
+    depends_on:
+      - redis
+    runtime: nvidia

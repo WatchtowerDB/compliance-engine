@@ -1,61 +1,31 @@
-import threading
 import psycopg
 import sqlite3
-from typing import List, Sequence, Any, Optional
-from urllib.parse import urlparse
 import logging
-from .settings.env import MODEL_PATH, CHROMA_DIR
-from .engine.scripts.pci_compliance_checker import PCIComplianceChecker
+import os
+from typing import List, Sequence, Any
+from urllib.parse import urlparse
+from pathlib import Path
+from ...engine.scripts.pci_compliance_checker import PCIComplianceChecker
 
 logger = logging.getLogger(__name__)
 
-_PCI_CHECKER: Optional[PCIComplianceChecker] = None
-_CHECKER_LOCK = threading.Lock()
+SCRIPT_DIR = Path(__file__).parent.parent
 
+MODEL_PATH: Path = Path(
+    os.getenv(
+        "WTCE_MODEL_PATH",
+        SCRIPT_DIR.parent
+        / "engine/models/base/Ministral-8B-Instruct-2410-GGUF/Ministral-8B-Instruct-2410-Q6_K_L.gguf",
+    )
+)
 
-def get_pci_checker() -> PCIComplianceChecker:
-    """
-    Thread-safe singleton accessor for the PCIComplianceChecker.
-    Lazily initializes the model on first use.
+CHROMA_DIR: Path = Path(
+    os.getenv("WTCE_CHROMA_DIR", SCRIPT_DIR.parent.parent.parent / "data/chroma_db")
+)
 
-    Implementation Details:
-    - Uses a Double-checked locking pattern for performance to ensure thread safety
-      without locking on every access once initialized.
-    - Checks the instance again inside the lock to prevent race conditions.
-    """
-    global _PCI_CHECKER
-
-    if _PCI_CHECKER is None:
-        with _CHECKER_LOCK:
-            if _PCI_CHECKER is None:
-                _validate_config()
-                model_label = getattr(MODEL_PATH, "name", str(MODEL_PATH))
-                logger.info(
-                    f"Initializing PCIComplianceChecker (Model: {model_label})..."
-                )
-                _PCI_CHECKER = PCIComplianceChecker(
-                    model_path=MODEL_PATH,
-                    chroma_dir=CHROMA_DIR,
-                    collection_name="PCI-DSS-v4.0.1",
-                )
-                logger.info("PCIComplianceChecker initialized successfully.")
-
-    return _PCI_CHECKER
-
-
-def _validate_config() -> None:
-    """Ensure environment paths are valid before loading model."""
-    if not MODEL_PATH or not MODEL_PATH.exists():
-        error_msg = f"Model path invalid: {MODEL_PATH}. Check WTCE_MODEL_PATH in env."
-        logger.error(error_msg)
-        raise ValueError(error_msg)
-
-    if not CHROMA_DIR or not CHROMA_DIR.exists():
-        error_msg = (
-            f"ChromaDB path invalid: {CHROMA_DIR}. Check WTCE_CHROMA_DIR in env."
-        )
-        logger.error(error_msg)
-        raise ValueError(error_msg)
+_PCI_CHECKER = PCIComplianceChecker(
+    model_path=MODEL_PATH, chroma_dir=CHROMA_DIR, collection_name="PCI-DSS-v4.0.1"
+)
 
 
 def generate_assertions(schema: str) -> List[str]:
@@ -77,8 +47,7 @@ def generate_assertions(schema: str) -> List[str]:
         if not schema_str.strip():
             return []
 
-        checker = get_pci_checker()
-        assertions = checker.generate_assertions(schema_str)
+        assertions = _PCI_CHECKER.generate_assertions(schema_str)
 
         return assertions
 
@@ -137,9 +106,9 @@ def analyze_failed_assertion(assertion: str, failure_result: str) -> str:
     """
 
     try:
-        checker = get_pci_checker()
-
-        recommendation = checker.analyze_failed_assertion(assertion, failure_result)
+        recommendation = _PCI_CHECKER.analyze_failed_assertion(
+            assertion, failure_result
+        )
 
         return recommendation
 
