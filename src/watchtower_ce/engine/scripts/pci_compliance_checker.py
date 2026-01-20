@@ -1,6 +1,8 @@
 import textwrap
+import threading
 from pathlib import Path
 from warnings import deprecated
+from typing import Optional
 
 from .compliance_checker import ComplianceChecker
 
@@ -25,6 +27,20 @@ class PCIComplianceChecker(ComplianceChecker):
         standard (str):
             The compliance standard being checked ("PCI-DSS v4.0.1").
     """
+
+    _instance: Optional["PCIComplianceChecker"] = None
+    _lock: threading.Lock = threading.Lock()
+
+    def __new__(cls, *args, **kwargs):
+        """
+        Ensure only one instance exists (Singleton Pattern).
+        Uses double-checked locking for thread safety.
+        """
+        if not cls._instance:
+            with cls._lock:
+                if not cls._instance:
+                    cls._instance = super(PCIComplianceChecker, cls).__new__(cls)
+        return cls._instance
 
     def __init__(
         self,
