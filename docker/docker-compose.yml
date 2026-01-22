@@ -7,8 +7,10 @@ services:
       - "8000:8000"
     volumes:
       - ../models:/data/models:ro
+      - ../src:/app/src
     environment:
       WTCE_MODEL_PATH: /data/models/model.gguf
+      PYTHONPATH: /app/src
 
   redis:
     image: redis:latest
@@ -21,4 +23,21 @@ services:
     restart: always
     depends_on:
       - redis
+    volumes:
+      - ../src:/app/src
+    environment:
+      PYTHONPATH: /app/src
     runtime: nvidia
+
+  db:
+    image: postgres:latest
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    restart: always
+    environment:
+      POSTGRES_DB: watchtower_ce
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password
+
+volumes:
+  postgres_data:

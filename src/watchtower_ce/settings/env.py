@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv(os.getenv("DJANGO_ENV_FILEPATH", BASE_DIR / "env/dev.env"))
+load_dotenv(os.getenv("DJANGO_ENV_FILEPATH", BASE_DIR / "env/prod.env"))
 
 DEBUG: bool = bool(os.getenv("DJANGO_DEBUG"))
 
