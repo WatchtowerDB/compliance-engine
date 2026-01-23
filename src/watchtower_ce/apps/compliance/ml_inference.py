@@ -21,9 +21,11 @@ MODEL_PATH: Path = Path(
 
 CHROMA_DIR: Path = Path(os.getenv("WTCE_CHROMA_DIR", SCRIPT_DIR / "data/chroma_db"))
 
-_PCI_CHECKER = PCIComplianceChecker(
-    model_path=MODEL_PATH, chroma_dir=CHROMA_DIR, collection_name="PCI-DSS-v4.0.1"
-)
+
+def get_pci_checker_instance() -> PCIComplianceChecker:
+    return PCIComplianceChecker(
+        model_path=MODEL_PATH, chroma_dir=CHROMA_DIR, collection_name="PCI-DSS-v4.0.1"
+    )
 
 
 def generate_assertions(schema: str) -> List[str]:
@@ -45,7 +47,7 @@ def generate_assertions(schema: str) -> List[str]:
         if not schema_str.strip():
             return []
 
-        assertions = _PCI_CHECKER.generate_assertions(schema_str)
+        assertions = get_pci_checker_instance().generate_assertions(schema_str)
 
         return assertions
 
@@ -104,7 +106,7 @@ def analyze_failed_assertion(assertion: str, failure_result: str) -> str:
     """
 
     try:
-        recommendation = _PCI_CHECKER.analyze_failed_assertion(
+        recommendation = get_pci_checker_instance().analyze_failed_assertion(
             assertion, failure_result
         )
 
