@@ -1,0 +1,47 @@
+@baseURL = http://localhost:8000
+@rootURL = http://localhost:8000/api
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY5MTc1ODM0LCJpYXQiOjE3NjkxNzQwMzQsImp0aSI6IjQzMWI4MjY2ZGM1ZDRkMzhhZjc2OTM5ODRhNDQ4MmFmIiwidXNlcl9pZCI6IjEifQ.5_YUStvwTiQ7iMJMUJJIsZ-gSSOza0QrumkBIF04ouM
+
+### Before starting go to /admin
+# user: admin
+# pass: admin
+# go to compliance frameworks +add
+# insert any record with dummy data
+# to insure that framework with id=1 exist
+
+### to get TOKEN and copy past it to var @token above
+POST {{baseURL}}/auth/
+Content-Type: application/json
+
+{ "username": "admin", "password": "admin" }
+
+### IMPORTANT: THE PORT OF SERVER DB IS 5432, SO MAKE SURE TO PORT FORWARD YOUR clien_test_db TO 5433:5432
+### IMPORTANT: MUST USE host.docker.internal for HOST IN CONNECTION STRING
+POST {{rootURL}}/compliance/clientdb/
+Content-Type: application/json 
+Authorization: Bearer {{token}}
+
+{ "name": "Production Payment DB", "connection_string": "postgresql://myuser:mypassword@host.docker.internal:5433/mydatabase", "description": "Main database storing customer transaction data" }
+
+### Upload schema
+POST {{rootURL}}/compliance/clientdbschema/
+Content-Type: application/json 
+Authorization: Bearer {{token}}
+
+{
+  "client_db": 1,
+  "schema_json": "--\n-- PostgreSQL database dump\n--\n\n\\\\restrict cYA0jbQMIZLoX0Q8Twzub0kYJ0PbBJhOTg2tA45FeBx2CqwXJ2drFHxqI6Ox3XN\n\n-- Dumped from database version 15.15 (Debian 15.15-1.pgdg13+1)\n-- Dumped by pg_dump version 15.15 (Debian 15.15-1.pgdg13+1)\n\nSET statement_timeout = 0;\nSET lock_timeout = 0;\nSET idle_in_transaction_session_timeout = 0;\nSET client_encoding = 'UTF8';\nSET standard_conforming_strings = on;\nSELECT pg_catalog.set_config('search_path', '', false);\nSET check_function_bodies = false;\nSET xmloption = content;\nSET client_min_messages = warning;\nSET row_security = off;\n\n--\n-- Name: operations; Type: SCHEMA; Schema: -; Owner: myuser\n--\n\nCREATE SCHEMA operations;\n\n\nALTER SCHEMA operations OWNER TO myuser;\n\nSET default_tablespace = '';\n\nSET default_table_access_method = heap;\n\n--\n-- Name: audit_logs; Type: TABLE; Schema: operations; Owner: myuser\n--\n\nCREATE TABLE operations.audit_logs (\n    log_id integer NOT NULL,\n    event_timestamp timestamp without time zone DEFAULT CURRENT_TIMESTAMP,\n    user_id character varying(50),\n    event_type character varying(50),\n    event_description text,\n    data_accessed character varying(100),\n    full_pan_viewed boolean DEFAULT false,\n    card_id integer,\n    source_ip character varying(45),\n    success boolean DEFAULT true\n);\n\n\nALTER TABLE operations.audit_logs OWNER TO myuser;\n\n--\n-- Name: audit_logs_log_id_seq; Type: SEQUENCE; Schema: operations; Owner: myuser\n--\n\nCREATE SEQUENCE operations.audit_logs_log_id_seq\n    AS integer\n    START WITH 1\n    INCREMENT BY 1\n    NO MINVALUE\n    NO MAXVALUE\n    CACHE 1;\n\n\nALTER TABLE operations.audit_logs_log_id_seq OWNER TO myuser;\n\n--\n-- Name: audit_logs_log_id_seq; Type: SEQUENCE OWNED BY; Schema: operations; Owner: myuser\n--\n\nALTER SEQUENCE operations.audit_logs_log_id_seq OWNED BY operations.audit_logs.log_id;\n\n\n--\n-- Name: cardholder_data; Type: TABLE; Schema: operations; Owner: myuser\n--\n\nCREATE TABLE operations.cardholder_data (\n    card_id integer NOT NULL,\n    customer_id integer NOT NULL,\n    cardholder_name character varying(100),\n    card_number character varying(50) NOT NULL,\n    card_number_masked character varying(50),\n    expiry_date character varying(7),\n    cvv character varying(4),\n    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP\n);\n\n\nALTER TABLE operations.cardholder_data OWNER TO myuser;\n\n--\n-- Name: cardholder_data_card_id_seq; Type: SEQUENCE; Schema: operations; Owner: myuser\n--\n\nCREATE SEQUENCE operations.cardholder_data_card_id_seq\n    AS integer\n    START WITH 1\n    INCREMENT BY 1\n    NO MINVALUE\n    NO MAXVALUE\n    CACHE 1;\n\n\nALTER TABLE operations.cardholder_data_card_id_seq OWNER TO myuser;\n\n--\n-- Name: cardholder_data_card_id_seq; Type: SEQUENCE OWNED BY; Schema: operations; Owner: myuser\n--\n\nALTER SEQUENCE operations.cardholder_data_card_id_seq OWNED BY operations.cardholder_data.card_id;\n\n\n--\n-- Name: transactions; Type: TABLE; Schema: operations; Owner: myuser\n--\n\nCREATE TABLE operations.transactions (\n    transaction_id integer NOT NULL,\n    card_id integer,\n    merchant_id integer NOT NULL,\n    amount numeric(10,2) NOT NULL,\n    full_pan character varying(20),\n    sad_data text,\n    authorization_code character varying(20),\n    response_code character varying(5),\n    transaction_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,\n    processed_by_user character varying(50)\n);\n\n\nALTER TABLE operations.transactions OWNER TO myuser;\n\n--\n-- Name: transactions_transaction_id_seq; Type: SEQUENCE; Schema: operations; Owner: myuser\n--\n\nCREATE SEQUENCE operations.transactions_transaction_id_seq\n    AS integer\n    START WITH 1\n    INCREMENT BY 1\n    NO MINVALUE\n    NO MAXVALUE\n    CACHE 1;\n\n\nALTER TABLE operations.transactions_transaction_id_seq OWNER TO myuser;\n\n--\n-- Name: transactions_transaction_id_seq; Type: SEQUENCE OWNED BY; Schema: operations; Owner: myuser\n--\n\nALTER SEQUENCE operations.transactions_transaction_id_seq OWNED BY operations.transactions.transaction_id;\n\n\n--\n-- Name: users; Type: TABLE; Schema: operations; Owner: myuser\n--\n\nCREATE TABLE operations.users (\n    user_id integer NOT NULL,\n    username character varying(50) NOT NULL,\n    email character varying(100),\n    department character varying(50),\n    job_title character varying(100),\n    can_view_full_pan boolean DEFAULT false,\n    requires_full_pan boolean DEFAULT false,\n    access_approved boolean DEFAULT false,\n    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP\n);\n\n\nALTER TABLE operations.users OWNER TO myuser;\n\n--\n-- Name: users_user_id_seq; Type: SEQUENCE; Schema: operations; Owner: myuser\n--\n\nCREATE SEQUENCE operations.users_user_id_seq\n    AS integer\n    START WITH 1\n    INCREMENT BY 1\n    NO MINVALUE\n    NO MAXVALUE\n    CACHE 1;\n\n\nALTER TABLE operations.users_user_id_seq OWNER TO myuser;\n\n--\n-- Name: users_user_id_seq; Type: SEQUENCE OWNED BY; Schema: operations; Owner: myuser\n--\n\nALTER SEQUENCE operations.users_user_id_seq OWNED BY operations.users.user_id;\n\n\n--\n-- Name: audit_logs log_id; Type: DEFAULT; Schema: operations; Owner: myuser\n--\n\nALTER TABLE ONLY operations.audit_logs ALTER COLUMN log_id SET DEFAULT nextval('operations.audit_logs_log_id_seq'::regclass);\n\n\n--\n-- Name: cardholder_data card_id; Type: DEFAULT; Schema: operations; Owner: myuser\n--\n\nALTER TABLE ONLY operations.cardholder_data ALTER COLUMN card_id SET DEFAULT nextval('operations.cardholder_data_card_id_seq'::regclass);\n\n\n--\n-- Name: transactions transaction_id; Type: DEFAULT; Schema: operations; Owner: myuser\n--\n\nALTER TABLE ONLY operations.transactions ALTER COLUMN transaction_id SET DEFAULT nextval('operations.transactions_transaction_id_seq'::regclass);\n\n\n--\n-- Name: users user_id; Type: DEFAULT; Schema: operations; Owner: myuser\n--\n\nALTER TABLE ONLY operations.users ALTER COLUMN user_id SET DEFAULT nextval('operations.users_user_id_seq'::regclass);\n\n\n--\n-- Name: audit_logs audit_logs_pkey; Type: CONSTRAINT; Schema: operations; Owner: myuser\n--\n\nALTER TABLE ONLY operations.audit_logs ADD CONSTRAINT audit_logs_pkey PRIMARY KEY (log_id);\n\n\n--\n-- Name: cardholder_data cardholder_data_pkey; Type: CONSTRAINT; Schema: operations; Owner: myuser\n--\n\nALTER TABLE ONLY operations.cardholder_data ADD CONSTRAINT cardholder_data_pkey PRIMARY KEY (card_id);\n\n\n--\n-- Name: transactions transactions_pkey; Type: CONSTRAINT; Schema: operations; Owner: myuser\n--\n\nALTER TABLE ONLY operations.transactions ADD CONSTRAINT transactions_pkey PRIMARY KEY (transaction_id);\n\n\n--\n-- Name: users users_pkey; Type: CONSTRAINT; Schema: operations; Owner: myuser\n--\n\nALTER TABLE ONLY operations.users ADD CONSTRAINT users_pkey PRIMARY KEY (user_id);\n\n\n--\n-- Name: users users_username_key; Type: CONSTRAINT; Schema: operations; Owner: myuser\n--\n\nALTER TABLE ONLY operations.users ADD CONSTRAINT users_username_key UNIQUE (username);\n\n\n--\n-- Name: transactions transactions_card_id_fkey; Type: FK CONSTRAINT; Schema: operations; Owner: myuser\n--\n\nALTER TABLE ONLY operations.transactions ADD CONSTRAINT transactions_card_id_fkey FOREIGN KEY (card_id) REFERENCES operations.cardholder_data(card_id);\n\n\n--\n-- PostgreSQL database dump complete\n--\n\n\\\\unrestrict cYA0jbQMIZLoX0Q8Twzub0kYJ0PbBJhOTg2tA45FeBx2CqwXJ2drFHxqI6Ox3XN"
+}
+
+### start pipeline 
+POST {{rootURL}}/compliance/checks/
+Content-Type: application/json 
+Authorization: Bearer {{token}}
+
+{ "framework": 1, "schema": 3 }
+
+### check it the pipeline is finished and what are the results
+GET {{rootURL}}/compliance/assertions/
+Content-Type: application/json 
+Authorization: Bearer {{token}}
+
