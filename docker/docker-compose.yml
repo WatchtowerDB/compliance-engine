@@ -6,10 +6,10 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ../models:/data/models:ro
+      - ../models/base/Ministral-8B-Instruct-2410-GGUF:/data/models:ro
       - ../src:/app/src
     environment:
-      WTCE_MODEL_PATH: /data/models/model.gguf
+      WTCE_MODEL_PATH: /data/models/Ministral-8B-Instruct-2410-Q6_K_L.gguf
       PYTHONPATH: /app/src
 
   redis:
@@ -24,8 +24,10 @@ services:
     depends_on:
       - redis
     volumes:
+      - ../models/base/Ministral-8B-Instruct-2410-GGUF:/data/models:ro
       - ../src:/app/src
     environment:
+      WTCE_MODEL_PATH: /data/models/Ministral-8B-Instruct-2410-Q6_K_L.gguf
       PYTHONPATH: /app/src
     runtime: nvidia
 
