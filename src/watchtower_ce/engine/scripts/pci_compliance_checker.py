@@ -1,8 +1,8 @@
 import textwrap
 import threading
 from pathlib import Path
-from warnings import deprecated
 from typing import Optional
+from warnings import deprecated
 
 from .compliance_checker import ComplianceChecker
 
@@ -71,6 +71,9 @@ class PCIComplianceChecker(ComplianceChecker):
                 GPU layer offloading. `-1` for all layers (recommended).
                 Defaults to `-1`.
         """
+        if hasattr(self, "_initialized") and self._initialized:
+            return
+
         super().__init__(
             model_path=model_path,
             chroma_dir=chroma_dir,
@@ -80,6 +83,7 @@ class PCIComplianceChecker(ComplianceChecker):
             n_gpu_layers=n_gpu_layers,
         )
         self.standard = "PCI-DSS v4.0.1"
+        self._initialized: bool = True
 
     def _build_questions_prompt(self, schema: str) -> str:
         """
