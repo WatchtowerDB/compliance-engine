@@ -11,6 +11,8 @@ services:
     environment:
       WTCE_MODEL_PATH: /data/models/Ministral-8B-Instruct-2410-Q6_K_L.gguf
       PYTHONPATH: /app/src
+    runtime: nvidia
+    gpus: all
 
   redis:
     image: redis:latest
@@ -30,6 +32,7 @@ services:
       WTCE_MODEL_PATH: /data/models/Ministral-8B-Instruct-2410-Q6_K_L.gguf
       PYTHONPATH: /app/src
     runtime: nvidia
+    gpus: all
 
   db:
     image: postgres:latest
