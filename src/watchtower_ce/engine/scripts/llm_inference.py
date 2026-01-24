@@ -1,9 +1,10 @@
+import logging
 from pathlib import Path
 from typing import Iterator
 
 from llama_cpp import CreateCompletionStreamResponse, Llama
-from yaspin import yaspin
-from yaspin.spinners import Spinners
+
+logger = logging.getLogger(__name__)
 
 
 class LLMInference:
@@ -66,14 +67,14 @@ class LLMInference:
         self.stop = stop
         self.model: Llama
 
-        with yaspin(Spinners.arc, text="[INFO] Loading GGUF model..."):
-            self.model = Llama(
-                model_path=str(self.model_path),
-                n_gpu_layers=n_gpu_layers,
-                n_ctx=context_window,
-                verbose=False,
-            )
-        print(f"[INFO] Successfully loaded model from {self.model_path.name}")
+        logger.info('Loading model from "%s"', self.model_path.name)
+        self.model = Llama(
+            model_path=str(self.model_path),
+            n_gpu_layers=n_gpu_layers,
+            n_ctx=context_window,
+            verbose=False,
+        )
+        logger.info('Successfully loaded model from "%s"', self.model_path.name)
 
     def stream_chunks(
         self, prompt: str, max_tokens: int = 1024, temperature: float = 0.4

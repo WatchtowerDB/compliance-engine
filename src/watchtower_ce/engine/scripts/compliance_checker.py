@@ -1,13 +1,13 @@
 import json
+import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 from warnings import deprecated
 
-from yaspin import yaspin
-from yaspin.spinners import Spinners
-
 from .context_retriever import ContextRetriever
 from .llm_inference import LLMInference
+
+logger = logging.getLogger(__name__)
 
 
 class ComplianceChecker(ABC):
@@ -246,14 +246,14 @@ class ComplianceChecker(ABC):
             items = json.loads(cleaned_response)
 
             if not isinstance(items, list):
-                raise ValueError("[ERROR] Response is not a list.")
+                raise ValueError("Response is not a valid list.")
 
-            print(f"[INFO] Successfully parsed {len(items)} items from JSON.")
+            logging.debug("Successfully parsed %s items from JSON", len(items))
             return items
 
         except (json.JSONDecodeError, ValueError) as e:
-            print(f"[WARNING] Failed to parse response as JSON: {e}")
-            print(f"[WARNING] Raw response: {repr(response)}")
+            logging.warning("Failed to parse response as JSON: %s", e)
+            logging.warning("Raw response: %s", repr(response))
 
             # Fallback: extract items from text (one per line)
             lines = response.strip().split("\n")
@@ -268,9 +268,9 @@ class ComplianceChecker(ABC):
             # Limit to fallback_item_limit if we have too many items
             if len(items) > fallback_item_limit:
                 items = items[:fallback_item_limit]
-                print(f"[INFO] Extracted and limited to {len(items)} items from text.")
+                logging.debug("Extracted and limited to %s items from text", len(items))
             else:
-                print(f"[INFO] Extracted {len(items)} items from text.")
+                logging.debug("Extracted %s items from text", len(items))
 
             return items
 
@@ -300,13 +300,12 @@ class ComplianceChecker(ABC):
         """
         prompt = self._build_questions_prompt(schema)
 
-        with yaspin(
-            Spinners.arc, text="[INFO] Generating compliance questions from schema..."
-        ):
-            # Use lower temperature for more consistent, focused question generation
-            response = self.llm.generate(
-                prompt, max_tokens=1024, temperature=0.3, stream=False
-            )
+        logging.info("Generating compliance questions from schema")
+
+        # Use lower temperature for more consistent, focused question generation
+        response = self.llm.generate(
+            prompt, max_tokens=1024, temperature=0.3, stream=False
+        )
 
         return self._parse_list_response(response)
 
@@ -326,17 +325,22 @@ class ComplianceChecker(ABC):
             str: Combined context from all retrievals, with double-newline separators
                  between unique document chunks.
         """
-        print(f"[INFO] Retrieving context for {len(questions)} questions...")
+        logging.info("Retrieving context for %s questions", len(questions))
         all_contexts = set()  # Using sets for automatic de-duplication of contexts
 
         for i, question in enumerate(questions, 1):
-            print(f"[INFO] Retrieving context for question {i}/{len(questions)}")
+            logging.debug(
+                'Retrieving context for question (%s/%s): "%s"',
+                i,
+                len(questions),
+                question,
+            )
             for context in self.context_retriever.context(question):
                 all_contexts.add(context.page_content)
 
         combined_context = "\n\n--- Context chunks seperator ---\n\n".join(all_contexts)
 
-        print("[INFO] Retrieved and combined all contexts.")
+        logging.info("Successfully retrieved context for %s questions", len(questions))
         return combined_context
 
     def generate_assertions(self, schema: str) -> list[str]:
@@ -368,13 +372,13 @@ class ComplianceChecker(ABC):
 
         prompt = self._build_assertions_prompt(context, schema)
 
-        with yaspin(Spinners.arc, text="[INFO] Generating SQL assertions..."):
-            response = self.llm.generate(
-                prompt, max_tokens=2048, temperature=0.3, stream=False
-            )
+        logging.info("Generating SQL assertions")
+        response = self.llm.generate(
+            prompt, max_tokens=2048, temperature=0.3, stream=False
+        )
 
         assertions = self._parse_list_response(response, fallback_item_limit=10)
-        print(f"[INFO] Generated {len(assertions)} SQL assertions.")
+        logging.info("Successfully generated %s SQL assertions", len(assertions))
 
         return assertions
 
@@ -408,10 +412,10 @@ class ComplianceChecker(ABC):
         # Generate a question to retrieve relevant context for this specific violation
         question = f"What are the compliance requirements related to: {assertion}"
 
-        print("[INFO] Retrieving context for failed assertion...")
+        logging.info("Retrieving context for failed assertion: %s", assertion)
         context = self.context_retriever.retrieve(question, 4)
 
-        print("[INFO] Analyzing failed assertion...")
+        logging.info("Analyzing failed assertion", assertion)
         prompt = self._build_assertion_analysis_prompt(
             context, assertion, failure_result
         )
@@ -419,7 +423,7 @@ class ComplianceChecker(ABC):
         response = self.llm.generate(
             prompt, max_tokens=2048, temperature=0.4, stream=True
         )
-        print("[INFO] Analysis complete.")
+        logging.info("Successfully analyzed failed assertion")
 
         return response
 
@@ -447,9 +451,7 @@ class ComplianceChecker(ABC):
         total = len(failed_assertions)
 
         for i, (assertion, result) in enumerate(failed_assertions.items(), 1):
-            print(f"\n[INFO] Analyzing failed assertion {i}/{total}")
-            print(f"[INFO] Assertion: {assertion[:80]}...")
-
+            logging.debug("Analyzing failed assertion (%s/%s)", i, total)
             analysis = self.analyze_failed_assertion(assertion, result)
             analyses[assertion] = analysis
 
