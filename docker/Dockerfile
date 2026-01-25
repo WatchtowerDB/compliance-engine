@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.9.1-cudnn-devel-ubuntu24.04 AS base
+FROM nvidia/cuda:13.1.1-cudnn-devel-ubuntu24.04 AS base
 
 # NOTE: Install UV
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
