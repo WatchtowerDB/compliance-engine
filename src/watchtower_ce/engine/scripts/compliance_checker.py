@@ -415,7 +415,7 @@ class ComplianceChecker(ABC):
         logging.info("Retrieving context for failed assertion: %s", assertion)
         context = self.context_retriever.retrieve(question, 4)
 
-        logging.info("Analyzing failed assertion", assertion)
+        logging.info("Analyzing failed assertion")
         prompt = self._build_assertion_analysis_prompt(
             context, assertion, failure_result
         )
