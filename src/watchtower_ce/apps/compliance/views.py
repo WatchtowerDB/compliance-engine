@@ -6,6 +6,7 @@ from .tasks import (
 )
 
 from . import models, serializers
+from .filters import ComplianceAssertionFilter, ClientDBSchemaFilter
 
 
 class ComplianceFrameworkViewSet(viewsets.ReadOnlyModelViewSet):
@@ -30,6 +31,7 @@ class ClientDBViewSet(viewsets.ModelViewSet):
 class ClientDBSchemaViewSet(viewsets.ModelViewSet):
     queryset: QuerySet = models.ClientDBSchema.objects.all()
     serializer_class = serializers.ClientDBSchemaSerializer
+    filterset_class = ClientDBSchemaFilter
 
     # Disallow updates/deletes
     def update(self, request, *args, **kwargs):
@@ -49,6 +51,7 @@ class ComplianceAssertionViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset: QuerySet = models.ComplianceAssertion.objects.all()
     serializer_class = serializers.ComplianceAssertionSerializer
+    filterset_class = ComplianceAssertionFilter
 
 
 class ComplianceCheckViewSet(viewsets.ModelViewSet):
