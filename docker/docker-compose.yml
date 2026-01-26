@@ -21,7 +21,7 @@ services:
     build:
       dockerfile: ./docker/Dockerfile
       context: ..
-    entrypoint: celery -A watchtower_ce worker --concurrency=1 -l INFO
+    entrypoint: celery -A watchtower_ce worker -P solo -l INFO
     restart: always
     depends_on:
       - redis

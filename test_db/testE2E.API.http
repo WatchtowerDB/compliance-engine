@@ -1,11 +1,6 @@
 @baseURL = http://localhost:8000
 @rootURL = http://localhost:8000/api
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY5MTc1ODM0LCJpYXQiOjE3NjkxNzQwMzQsImp0aSI6IjQzMWI4MjY2ZGM1ZDRkMzhhZjc2OTM5ODRhNDQ4MmFmIiwidXNlcl9pZCI6IjEifQ.5_YUStvwTiQ7iMJMUJJIsZ-gSSOza0QrumkBIF04ouM
-
-### Before starting go to /admin
-# user: admin
-# pass: admin
-# go to compliance frameworks +add
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY5MzE4NjU5LCJpYXQiOjE3NjkzMTY4NTksImp0aSI6IjQ4ZGFlNWE2ZDNiNjQ5OTc4NzI1ODMwODgzOGEwOTg2IiwidXNlcl9pZCI6IjEifQ.rTolCqnW8CBk1dhRY-qFkDMIha5RrP0Gv5OxsXCMC-o
 # insert any record with dummy data
 # to insure that framework with id=1 exist
 
@@ -23,6 +18,8 @@ Authorization: Bearer {{token}}
 
 { "name": "Production Payment DB", "connection_string": "postgresql://myuser:mypassword@host.docker.internal:5433/mydatabase", "description": "Main database storing customer transaction data" }
 
+###{ "name": "Production Payment DB", "connection_string": "postgresql://myuser:mypassword@localhost:5433/mydatabase", "description": "Main database storing customer transaction data" }
+
 ### Upload schema
 POST {{rootURL}}/compliance/clientdbschema/
 Content-Type: application/json 
@@ -38,7 +35,7 @@ POST {{rootURL}}/compliance/checks/
 Content-Type: application/json 
 Authorization: Bearer {{token}}
 
-{ "framework": 1, "schema": 3 }
+{ "framework": 1, "schema": 1 }
 
 ### check it the pipeline is finished and what are the results
 GET {{rootURL}}/compliance/assertions/
