@@ -48,7 +48,8 @@ class PDFToChroma:
         collection_name: str | None = None,
         overwrite: bool = False,
         model_name: str = "sentence-transformers/all-MiniLM-L12-v2",
-        chunk_size: int = 800,
+        separators: list[str] | None = None,
+        chunk_size: int = 1000,
         chunk_overlap: int = 100,
     ) -> None:
         """
@@ -66,6 +67,9 @@ class PDFToChroma:
                 Defaults to `False`.
             model_name (str, optional):
                 Name of the Hugging Face embedding model to use. Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`.
+            separators (list[str], optional):
+                If set, `PDFToChroma` will split the chunks based on these separators.
+                If not, it will use `chunk_size` and `chunk_overlap`.
             chunk_size (int, optional):
                 Maximum number of characters per text chunk before embedding. Defaults to `800`.
             chunk_overlap (int, optional):
@@ -78,6 +82,7 @@ class PDFToChroma:
         )  # default: filename
         self.overwrite = overwrite
         self.model_name = model_name
+        self.separators = separators
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self._embedding_model = None  # lazy initialization
@@ -130,11 +135,21 @@ class PDFToChroma:
             list[Document]: The list of split text chunks.
         """
         with yaspin(Spinners.arc, text="[INFO] Splitting text into chunks..."):
-            splitter = RecursiveCharacterTextSplitter(
-                chunk_size=self.chunk_size,
-                chunk_overlap=self.chunk_overlap,
-            )
-            texts = splitter.split_documents(documents)
+            texts: list[Document]
+
+            if self.separators:
+                splitter = RecursiveCharacterTextSplitter(
+                    separators=self.separators,
+                    keep_separator=False,
+                )
+                texts = splitter.split_documents(documents)
+            else:
+                splitter = RecursiveCharacterTextSplitter(
+                    chunk_size=self.chunk_size,
+                    chunk_overlap=self.chunk_overlap,
+                )
+                texts = splitter.split_documents(documents)
+
         print(f"[INFO] Created {len(texts)} text chunks.")
 
         return texts
