@@ -84,17 +84,38 @@ class ComplianceChecker(ABC):
         )
 
     @abstractmethod
-    def _build_questions_prompt(self, schema: str) -> str:
+    def _build_schema_questions_prompt(self, schema: str) -> str:
         """
-        Construct a prompt for generating compliance-specific questions.
+        Construct a prompt for generating compliance-specific questions for an SQL schema.
 
         This method should create a prompt that instructs the LLM to analyze the
-        input (schema, config, etc.) and generate targeted questions that will be
+        input schema and generate targeted questions that will be
         used to retrieve relevant compliance documentation.
 
         Args:
             schema (str):
-                The artifact to analyze (SQL schema, config file, etc.).
+                The SQL schema to analyze.
+
+        Returns:
+            str: A prompt instructing the LLM to generate compliance questions.
+
+        Note:
+            Subclasses should instruct the model to return a Python list of strings.
+        """
+        pass
+
+    @abstractmethod
+    def _build_assertion_questions_prompt(self, assertion: str) -> str:
+        """
+        Construct a prompt for generating compliance-specific questions for an SQL assertion.
+
+        This method should create a prompt that instructs the LLM to analyze the
+        input assertion and generate targeted questions that will be
+        used to retrieve relevant compliance documentation.
+
+        Args:
+            assertion (str):
+                An sql assertion to analyze.
 
         Returns:
             str: A prompt instructing the LLM to generate compliance questions.
@@ -274,18 +295,18 @@ class ComplianceChecker(ABC):
 
             return items
 
-    def _generate_compliance_questions(self, schema: str) -> list[str]:
+    def _generate_schema_questions(self, schema: str) -> list[str]:
         """
-        Generate targeted compliance questions from the artifact using the LLM.
+        Generate targeted compliance questions from the schema using the LLM.
 
         This method uses the LLM to intelligently extract compliance concerns from
-        the input artifact. The generated questions are then used to query the
+        the input schema. The generated questions are then used to query the
         vector store for relevant documentation, making retrieval more focused
         than direct schema-based queries.
 
         Args:
             schema (str):
-                The artifact to analyze (SQL schema, configuration, etc.).
+                The SQL schema to analyze.
 
         Returns:
             list[str]: A list of compliance question strings. Returns up to 6 questions,
@@ -298,9 +319,7 @@ class ComplianceChecker(ABC):
             The method expects JSON output from the LLM but has robust fallback
             handling for malformed responses, including stripping markdown code blocks.
         """
-        prompt = self._build_questions_prompt(schema)
-
-        logger.info("Generating compliance questions from schema")
+        prompt = self._build_schema_questions_prompt(schema)
 
         # Use lower temperature for more consistent, focused question generation
         response = self.llm.generate(
@@ -308,6 +327,39 @@ class ComplianceChecker(ABC):
         )
 
         return self._parse_list_response(response)
+
+    def _generate_assertion_questions(self, assertion: str) -> list[str]:
+        """
+        Generate targeted compliance questions from the assertion using the LLM.
+
+        This method uses the LLM to intelligently extract compliance concerns from
+        the input assertion. The generated questions are then used to query the
+        vector store for relevant documentation, making retrieval more focused
+        than direct assertion-based queries.
+
+        Args:
+            schema (str):
+                The SQL assertion to analyze.
+
+        Returns:
+            list[str]: A list of compliance question strings. Returns up to 2 questions,
+                       even if JSON parsing fails (fallback to text extraction).
+
+        Raises:
+            No exceptions are raised - parsing failures trigger fallback logic.
+
+        Note:
+            The method expects JSON output from the LLM but has robust fallback
+            handling for malformed responses, including stripping markdown code blocks.
+        """
+        prompt = self._build_assertion_questions_prompt(assertion)
+
+        # Use lower temperature for more consistent, focused question generation
+        response = self.llm.generate(
+            prompt, max_tokens=1024, temperature=0.3, stream=False
+        )
+
+        return self._parse_list_response(response, 2)
 
     def _retrieve_context_for_questions(self, questions: list[str]) -> str:
         """
@@ -367,7 +419,8 @@ class ComplianceChecker(ABC):
             >>> for assertion in assertions:
             ...     print(assertion)
         """
-        questions = self._generate_compliance_questions(schema)
+        logger.info("Generating compliance questions from schema")
+        questions = self._generate_schema_questions(schema)
         context = self._retrieve_context_for_questions(questions)
 
         prompt = self._build_assertions_prompt(context, schema)
@@ -410,16 +463,15 @@ class ComplianceChecker(ABC):
             >>> print(analysis)
         """
         # Generate a question to retrieve relevant context for this specific violation
-        question = f"What are the compliance requirements related to: {assertion}"
+        logger.info("Generating questions from failed assertion: %s", assertion)
+        questions = self._generate_assertion_questions(assertion)
+        context = self._retrieve_context_for_questions(questions)
 
-        logger.info("Retrieving context for failed assertion: %s", assertion)
-        context = self.context_retriever.retrieve(question, 4)
-
-        logger.info("Analyzing failed assertion")
         prompt = self._build_assertion_analysis_prompt(
             context, assertion, failure_result
         )
 
+        logger.info("Analyzing failed assertion")
         response = self.llm.generate(
             prompt, max_tokens=2048, temperature=0.4, stream=True
         )

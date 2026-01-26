@@ -85,7 +85,7 @@ class PCIComplianceChecker(ComplianceChecker):
         self.standard = "PCI-DSS v4.0.1"
         self._initialized: bool = True
 
-    def _build_questions_prompt(self, schema: str) -> str:
+    def _build_schema_questions_prompt(self, schema: str) -> str:
         """
         Build a prompt for generating PCI-DSS specific compliance questions.
 
@@ -105,22 +105,81 @@ class PCIComplianceChecker(ComplianceChecker):
         return textwrap.dedent(
             f"""
             Analyze the SQL schema and infer possible {self.standard} concerns.
-            Generate ONLY 3-6 comprehensive rich questions an auditor would ask about:
-            - cardholder data storage (PAN, CVV, expiration)
-            - sensitive data retention
-            - encryption/hashing
-            - access control
-            - auditing/logging
-            - ambiguous columns that might contain payment data
+            Generate ONLY 3-6 comprehensive rich questions an auditor would ask that
+            directly relate to the following PCI-DSS requirements:
+            - Requirement 3: Storage and protection of stored cardholder data (e.g., PAN, SAD, hashing, encryption, truncation)
+            - Requirement 4: Protection of cardholder data during transmission (encryption in transit, key management assumptions)
+            - Requirement 7: Restriction of access to cardholder data by business need-to-know
+            - Requirement 8: Identification and authentication of users accessing cardholder data
+            - Requirement 10: Logging, monitoring, and audit trails for access to cardholder data
 
-            Infer risks even when column names are unclear.
+            Instructions:
+            1. Examine the schema for both clear (e.g., 'credit_card') and ambiguous (e.g., 'blob_data', 'user_info') columns.
+            2. Generate questions that use PCI-DSS terminology (e.g., "PAN" instead of "card_number", "SAD", etc.).
+            3. Ensure questions are retrieval friendly to vector stores—they should sound like they are seeking specific guidance from the standard.
+            
+            Focus on:
+            - Whether PAN or SAD could even be stored (explicitly or implicitly)
+            - Whether encryption or hashing is required and how it is enforced
+            - How access to sensitive columns is restricted and authenticated
+            - Whether access and changes to cardholder data are logged and monitored
 
-            Keep in mind, these questions will be fed to a vector store of the {self.standard} standard to retrieve relevant context.
-
-            Return **ONLY** a Python list of question strings.
+            Constraints:
+            - Return ONLY a Python list of strings.
+            - MAXIMUM 6 questions.
+            - No introductory text or markdown formatting outside the list.
 
             Schema:
             {schema}
+            """
+        ).strip()
+
+    def _build_assertion_questions_prompt(self, assertion: str) -> str:
+        """
+        Build a prompt for generating PCI-DSS specific compliance questions.
+
+        Creates a prompt that instructs the LLM to analyze an SQL assertion and generate
+        targeted questions about PCI-DSS concerns. The questions focus on cardholder
+        data handling, sensitive authentication data, encryption requirements, and
+        potential ambiguous columns.
+
+        Args:
+            schema (str):
+                The SQL assertion to analyze.
+
+        Returns:
+            str: A formatted prompt instructing the LLM to generate 2 comprehensive
+                 questions as a Python list of strings.
+        """
+        return textwrap.dedent(
+            f"""
+            Analyze the SQL assetion command and infer possible {self.standard} concerns.
+            Generate ONLY 2 comprehensive rich questions depending on what the assertion command checks for
+            that an auditor would ask that directly relate to the following PCI-DSS requirements:
+            - Requirement 3: Storage and protection of stored cardholder data (e.g., PAN, SAD, hashing, encryption, truncation)
+            - Requirement 4: Protection of cardholder data during transmission (encryption in transit, key management assumptions)
+            - Requirement 7: Restriction of access to cardholder data by business need-to-know
+            - Requirement 8: Identification and authentication of users accessing cardholder data
+            - Requirement 10: Logging, monitoring, and audit trails for access to cardholder data
+
+            Instructions:
+            1. Examine the schema for both clear (e.g., 'credit_card') and ambiguous (e.g., 'blob_data', 'user_info') columns.
+            2. Generate questions that use PCI-DSS terminology (e.g., "PAN" instead of "card_number", "SAD", etc.).
+            3. Ensure questions are retrieval friendly to vector stores—they should sound like they are seeking specific guidance from the standard.
+            
+            Focus on:
+            - Whether PAN or SAD could even be stored (explicitly or implicitly)
+            - Whether encryption or hashing is required and how it is enforced
+            - How access to sensitive columns is restricted and authenticated
+            - Whether access and changes to cardholder data are logged and monitored
+
+            Constraints:
+            - Return ONLY a Python list of strings.
+            - EXACTLY 2 questions.
+            - No introductory text or markdown formatting outside the list.
+
+            Assertion:
+            {assertion}
             """
         ).strip()
 
@@ -287,7 +346,7 @@ class PCIComplianceChecker(ComplianceChecker):
         Returns:
             str: A compliance report (deprecated format).
         """
-        questions = self._generate_compliance_questions(schema)
+        questions = self._generate_schema_questions(schema)
         context = self._retrieve_context_for_questions(questions)
 
         # Build final analysis prompt with retrieved context
