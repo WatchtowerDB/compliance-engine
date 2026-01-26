@@ -1,0 +1,381 @@
+import json
+from pathlib import Path
+
+from .evaluation_metrics import EvaluationMetrics
+from .test_case import TestCase
+
+
+class AnalysisQualityEvaluator:
+    """
+    Evaluates the quality of compliance violation analyses.
+
+    This evaluator assesses how well the system:
+    1. Identifies the correct PCI-DSS requirement violated
+    2. Explains the violation clearly
+    3. Provides actionable remediation steps
+    4. Includes SQL fixes where appropriate
+    """
+
+    def __init__(self, test_cases: list[TestCase]):
+        """
+        Initialize evaluator with test cases.
+
+        Args:
+            test_cases: List of TestCase objects
+        """
+        self.test_cases = test_cases
+        self.results: list[dict] = []
+
+    def _check_requirement_identification(
+        self, analysis: str, expected_requirement: str
+    ) -> bool:
+        """
+        Check if the analysis correctly identifies the PCI-DSS requirement.
+
+        Args:
+            analysis: Generated analysis text
+            expected_requirement: Expected requirement (e.g., "Req 3.4", "Requirement 3.4")
+
+        Returns:
+            True if requirement is correctly identified
+        """
+        analysis_lower = analysis.lower()
+
+        # Normalize requirement format for matching
+        # "Req 3.4" -> ["req 3.4", "requirement 3.4", "3.4"]
+        req_parts = (
+            expected_requirement.lower()
+            .replace("req", "")
+            .replace("uirement", "")
+            .strip()
+        )
+
+        variations = [
+            f"req {req_parts}",
+            f"req. {req_parts}",
+            f"requirement {req_parts}",
+            req_parts,
+        ]
+
+        return any(var in analysis_lower for var in variations)
+
+    def _check_elements_present(
+        self, analysis: str, required_elements: set[str]
+    ) -> tuple[int, set[str]]:
+        """
+        Check which required elements are present in the analysis.
+
+        Args:
+            analysis: Generated analysis text
+            required_elements: Set of required element keywords
+
+        Returns:
+            Tuple of (count_found, set_of_found_elements)
+        """
+        analysis_lower = analysis.lower()
+        found = set()
+
+        for element in required_elements:
+            if element.lower() in analysis_lower:
+                found.add(element)
+
+        return len(found), found
+
+    def _check_key_phrases(
+        self, analysis: str, key_phrases: list[str]
+    ) -> tuple[int, list[str]]:
+        """
+        Check which key security phrases/concepts are mentioned.
+
+        Args:
+            analysis: Generated analysis text
+            key_phrases: List of important phrases to look for
+
+        Returns:
+            Tuple of (count_found, list_of_found_phrases)
+        """
+        analysis_lower = analysis.lower()
+        found = []
+
+        for phrase in key_phrases:
+            if phrase.lower() in analysis_lower:
+                found.append(phrase)
+
+        return len(found), found
+
+    def _check_remediation_steps(
+        self, analysis: str, expected_steps: list[str]
+    ) -> tuple[int, list[str]]:
+        """
+        Check which remediation steps are covered in the analysis.
+
+        Args:
+            analysis: Generated analysis text
+            expected_steps: List of expected remediation actions
+
+        Returns:
+            Tuple of (count_found, list_of_found_steps)
+        """
+        analysis_lower = analysis.lower()
+        found = []
+
+        for step in expected_steps:
+            # Check for semantic presence (not just exact match)
+            step_keywords = step.lower().split()
+            if len(step_keywords) > 0:
+                # If most keywords from the step appear, consider it found
+                matches = sum(
+                    1 for kw in step_keywords if len(kw) > 3 and kw in analysis_lower
+                )
+                if matches >= len(step_keywords) * 0.6:  # 60% of keywords present
+                    found.append(step)
+
+        return len(found), found
+
+    def _check_sql_fix_present(self, analysis: str) -> bool:
+        """
+        Check if the analysis includes SQL fix examples.
+
+        Args:
+            analysis: Generated analysis text
+
+        Returns:
+            True if SQL fixes are present
+        """
+        analysis_upper = analysis.upper()
+
+        sql_keywords = [
+            "ALTER TABLE",
+            "DROP COLUMN",
+            "CREATE TABLE",
+            "UPDATE",
+            "DELETE",
+            "GRANT",
+            "REVOKE",
+            "ADD COLUMN",
+            "MODIFY COLUMN",
+        ]
+
+        return any(keyword in analysis_upper for keyword in sql_keywords)
+
+    def evaluate_single_analysis(
+        self, test_case: TestCase, generated_analysis: str
+    ) -> dict:
+        """
+        Evaluate quality of a single analysis.
+
+        Args:
+            test_case: The test case with ground truth
+            generated_analysis: Analysis generated by the system
+
+        Returns:
+            Dictionary with detailed evaluation results
+        """
+        gt = test_case.ground_truth
+
+        # Check requirement identification
+        req_identified = self._check_requirement_identification(
+            generated_analysis, gt.pci_requirement
+        )
+
+        # Check required elements
+        elements_found, found_elements = self._check_elements_present(
+            generated_analysis, gt.required_elements
+        )
+
+        # Check key phrases
+        phrases_found, found_phrases = self._check_key_phrases(
+            generated_analysis, gt.key_phrases
+        )
+
+        # Check remediation steps
+        steps_found, found_steps = self._check_remediation_steps(
+            generated_analysis, gt.remediation_steps
+        )
+
+        # Check SQL fix
+        sql_fix_present = self._check_sql_fix_present(generated_analysis)
+
+        return {
+            "test_case": test_case.name,
+            "description": test_case.description,
+            "requirement_identified": req_identified,
+            "required_elements": {
+                "found": elements_found,
+                "total": len(gt.required_elements),
+                "details": list(found_elements),
+            },
+            "key_phrases": {
+                "found": phrases_found,
+                "total": len(gt.key_phrases),
+                "details": found_phrases,
+            },
+            "remediation_steps": {
+                "found": steps_found,
+                "total": len(gt.remediation_steps),
+                "details": found_steps,
+            },
+            "sql_fix": {"provided": sql_fix_present, "required": gt.sql_fix_required},
+            "analysis_text": generated_analysis[:500] + "..."
+            if len(generated_analysis) > 500
+            else generated_analysis,
+        }
+
+    def evaluate_all(self, checker, verbose: bool = True) -> EvaluationMetrics:
+        """
+        Evaluate analysis quality across all test cases.
+
+        Args:
+            checker: Instance of PCIComplianceChecker
+            verbose: Whether to print progress
+
+        Returns:
+            EvaluationMetrics with comprehensive scores
+        """
+        metrics = EvaluationMetrics()
+        metrics.total_cases = len(self.test_cases)
+        self.results = []
+
+        for i, test_case in enumerate(self.test_cases, 1):
+            if verbose:
+                print(f"\n{'=' * 80}")
+                print(
+                    f"Evaluating Analysis {i}/{len(self.test_cases)}: {test_case.name}"
+                )
+                print(f"{'=' * 80}")
+                print(f"Description: {test_case.description}")
+                print(f"Violation: {test_case.ground_truth.violation_description}")
+
+            # Generate analysis using the checker
+            generated_analysis = checker.analyze_failed_assertion(
+                test_case.failed_assertion, test_case.failure_result
+            )
+
+            if verbose:
+                print(f"\nGenerated analysis ({len(generated_analysis)} chars)")
+
+            # Evaluate this analysis
+            result = self.evaluate_single_analysis(test_case, generated_analysis)
+            self.results.append(result)
+
+            # Accumulate metrics
+            if result["requirement_identified"]:
+                metrics.requirement_correctly_identified += 1
+
+            metrics.required_elements_found += result["required_elements"]["found"]
+            metrics.required_elements_total += result["required_elements"]["total"]
+
+            metrics.key_phrases_found += result["key_phrases"]["found"]
+            metrics.key_phrases_total += result["key_phrases"]["total"]
+
+            metrics.remediation_steps_found += result["remediation_steps"]["found"]
+            metrics.remediation_steps_total += result["remediation_steps"]["total"]
+
+            if result["sql_fix"]["required"]:
+                metrics.sql_fixes_required += 1
+                if result["sql_fix"]["provided"]:
+                    metrics.sql_fixes_provided += 1
+
+            if verbose:
+                print(
+                    f"Requirement ID: {'✓' if result['requirement_identified'] else '✗'}"
+                )
+                print(
+                    f"Elements: {result['required_elements']['found']}/{result['required_elements']['total']}"
+                )
+                print(
+                    f"Key Phrases: {result['key_phrases']['found']}/{result['key_phrases']['total']}"
+                )
+                print(
+                    f"Remediation: {result['remediation_steps']['found']}/{result['remediation_steps']['total']}"
+                )
+                print(
+                    f"SQL Fix: {'✓' if result['sql_fix']['provided'] else '✗'} (Required: {result['sql_fix']['required']})"
+                )
+
+        return metrics
+
+    def generate_detailed_report(self, metrics: EvaluationMetrics) -> str:
+        """
+        Generate detailed report for research paper.
+
+        Args:
+            metrics: Computed metrics
+
+        Returns:
+            Formatted report string
+        """
+        report = []
+        report.append("=" * 80)
+        report.append("ANALYSIS QUALITY EVALUATION REPORT")
+        report.append("=" * 80)
+        report.append("")
+
+        # Overall scores
+        report.append("OVERALL QUALITY SCORES:")
+        report.append("-" * 80)
+        report.append(
+            f"  Overall Quality Score: {metrics.overall_quality_score:.4f} ({metrics.overall_quality_score * 100:.2f}%)"
+        )
+        report.append("")
+        report.append(
+            f"  Requirement Identification: {metrics.requirement_identification_rate:.4f} ({metrics.requirement_identification_rate * 100:.2f}%)"
+        )
+        report.append(
+            f"  Element Coverage: {metrics.element_coverage_rate:.4f} ({metrics.element_coverage_rate * 100:.2f}%)"
+        )
+        report.append(
+            f"  Key Phrase Coverage: {metrics.key_phrase_coverage_rate:.4f} ({metrics.key_phrase_coverage_rate * 100:.2f}%)"
+        )
+        report.append(
+            f"  Remediation Completeness: {metrics.remediation_completeness_rate:.4f} ({metrics.remediation_completeness_rate * 100:.2f}%)"
+        )
+        report.append(
+            f"  SQL Fix Provision: {metrics.sql_fix_provision_rate:.4f} ({metrics.sql_fix_provision_rate * 100:.2f}%)"
+        )
+
+        report.append("")
+        report.append("PER-TEST-CASE BREAKDOWN:")
+        report.append("-" * 80)
+
+        for result in self.results:
+            report.append(f"\n[{result['test_case']}]")
+            report.append(f"  Description: {result['description']}")
+            report.append(
+                f"  Requirement Identified: {'✓' if result['requirement_identified'] else '✗'}"
+            )
+            report.append(
+                f"  Elements Found: {result['required_elements']['found']}/{result['required_elements']['total']} - {result['required_elements']['details']}"
+            )
+            report.append(
+                f"  Key Phrases Found: {result['key_phrases']['found']}/{result['key_phrases']['total']} - {result['key_phrases']['details']}"
+            )
+            report.append(
+                f"  Remediation Steps Found: {result['remediation_steps']['found']}/{result['remediation_steps']['total']} - {result['remediation_steps']['details']}"
+            )
+            report.append(
+                f"  SQL Fix: {'Provided' if result['sql_fix']['provided'] else 'Not Provided'} (Required: {result['sql_fix']['required']})"
+            )
+
+        report.append("")
+        report.append("=" * 80)
+
+        return "\n".join(report)
+
+    def save_results(self, output_path: Path, metrics: EvaluationMetrics):
+        """
+        Save results to JSON file.
+
+        Args:
+            output_path: Path to save JSON
+            metrics: Computed metrics
+        """
+        output_data = {
+            "metrics": metrics.to_dict(),
+            "detailed_results": self.results,
+        }
+
+        with open(output_path, "w") as f:
+            json.dump(output_data, f, indent=2)
+
+        print(f"\nResults saved to: {output_path}")
