@@ -248,12 +248,12 @@ class ComplianceChecker(ABC):
             if not isinstance(items, list):
                 raise ValueError("Response is not a valid list.")
 
-            logging.debug("Successfully parsed %s items from JSON", len(items))
+            logger.debug("Successfully parsed %s items from JSON", len(items))
             return items
 
         except (json.JSONDecodeError, ValueError) as e:
-            logging.warning("Failed to parse response as JSON: %s", e)
-            logging.warning("Raw response: %s", repr(response))
+            logger.warning("Failed to parse response as JSON: %s", e)
+            logger.warning("Raw response: %s", repr(response))
 
             # Fallback: extract items from text (one per line)
             lines = response.strip().split("\n")
@@ -268,9 +268,9 @@ class ComplianceChecker(ABC):
             # Limit to fallback_item_limit if we have too many items
             if len(items) > fallback_item_limit:
                 items = items[:fallback_item_limit]
-                logging.debug("Extracted and limited to %s items from text", len(items))
+                logger.debug("Extracted and limited to %s items from text", len(items))
             else:
-                logging.debug("Extracted %s items from text", len(items))
+                logger.debug("Extracted %s items from text", len(items))
 
             return items
 
@@ -300,7 +300,7 @@ class ComplianceChecker(ABC):
         """
         prompt = self._build_questions_prompt(schema)
 
-        logging.info("Generating compliance questions from schema")
+        logger.info("Generating compliance questions from schema")
 
         # Use lower temperature for more consistent, focused question generation
         response = self.llm.generate(
@@ -325,11 +325,11 @@ class ComplianceChecker(ABC):
             str: Combined context from all retrievals, with double-newline separators
                  between unique document chunks.
         """
-        logging.info("Retrieving context for %s questions", len(questions))
+        logger.info("Retrieving context for %s questions", len(questions))
         all_contexts = set()  # Using sets for automatic de-duplication of contexts
 
         for i, question in enumerate(questions, 1):
-            logging.debug(
+            logger.debug(
                 'Retrieving context for question (%s/%s): "%s"',
                 i,
                 len(questions),
@@ -340,7 +340,7 @@ class ComplianceChecker(ABC):
 
         combined_context = "\n\n--- Context chunks seperator ---\n\n".join(all_contexts)
 
-        logging.info("Successfully retrieved context for %s questions", len(questions))
+        logger.info("Successfully retrieved context for %s questions", len(questions))
         return combined_context
 
     def generate_assertions(self, schema: str) -> list[str]:
@@ -372,13 +372,13 @@ class ComplianceChecker(ABC):
 
         prompt = self._build_assertions_prompt(context, schema)
 
-        logging.info("Generating SQL assertions")
+        logger.info("Generating SQL assertions")
         response = self.llm.generate(
             prompt, max_tokens=2048, temperature=0.3, stream=False
         )
 
         assertions = self._parse_list_response(response, fallback_item_limit=10)
-        logging.info("Successfully generated %s SQL assertions", len(assertions))
+        logger.info("Successfully generated %s SQL assertions", len(assertions))
 
         return assertions
 
@@ -412,10 +412,10 @@ class ComplianceChecker(ABC):
         # Generate a question to retrieve relevant context for this specific violation
         question = f"What are the compliance requirements related to: {assertion}"
 
-        logging.info("Retrieving context for failed assertion: %s", assertion)
+        logger.info("Retrieving context for failed assertion: %s", assertion)
         context = self.context_retriever.retrieve(question, 4)
 
-        logging.info("Analyzing failed assertion")
+        logger.info("Analyzing failed assertion")
         prompt = self._build_assertion_analysis_prompt(
             context, assertion, failure_result
         )
@@ -423,7 +423,7 @@ class ComplianceChecker(ABC):
         response = self.llm.generate(
             prompt, max_tokens=2048, temperature=0.4, stream=True
         )
-        logging.info("Successfully analyzed failed assertion")
+        logger.info("Successfully analyzed failed assertion")
 
         return response
 
@@ -451,7 +451,7 @@ class ComplianceChecker(ABC):
         total = len(failed_assertions)
 
         for i, (assertion, result) in enumerate(failed_assertions.items(), 1):
-            logging.debug("Analyzing failed assertion (%s/%s)", i, total)
+            logger.debug("Analyzing failed assertion (%s/%s)", i, total)
             analysis = self.analyze_failed_assertion(assertion, result)
             analyses[assertion] = analysis
 
