@@ -283,8 +283,10 @@ class PCIComplianceChecker(ComplianceChecker):
             3. SECURITY IMPACT: Explain the risk this violation poses to cardholder data
             4. REMEDIATION STEPS: Provide concrete, actionable steps and optionally SQL queries to fix this violation
 
-            Be specific and actionable. If encryption is needed, specify what to encrypt and how.
-            If data should be deleted, explain why and provide the SQL to do so safely. And so on.
+            Your reply should:
+            - Use as much wording from the given context as possible except for the REMEDIATION STEPS.
+            - Be specific and actionable. If encryption is needed, specify what to encrypt and how.
+              If data should be deleted, explain why and provide the SQL to do so safely. And so on.
             """
         ).strip()
 
