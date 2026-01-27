@@ -11,6 +11,7 @@ services:
     environment:
       WTCE_MODEL_PATH: /data/models/Ministral-8B-Instruct-2410-Q6_K_L.gguf
       PYTHONPATH: /app/src
+      DJANGO_ENVIRONMENT: prod
     runtime: nvidia
     gpus: all
 
@@ -31,6 +32,7 @@ services:
     environment:
       WTCE_MODEL_PATH: /data/models/Ministral-8B-Instruct-2410-Q6_K_L.gguf
       PYTHONPATH: /app/src
+      DJANGO_ENVIRONMENT: prod
     extra_hosts:
       - "host.docker.internal:host-gateway"
     runtime: nvidia
