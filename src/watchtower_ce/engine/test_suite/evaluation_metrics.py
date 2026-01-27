@@ -78,17 +78,17 @@ class EvaluationMetrics:
         Weighted composite score for overall analysis quality.
 
         Weights:
-        - Requirement ID: 25% (critical to identify what's wrong)
+        - Requirement ID: 30% (critical to identify what's wrong)
         - Required Phrases Coverage: 20% (must cover key aspects)
         - Preferred Phrases: 15% (shows understanding)
-        - Remediation: 30% (most important - actionable fixes)
+        - Remediation: 25% (most important - actionable fixes)
         - SQL Fixes: 10% (nice to have when applicable)
         """
         return (
-            0.25 * self.requirement_identification_rate
+            0.3 * self.requirement_identification_rate
             + 0.20 * self.required_phrases_coverage_rate
             + 0.15 * self.preferred_phrases_coverage_rate
-            + 0.30 * self.remediation_completeness_rate
+            + 0.25 * self.remediation_completeness_rate
             + 0.10 * self.sql_fix_provision_rate
         )
 
