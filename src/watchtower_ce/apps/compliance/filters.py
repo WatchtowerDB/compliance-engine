@@ -1,5 +1,5 @@
 from django_filters import rest_framework as filters
-from .models import ComplianceAssertion
+from .models import ComplianceAssertion, ClientDBSchema
 
 
 class ComplianceAssertionFilter(filters.FilterSet):
@@ -17,5 +17,5 @@ class ClientDBSchemaFilter(filters.FilterSet):
     client_db = filters.NumberFilter(field_name="client_db__id")
 
     class Meta:
-        model = ComplianceAssertion
+        model = ClientDBSchema
         fields = ["client_db"]
