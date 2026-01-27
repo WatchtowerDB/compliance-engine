@@ -3,6 +3,7 @@ GOLD STANDARD TEST DATASET FOR ANALYSIS QUALITY
 """
 
 from .ground_truth import GroundTruth
+from .synonym_set import SynonymSet
 from .test_case import TestCase
 
 
@@ -18,8 +19,6 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
 
     test_cases = []
 
-    # ! THE FOLLOWING TEST CASES ARE AI GENERATED. THEY MAY NOT BE ACCURATE.
-    # ! CHECK, REMOVE, OR REFINE THEM AFTER THE TEST SUITE IS FUNCTIONAL.
     # Test Case 1: CVV Storage Violation
     test_cases.append(
         TestCase(
@@ -36,33 +35,41 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
         """,
             ground_truth=GroundTruth(
                 violation_description="CVV storage (prohibited)",
-                pci_requirement="Req 3.4",
-                required_elements={
-                    "CVV",
-                    "CVC",
-                    "prohibited",
-                    "sensitive authentication data",
-                    "requirement 3.4",
-                    "never store",
+                pci_requirements=["Req 3.2", "Req 3.3"],
+                required_phrases={
+                    SynonymSet("CVV", "card verification value", "CVC"),
+                    SynonymSet("prohibited", "not allowed", "limited"),
+                    SynonymSet(
+                        "SAD",
+                        "Sensitive Authentication Data",
+                        "Sensitive Cardholder Data",
+                    ),
                 },
-                key_phrases=[
-                    "sensitive authentication data",
-                    "card verification value",
-                    "prohibited after authorization",
-                    "security risk",
-                    "counterfeit cards",
+                preferred_phrases=[
+                    "need to know",
+                    SynonymSet("counterfeit payment cards", "counterfeit cards"),
+                    "fraudulent transactions",
+                    SynonymSet("encrypt", "plaintext", "unencrypt"),
                 ],
                 remediation_steps=[
-                    "Remove CVV column from database",
-                    "Delete all stored CVV values",
-                    "Update application to not store CVV",
-                    "Implement validation to reject CVV storage",
+                    SynonymSet(
+                        "Remove CVV column / data from database",
+                        "Drop CVV column / data from database",
+                        "Delete CVV column / data from database",
+                    ),
+                    SynonymSet("Implement Access Controls", "Verifiy Access Controls"),
+                    SynonymSet(
+                        "Document Policies and Business Justification",
+                        "Review Policies and Business Justification",
+                    ),
                 ],
                 sql_fix_required=True,
             ),
         )
     )
 
+    # ! THE FOLLOWING TEST CASES ARE AI GENERATED. THEY MAY NOT BE ACCURATE.
+    # ! CHECK, REMOVE, OR REFINE THEM AFTER THE TEST SUITE IS FUNCTIONAL.
     # Test Case 2: Unencrypted PAN
     test_cases.append(
         TestCase(
@@ -79,8 +86,8 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
         """,
             ground_truth=GroundTruth(
                 violation_description="Unencrypted PAN storage",
-                pci_requirement="Req 3.5.1",
-                required_elements={
+                pci_requirements=["Req 3.5.1"],
+                required_phrases={
                     "PAN",
                     "Primary Account Number",
                     "encryption",
@@ -88,7 +95,7 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
                     "cardholder data",
                     "plaintext",
                 },
-                key_phrases=[
+                preferred_phrases=[
                     "unencrypted",
                     "stored in plaintext",
                     "strong cryptography",
@@ -123,15 +130,15 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
         """,
             ground_truth=GroundTruth(
                 violation_description="Track data storage (prohibited)",
-                pci_requirement="Req 3.4",
-                required_elements={
+                pci_requirements=["Req 3.4"],
+                required_phrases={
                     "track data",
                     "magnetic stripe",
                     "requirement 3.4",
                     "prohibited",
                     "sensitive authentication data",
                 },
-                key_phrases=[
+                preferred_phrases=[
                     "track 1",
                     "track 2",
                     "full magnetic stripe",
@@ -166,8 +173,8 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
         """,
             ground_truth=GroundTruth(
                 violation_description="Missing audit timestamps",
-                pci_requirement="Req 10.2",
-                required_elements={
+                pci_requirements=["Req 10.2"],
+                required_phrases={
                     "audit",
                     "logging",
                     "timestamp",
@@ -175,7 +182,7 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
                     "access tracking",
                     "accountability",
                 },
-                key_phrases=[
+                preferred_phrases=[
                     "audit trail",
                     "log all access",
                     "who accessed what when",
@@ -210,15 +217,15 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
         """,
             ground_truth=GroundTruth(
                 violation_description="Public access to cardholder data",
-                pci_requirement="Req 7.1.2",
-                required_elements={
+                pci_requirements=["Req 7.1.2"],
+                required_phrases={
                     "access control",
                     "PUBLIC",
                     "requirement 7.1.2",
                     "least privilege",
                     "need-to-know",
                 },
-                key_phrases=[
+                preferred_phrases=[
                     "overly permissive",
                     "role-based access control",
                     "need-to-know basis",

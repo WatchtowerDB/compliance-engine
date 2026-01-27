@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from .evaluation_metrics import EvaluationMetrics
+from .synonym_set import SynonymSet
 from .test_case import TestCase
 
 
@@ -27,69 +28,81 @@ class AnalysisQualityEvaluator:
         self.results: list[dict] = []
 
     def _check_requirement_identification(
-        self, analysis: str, expected_requirement: str
+        self, analysis: str, expected_requirements: list[str]
     ) -> bool:
         """
-        Check if the analysis correctly identifies the PCI-DSS requirement.
+        Check if the analysis correctly identifies any of the expected PCI-DSS requirements.
 
         Args:
             analysis: Generated analysis text
-            expected_requirement: Expected requirement (e.g., "Req 3.4", "Requirement 3.4")
+            expected_requirements: A list of possible expected requirements (e.g., ["Req 3.4", "Req 3.2.1"])
 
         Returns:
-            True if requirement is correctly identified
+            True if at least one requirement is correctly identified.
         """
         analysis_lower = analysis.lower()
 
-        # Normalize requirement format for matching
-        # "Req 3.4" -> ["req 3.4", "requirement 3.4", "3.4"]
-        req_parts = (
-            expected_requirement.lower()
-            .replace("req", "")
-            .replace("uirement", "")
-            .strip()
-        )
+        for expected_requirement in expected_requirements:
+            # Normalize requirement format for matching
+            # "Req 3.4" -> ["req 3.4", "requirement 3.4", "3.4"]
+            req_parts = (
+                expected_requirement.lower()
+                .replace("req", "")
+                .replace("uirement", "")
+                .strip()
+            )
 
-        variations = [
-            f"req {req_parts}",
-            f"req. {req_parts}",
-            f"requirement {req_parts}",
-            req_parts,
-        ]
+            variations = [
+                f"req {req_parts}",
+                f"req. {req_parts}",
+                f"requirement {req_parts}",
+                req_parts,
+            ]
 
-        return any(var in analysis_lower for var in variations)
+            if any(var in analysis_lower for var in variations):
+                return True
 
-    def _check_elements_present(
-        self, analysis: str, required_elements: set[str]
+        return False
+
+    def _check_phrases_present(
+        self, analysis: str, required_phrases: set[str | SynonymSet]
     ) -> tuple[int, set[str]]:
         """
-        Check which required elements are present in the analysis.
+        Check which required phrases are present in the analysis.
 
         Args:
             analysis: Generated analysis text
-            required_elements: Set of required element keywords
+            required_phrases: Set of required element preferred_words
 
         Returns:
-            Tuple of (count_found, set_of_found_elements)
+            Tuple of (count_found, set_of_found_phrases)
         """
         analysis_lower = analysis.lower()
         found = set()
 
-        for element in required_elements:
-            if element.lower() in analysis_lower:
-                found.add(element)
+        for element in required_phrases:
+            if isinstance(element, SynonymSet):
+                if any(syn.lower() in analysis_lower for syn in element):
+                    found.add(str(element))
+            elif isinstance(element, str):
+                if element.lower() in analysis_lower:
+                    found.add(element)
+            else:
+                raise TypeError(
+                    f"Unexpected element type. Expected str or SynonymSet, got {type(element)}."
+                )
 
         return len(found), found
 
-    def _check_key_phrases(
-        self, analysis: str, key_phrases: list[str]
+    def _check_preferred_phrases(
+        self, analysis: str, preferred_phrases: list[str | SynonymSet]
     ) -> tuple[int, list[str]]:
         """
-        Check which key security phrases/concepts are mentioned.
+        Check which preferred_ security phrases/concepts are mentioned.
 
         Args:
             analysis: Generated analysis text
-            key_phrases: List of important phrases to look for
+            preferred_phrases: List of important phrases to look for
 
         Returns:
             Tuple of (count_found, list_of_found_phrases)
@@ -97,14 +110,18 @@ class AnalysisQualityEvaluator:
         analysis_lower = analysis.lower()
         found = []
 
-        for phrase in key_phrases:
-            if phrase.lower() in analysis_lower:
-                found.append(phrase)
+        for phrase in preferred_phrases:
+            if isinstance(phrase, SynonymSet):
+                if any(p.lower() in analysis_lower for p in phrase):
+                    found.append(str(phrase))
+            elif isinstance(phrase, str):
+                if phrase.lower() in analysis_lower:
+                    found.append(phrase)
 
         return len(found), found
 
     def _check_remediation_steps(
-        self, analysis: str, expected_steps: list[str]
+        self, analysis: str, expected_steps: list[str | SynonymSet]
     ) -> tuple[int, list[str]]:
         """
         Check which remediation steps are covered in the analysis.
@@ -119,15 +136,22 @@ class AnalysisQualityEvaluator:
         analysis_lower = analysis.lower()
         found = []
 
-        for step in expected_steps:
-            # Check for semantic presence (not just exact match)
-            step_keywords = step.lower().split()
+        def is_step_present(step_text: str) -> bool:
+            step_keywords = step_text.lower().split()
+            step_keywords = [kw for kw in step_keywords if kw != "/"]
             if len(step_keywords) > 0:
-                # If most keywords from the step appear, consider it found
                 matches = sum(
-                    1 for kw in step_keywords if len(kw) > 3 and kw in analysis_lower
+                    1 for kw in step_keywords if len(kw) > 2 and kw in analysis_lower
                 )
-                if matches >= len(step_keywords) * 0.6:  # 60% of keywords present
+                return matches >= len(step_keywords) * 0.6
+            return False
+
+        for step in expected_steps:
+            if isinstance(step, SynonymSet):
+                if any(is_step_present(s) for s in step):
+                    found.append(str(step))
+            elif isinstance(step, str):
+                if is_step_present(step):
                     found.append(step)
 
         return len(found), found
@@ -175,17 +199,17 @@ class AnalysisQualityEvaluator:
 
         # Check requirement identification
         req_identified = self._check_requirement_identification(
-            generated_analysis, gt.pci_requirement
+            generated_analysis, gt.pci_requirements
         )
 
-        # Check required elements
-        elements_found, found_elements = self._check_elements_present(
-            generated_analysis, gt.required_elements
+        # Check required phrases
+        required_phrases_found, required_found_phrases = self._check_phrases_present(
+            generated_analysis, gt.required_phrases
         )
 
-        # Check key phrases
-        phrases_found, found_phrases = self._check_key_phrases(
-            generated_analysis, gt.key_phrases
+        # Check preferred phrases
+        preferred_phrases_found, preferred_found_phrases = (
+            self._check_preferred_phrases(generated_analysis, gt.preferred_phrases)
         )
 
         # Check remediation steps
@@ -200,15 +224,15 @@ class AnalysisQualityEvaluator:
             "test_case": test_case.name,
             "description": test_case.description,
             "requirement_identified": req_identified,
-            "required_elements": {
-                "found": elements_found,
-                "total": len(gt.required_elements),
-                "details": list(found_elements),
+            "required_phrases": {
+                "found": required_phrases_found,
+                "total": len(gt.required_phrases),
+                "details": list(required_found_phrases),
             },
-            "key_phrases": {
-                "found": phrases_found,
-                "total": len(gt.key_phrases),
-                "details": found_phrases,
+            "preferred_phrases": {
+                "found": preferred_phrases_found,
+                "total": len(gt.preferred_phrases),
+                "details": preferred_found_phrases,
             },
             "remediation_steps": {
                 "found": steps_found,
@@ -262,11 +286,11 @@ class AnalysisQualityEvaluator:
             if result["requirement_identified"]:
                 metrics.requirement_correctly_identified += 1
 
-            metrics.required_elements_found += result["required_elements"]["found"]
-            metrics.required_elements_total += result["required_elements"]["total"]
+            metrics.required_phrases_found += result["required_phrases"]["found"]
+            metrics.required_phrases_total += result["required_phrases"]["total"]
 
-            metrics.key_phrases_found += result["key_phrases"]["found"]
-            metrics.key_phrases_total += result["key_phrases"]["total"]
+            metrics.preferred_phrases_found += result["preferred_phrases"]["found"]
+            metrics.preferred_phrases_total += result["preferred_phrases"]["total"]
 
             metrics.remediation_steps_found += result["remediation_steps"]["found"]
             metrics.remediation_steps_total += result["remediation_steps"]["total"]
@@ -281,10 +305,10 @@ class AnalysisQualityEvaluator:
                     f"Requirement ID: {'✓' if result['requirement_identified'] else '✗'}"
                 )
                 print(
-                    f"Elements: {result['required_elements']['found']}/{result['required_elements']['total']}"
+                    f"Required Phrases: {result['required_phrases']['found']}/{result['required_phrases']['total']}"
                 )
                 print(
-                    f"Key Phrases: {result['key_phrases']['found']}/{result['key_phrases']['total']}"
+                    f"preferred Phrases: {result['preferred_phrases']['found']}/{result['preferred_phrases']['total']}"
                 )
                 print(
                     f"Remediation: {result['remediation_steps']['found']}/{result['remediation_steps']['total']}"
@@ -322,10 +346,10 @@ class AnalysisQualityEvaluator:
             f"  Requirement Identification: {metrics.requirement_identification_rate:.4f} ({metrics.requirement_identification_rate * 100:.2f}%)"
         )
         report.append(
-            f"  Element Coverage: {metrics.element_coverage_rate:.4f} ({metrics.element_coverage_rate * 100:.2f}%)"
+            f"  Required Phrases Coverage: {metrics.required_phrases_coverage_rate:.4f} ({metrics.required_phrases_coverage_rate * 100:.2f}%)"
         )
         report.append(
-            f"  Key Phrase Coverage: {metrics.key_phrase_coverage_rate:.4f} ({metrics.key_phrase_coverage_rate * 100:.2f}%)"
+            f"  Preferred Phrase Coverage: {metrics.preferred_phrases_coverage_rate:.4f} ({metrics.preferred_phrases_coverage_rate * 100:.2f}%)"
         )
         report.append(
             f"  Remediation Completeness: {metrics.remediation_completeness_rate:.4f} ({metrics.remediation_completeness_rate * 100:.2f}%)"
@@ -345,10 +369,10 @@ class AnalysisQualityEvaluator:
                 f"  Requirement Identified: {'✓' if result['requirement_identified'] else '✗'}"
             )
             report.append(
-                f"  Elements Found: {result['required_elements']['found']}/{result['required_elements']['total']} - {result['required_elements']['details']}"
+                f"  Required Phrases Found: {result['required_phrases']['found']}/{result['required_phrases']['total']} - {result['required_phrases']['details']}"
             )
             report.append(
-                f"  Key Phrases Found: {result['key_phrases']['found']}/{result['key_phrases']['total']} - {result['key_phrases']['details']}"
+                f"  Preferred Phrases Found: {result['preferred_phrases']['found']}/{result['preferred_phrases']['total']} - {result['preferred_phrases']['details']}"
             )
             report.append(
                 f"  Remediation Steps Found: {result['remediation_steps']['found']}/{result['remediation_steps']['total']} - {result['remediation_steps']['details']}"

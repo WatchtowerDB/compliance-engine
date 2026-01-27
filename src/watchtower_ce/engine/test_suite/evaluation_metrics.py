@@ -18,10 +18,10 @@ class EvaluationMetrics:
 
     # Core metrics
     requirement_correctly_identified: int = 0
-    required_elements_found: int = 0
-    required_elements_total: int = 0
-    key_phrases_found: int = 0
-    key_phrases_total: int = 0
+    required_phrases_found: int = 0
+    required_phrases_total: int = 0
+    preferred_phrases_found: int = 0
+    preferred_phrases_total: int = 0
     remediation_steps_found: int = 0
     remediation_steps_total: int = 0
     sql_fixes_provided: int = 0
@@ -37,20 +37,20 @@ class EvaluationMetrics:
         )
 
     @property
-    def element_coverage_rate(self) -> float:
-        """% of required elements present in analyses"""
+    def required_phrases_coverage_rate(self) -> float:
+        """% of required phrases present in analyses"""
         return (
-            self.required_elements_found / self.required_elements_total
-            if self.required_elements_total > 0
+            self.required_phrases_found / self.required_phrases_total
+            if self.required_phrases_total > 0
             else 0.0
         )
 
     @property
-    def key_phrase_coverage_rate(self) -> float:
+    def preferred_phrases_coverage_rate(self) -> float:
         """% of key security concepts mentioned"""
         return (
-            self.key_phrases_found / self.key_phrases_total
-            if self.key_phrases_total > 0
+            self.preferred_phrases_found / self.preferred_phrases_total
+            if self.preferred_phrases_total > 0
             else 0.0
         )
 
@@ -79,15 +79,15 @@ class EvaluationMetrics:
 
         Weights:
         - Requirement ID: 25% (critical to identify what's wrong)
-        - Element Coverage: 20% (must cover key aspects)
-        - Key Phrases: 15% (shows understanding)
+        - Required Phrases Coverage: 20% (must cover key aspects)
+        - Preferred Phrases: 15% (shows understanding)
         - Remediation: 30% (most important - actionable fixes)
         - SQL Fixes: 10% (nice to have when applicable)
         """
         return (
             0.25 * self.requirement_identification_rate
-            + 0.20 * self.element_coverage_rate
-            + 0.15 * self.key_phrase_coverage_rate
+            + 0.20 * self.required_phrases_coverage_rate
+            + 0.15 * self.preferred_phrases_coverage_rate
             + 0.30 * self.remediation_completeness_rate
             + 0.10 * self.sql_fix_provision_rate
         )
@@ -99,8 +99,12 @@ class EvaluationMetrics:
             "requirement_identification_rate": round(
                 self.requirement_identification_rate, 4
             ),
-            "element_coverage_rate": round(self.element_coverage_rate, 4),
-            "key_phrase_coverage_rate": round(self.key_phrase_coverage_rate, 4),
+            "required_phrases_coverage_rate": round(
+                self.required_phrases_coverage_rate, 4
+            ),
+            "preferred_phrases_coverage_rate": round(
+                self.preferred_phrases_coverage_rate, 4
+            ),
             "remediation_completeness_rate": round(
                 self.remediation_completeness_rate, 4
             ),
@@ -108,8 +112,8 @@ class EvaluationMetrics:
             "overall_quality_score": round(self.overall_quality_score, 4),
             "raw_counts": {
                 "requirement_correctly_identified": self.requirement_correctly_identified,
-                "required_elements_found": f"{self.required_elements_found}/{self.required_elements_total}",
-                "key_phrases_found": f"{self.key_phrases_found}/{self.key_phrases_total}",
+                "required_phrases_found": f"{self.required_phrases_found}/{self.required_phrases_total}",
+                "preferred_phrases_found": f"{self.preferred_phrases_found}/{self.preferred_phrases_total}",
                 "remediation_steps_found": f"{self.remediation_steps_found}/{self.remediation_steps_total}",
                 "sql_fixes_provided": f"{self.sql_fixes_provided}/{self.sql_fixes_required}",
             },
