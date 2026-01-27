@@ -31,6 +31,8 @@ services:
     environment:
       WTCE_MODEL_PATH: /data/models/Ministral-8B-Instruct-2410-Q6_K_L.gguf
       PYTHONPATH: /app/src
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     runtime: nvidia
     gpus: all
 
