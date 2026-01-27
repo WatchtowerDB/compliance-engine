@@ -68,7 +68,7 @@ def execute_sql_assertion_task(assertion_id: int) -> tuple[int, str]:
         assertion.sql_query,
     )
 
-    assertion.result = result
+    assertion.result = result[0]
     assertion.save(update_fields=["result"])
 
     return assertion_id, result
