@@ -60,7 +60,7 @@ def generate_assertions(schema: str) -> List[str]:
         return []
 
 
-def execute_sql_assertion(connection_string: str, sql_query: str) -> bool:
+def execute_sql_assertion(connection_string: str, sql_query: str) -> tuple[bool, str]:
     """Execute a SQL assertion against a client database.
 
     This function runs a single SQL assertion query and evaluates
@@ -77,7 +77,7 @@ def execute_sql_assertion(connection_string: str, sql_query: str) -> bool:
     clean_query = sql_query.strip().upper()
     if not clean_query.startswith("SELECT") and not clean_query.startswith("WITH"):
         logger.error("Blocked potentially unsafe query: %s", sql_query)
-        return False
+        return False, ""
 
     try:
         db_scheme = _detect_scheme(connection_string)
@@ -88,11 +88,11 @@ def execute_sql_assertion(connection_string: str, sql_query: str) -> bool:
             return _execute_sqlite(connection_string, sql_query)
         else:
             logger.error("Unsupported database scheme: %s", db_scheme)
-            return False
+            return False, ""
 
     except Exception as exc:
         logger.exception("Execution Error [%s]: %s", db_scheme, exc)
-        return False
+        return False, ""
 
 
 def analyze_failed_assertion(assertion: str, failure_result: str) -> str:
@@ -121,7 +121,7 @@ def analyze_failed_assertion(assertion: str, failure_result: str) -> str:
         return "Analysis unavailable. Please review the SQL violation manually."
 
 
-def _execute_psql(conn_str: str, sql_query: str) -> bool:
+def _execute_psql(conn_str: str, sql_query: str) -> tuple[bool, str]:
     """
     Executes a query against a PostgreSQL database.
 
@@ -136,15 +136,15 @@ def _execute_psql(conn_str: str, sql_query: str) -> bool:
                 cur.execute(sql_query)
 
                 if cur.description:
-                    rows = cur.fetchall()
-                    return _passes(rows)
-                return True
+                    rows = cur.fetchmany(3)
+                    passed = _passes(rows)
+                return passed, str(rows)
     except psycopg.Error as e:
         logger.error("PostgreSQL Operational Error: %s", e)
-        return False
+        return False, ""
 
 
-def _execute_sqlite(conn_str: str, sql_query: str) -> bool:
+def _execute_sqlite(conn_str: str, sql_query: str) -> tuple[bool, str]:
     """
     Executes a query against a SQLite database.
 
@@ -159,11 +159,12 @@ def _execute_sqlite(conn_str: str, sql_query: str) -> bool:
         with sqlite3.connect(db_path) as conn:
             with conn.cursor() as cur:
                 cur.execute(sql_query)
-                rows = cur.fetchall()
-                return _passes(rows)
+                rows = cur.fetchmany(3)
+                passed = _passes(rows)
+                return passed, str(rows)
     except sqlite3.Error as e:
         logger.error("SQLite Operational Error: %s", e)
-        return False
+        return False, ""
 
 
 def _detect_scheme(conn_str: str) -> str:
