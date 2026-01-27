@@ -38,7 +38,7 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
                 pci_requirements=["Req 3.2", "Req 3.3"],
                 required_phrases={
                     SynonymSet("CVV", "card verification value", "CVC"),
-                    SynonymSet("prohibited", "not allowed", "limited"),
+                    SynonymSet("prohibited", "not allowed", "limited", "not stored"),
                     SynonymSet(
                         "SAD",
                         "Sensitive Authentication Data",
@@ -49,7 +49,7 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
                     "need to know",
                     SynonymSet("counterfeit payment cards", "counterfeit cards"),
                     "fraudulent transactions",
-                    SynonymSet("encrypt", "plaintext", "unencrypt"),
+                    SynonymSet("encrypt", "plaintext", "cleartext", "unencrypt"),
                 ],
                 remediation_steps=[
                     SynonymSet(
@@ -68,14 +68,12 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
         )
     )
 
-    # ! THE FOLLOWING TEST CASES ARE AI GENERATED. THEY MAY NOT BE ACCURATE.
-    # ! CHECK, REMOVE, OR REFINE THEM AFTER THE TEST SUITE IS FUNCTIONAL.
     # Test Case 2: Unencrypted PAN
     test_cases.append(
         TestCase(
             name="TC002_Unencrypted_PAN_Analysis",
             description="Analysis quality for unencrypted PAN storage",
-            failed_assertion="SELECT * FROM transactions WHERE card_number IS NOT NULL AND card_number NOT LIKE '%encrypted%'",
+            failed_assertion=r"SELECT * FROM transactions WHERE card_number IS NOT NULL AND card_number NOT LIKE '%encrypted%'",
             failure_result="transaction_id: 101, card_number: 4532123456789012\ntransaction_id: 102, card_number: 5425233430109903",
             schema_context="""
         CREATE TABLE transactions (
@@ -88,32 +86,40 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
                 violation_description="Unencrypted PAN storage",
                 pci_requirements=["Req 3.5.1"],
                 required_phrases={
-                    "PAN",
-                    "Primary Account Number",
-                    "encryption",
-                    "requirement 3.5.1",
-                    "cardholder data",
-                    "plaintext",
+                    SynonymSet("PAN", "Primary Account Number"),
+                    SynonymSet(
+                        "encrypt", "plaintext", "cryptography", "unecrypt", "cleartext"
+                    ),
+                    SynonymSet("hash"),
                 },
                 preferred_phrases=[
-                    "unencrypted",
-                    "stored in plaintext",
-                    "strong cryptography",
-                    "AES-256",
-                    "data breach risk",
-                    "render cardholder data unreadable",
+                    SynonymSet("defense in depth", "defense-in-depth"),
+                    "reconstruct",
+                    "data breach",
+                    "unreadable",
                 ],
                 remediation_steps=[
-                    "Encrypt card_number column using AES-256",
-                    "Implement encryption key management",
-                    "Store only last 4 digits in plaintext",
-                    "Consider tokenization as alternative",
+                    SynonymSet(
+                        "Encrypt card_number column using AES-256",
+                        "Encrypt card number column using AES-256",
+                    ),
+                    SynonymSet(
+                        "Implement encryption key management",
+                        "Implement encryption key-management",
+                    ),
+                    SynonymSet(
+                        "Remove Plaintext Data",
+                        "Drop Plaintext Data",
+                        "Delete Plaintext Data",
+                    ),
                 ],
                 sql_fix_required=True,
             ),
         )
     )
 
+    # ! THE FOLLOWING TEST CASES ARE AI GENERATED. THEY MAY NOT BE ACCURATE.
+    # ! CHECK, REMOVE, OR REFINE THEM AFTER THE TEST SUITE IS FUNCTIONAL.
     # Test Case 3: Track Data Storage
     test_cases.append(
         TestCase(
