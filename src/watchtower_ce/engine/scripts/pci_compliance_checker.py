@@ -236,6 +236,7 @@ class PCIComplianceChecker(ComplianceChecker):
             Generate as many comprehensive assertions as you need against the provided schema covering different {self.standard} requirements when necessary.
 
             Respond **ONLY** with a Python list of SQL query strings. Nothing else.
+            Make sure it respects JSON formatting and escape sequences.
             """
         ).strip()
 
