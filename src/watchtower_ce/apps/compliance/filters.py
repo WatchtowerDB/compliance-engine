@@ -5,8 +5,8 @@ from .models import ComplianceAssertion, ClientDBSchema
 class ComplianceAssertionFilter(filters.FilterSet):
     schema = filters.NumberFilter(field_name="schema__id")
     client_db = filters.NumberFilter(field_name="client_db__id")
-    compilance_framework = filters.NumberFilter(field_name="compliance_framework__id")
-    result = filters.BooleanFilter(field_name="result")
+    compliance_framework = filters.NumberFilter(field_name="compliance_framework__id")
+    result = filters.BooleanFilter()
 
     class Meta:
         model = ComplianceAssertion

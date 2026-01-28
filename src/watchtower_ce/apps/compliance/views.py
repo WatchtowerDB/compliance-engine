@@ -4,7 +4,6 @@ from rest_framework.response import Response
 from .tasks import (
     schedule_sql_assertion_pipeline,
 )
-
 from . import models, serializers
 from .filters import ComplianceAssertionFilter, ClientDBSchemaFilter
 
@@ -49,7 +48,9 @@ class ComplianceAssertionViewSet(viewsets.ReadOnlyModelViewSet):
     This viewset provides read-only access to compliance assertion records.
     """
 
-    queryset: QuerySet = models.ComplianceAssertion.objects.all()
+    queryset = models.ComplianceAssertion.objects.select_related(
+        "schema", "client_db", "compliance_framework"
+    )
     serializer_class = serializers.ComplianceAssertionSerializer
     filterset_class = ComplianceAssertionFilter
 
