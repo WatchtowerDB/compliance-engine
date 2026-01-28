@@ -166,19 +166,13 @@ class PCIComplianceChecker(ComplianceChecker):
             - Requirement 10: Logging, monitoring, and audit trails for access to cardholder data
 
             Instructions:
-            1. Examine the schema for both clear (e.g., 'credit_card') and ambiguous (e.g., 'blob_data', 'user_info') columns.
-            2. Generate questions that use PCI-DSS terminology (e.g., "PAN" instead of "card_number", "SAD" instead of "security_code", etc.).
-            3. Be specific (e.g., PAN and SAD are not the same thing and should be treated as so in your questions;
+            1. Examine the assertion for both clear (e.g., 'credit_card') and ambiguous (e.g., 'blob_data', 'user_info') columns.
+            2. DO NOT use the database code names, turn them into proper English names (e.g., "card number" instead of "card_number").
+            3. Generate questions that use PCI-DSS terminology (e.g., "PAN" instead of "card number", "SAD" instead of "security code", etc.).
+            4. Be specific (e.g., PAN and SAD are not the same thing and should be treated as so in your questions;
                these are two separate topics, so two separate questions if needed).
-            4. ONLY ask about what's relevant in the assertion (e.g., if the assertion mentions nothing of logging, then don't ask about it).
-            5. Ensure questions are retrieval friendly to vector stores—they should sound like they are seeking specific guidance from the standard.
-            
-            Focus on:
-            - Whether PAN is stored correctly if even needed (explicitly or implicitly)
-            - Whether SAD could even be stored (explicitly or implicitly)
-            - Whether encryption or hashing is required and how it is enforced
-            - How access to sensitive columns is restricted and authenticated
-            - Whether access and changes to cardholder data are logged and monitored
+            5. ONLY ask about what's relevant in the assertion (e.g., if the assertion mentions nothing of logging, then don't ask about it).
+            6. Ensure questions are retrieval friendly to vector stores—they should sound like they are seeking specific guidance from the standard.
 
             Constraints:
             - Return ONLY a Python list of strings.
@@ -270,7 +264,7 @@ class PCIComplianceChecker(ComplianceChecker):
             f"""
             You are an expert PCI-DSS compliance auditor and database security specialist.
 
-            Context chunks (retrieved from a {self.standard} standard vector store):
+            Context chunks (retrieved from a {self.standard} standard vector store; often not all of it is needed. Pick only what's relevant):
             {context}
 
             A compliance assertion has FAILED, indicating a {self.standard} violation.
