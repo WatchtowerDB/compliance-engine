@@ -9,7 +9,7 @@ from ...engine.scripts.pci_compliance_checker import PCIComplianceChecker
 
 logger = logging.getLogger(__name__)
 
-SCRIPT_DIR = Path(__file__).parent.parent.parent.parent.parent
+SCRIPT_DIR = Path(__file__).resolve().parents[4]
 
 MODEL_PATH: Path = Path(
     os.getenv(
