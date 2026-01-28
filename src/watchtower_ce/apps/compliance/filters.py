@@ -6,7 +6,7 @@ class ComplianceAssertionFilter(filters.FilterSet):
     schema = filters.NumberFilter(field_name="schema__id")
     client_db = filters.NumberFilter(field_name="client_db__id")
     compliance_framework = filters.NumberFilter(field_name="compliance_framework__id")
-    result = filters.BooleanFilter()
+    result = filters.BooleanFilter(fireld_name="result")
 
     class Meta:
         model = ComplianceAssertion
