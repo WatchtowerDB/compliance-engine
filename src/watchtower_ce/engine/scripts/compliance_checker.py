@@ -361,7 +361,9 @@ class ComplianceChecker(ABC):
 
         return self._parse_list_response(response, 2)
 
-    def _retrieve_context_for_questions(self, questions: list[str]) -> str:
+    def _retrieve_context_for_questions(
+        self, questions: list[str], retrieval_k: int | None = None
+    ) -> str:
         """
         Retrieve relevant compliance documentation for multiple questions.
 
@@ -372,6 +374,8 @@ class ComplianceChecker(ABC):
         Args:
             questions (list[str]):
                 List of compliance-related questions to search for.
+            retrieval_k (int | None):
+                # TODO: FILL DOSCTRING
 
         Returns:
             str: Combined context from all retrievals, with double-newline separators
@@ -387,8 +391,12 @@ class ComplianceChecker(ABC):
                 len(questions),
                 question,
             )
-            for context in self.context_retriever.context(question):
-                all_contexts.add(context.page_content)
+            if retrieval_k:
+                for context in self.context_retriever.context(question, retrieval_k):
+                    all_contexts.add(context.page_content)
+            else:
+                for context in self.context_retriever.context(question):
+                    all_contexts.add(context.page_content)
 
         combined_context = "\n\n--- Context chunks seperator ---\n\n".join(all_contexts)
 
@@ -465,7 +473,9 @@ class ComplianceChecker(ABC):
         # Generate a question to retrieve relevant context for this specific violation
         logger.info("Generating questions from failed assertion: %s", assertion)
         questions = self._generate_assertion_questions(assertion)
-        context = self._retrieve_context_for_questions(questions)
+        context = self._retrieve_context_for_questions(questions, 3)
+
+        logger.debug("Retrieved context: %s", context)
 
         prompt = self._build_assertion_analysis_prompt(
             context, assertion, failure_result
