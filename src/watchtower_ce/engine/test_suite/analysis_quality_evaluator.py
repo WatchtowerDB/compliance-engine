@@ -308,7 +308,7 @@ class AnalysisQualityEvaluator:
                     f"Required Phrases: {result['required_phrases']['found']}/{result['required_phrases']['total']}"
                 )
                 print(
-                    f"preferred Phrases: {result['preferred_phrases']['found']}/{result['preferred_phrases']['total']}"
+                    f"Preferred Phrases: {result['preferred_phrases']['found']}/{result['preferred_phrases']['total']}"
                 )
                 print(
                     f"Remediation: {result['remediation_steps']['found']}/{result['remediation_steps']['total']}"
