@@ -84,16 +84,17 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
         """,
             ground_truth=GroundTruth(
                 violation_description="Unencrypted PAN storage",
-                pci_requirements=["Req 3.5.1"],
+                pci_requirements=["Req 3.5"],
                 required_phrases={
                     SynonymSet("PAN", "Primary Account Number"),
                     SynonymSet(
                         "encrypt", "plaintext", "cryptography", "unecrypt", "cleartext"
                     ),
-                    SynonymSet("hash"),
+                    "hash",
                 },
                 preferred_phrases=[
                     SynonymSet("defense in depth", "defense-in-depth"),
+                    SynonymSet("4 digit", "4-digit", "four digit", "four-digit"),
                     "reconstruct",
                     "data breach",
                     "unreadable",
@@ -118,8 +119,6 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
         )
     )
 
-    # ! THE FOLLOWING TEST CASES ARE AI GENERATED. THEY MAY NOT BE ACCURATE.
-    # ! CHECK, REMOVE, OR REFINE THEM AFTER THE TEST SUITE IS FUNCTIONAL.
     # Test Case 3: Track Data Storage
     test_cases.append(
         TestCase(
@@ -136,32 +135,52 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
         """,
             ground_truth=GroundTruth(
                 violation_description="Track data storage (prohibited)",
-                pci_requirements=["Req 3.4"],
+                pci_requirements=["Req 3.3.1"],
                 required_phrases={
-                    "track data",
-                    "magnetic stripe",
-                    "requirement 3.4",
-                    "prohibited",
-                    "sensitive authentication data",
+                    SynonymSet("full track", "track 1", "track 2"),
+                    SynonymSet("prohibited", "not allowed", "limited", "not stored"),
+                    SynonymSet(
+                        "SAD",
+                        "Sensitive Authentication Data",
+                        "Sensitive Cardholder Data",
+                    ),
                 },
                 preferred_phrases=[
-                    "track 1",
-                    "track 2",
-                    "full magnetic stripe",
-                    "never store after authorization",
-                    "counterfeit card creation",
+                    SynonymSet("magnetic stripe", "magnetic-stripe", "chip"),
+                    SynonymSet(
+                        "reproduce payment card",
+                        "reproduce card",
+                        "counterfeit card",
+                        "counterfeit payment card",
+                    ),
+                    "fraudulent transaction",
                 ],
                 remediation_steps=[
-                    "Drop track1_data and track2_data columns",
-                    "Delete all track data immediately",
-                    "Update card readers to not store track data",
-                    "Implement point-to-point encryption",
+                    SynonymSet(
+                        "Remove track1_data and track2_data columns",
+                        "Remove track 1 data and track 2 data columns",
+                        "Drop track1_data and track2_data columns",
+                        "Drop track 1 data and track 2 data columns",
+                        "Delete track1_data and track2_data columns",
+                        "Delete track 1 data and track 2 data columns",
+                    ),
+                    SynonymSet(
+                        "Delete all track data",
+                        "Remove all track data",
+                        "Drop all track data",
+                    ),
+                    SynonymSet(
+                        "Ensure data deletion after authorization",
+                        "Ensure data removal after authorization",
+                    ),
                 ],
                 sql_fix_required=True,
             ),
         )
     )
 
+    # ! THE FOLLOWING TEST CASES ARE AI GENERATED. THEY MAY NOT BE ACCURATE.
+    # ! CHECK, REMOVE, OR REFINE THEM AFTER THE TEST SUITE IS FUNCTIONAL.
     # Test Case 4: Missing Audit Logging
     test_cases.append(
         TestCase(
