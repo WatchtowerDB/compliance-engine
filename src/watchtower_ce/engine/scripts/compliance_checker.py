@@ -254,6 +254,8 @@ class ComplianceChecker(ABC):
                 cleaned_response = cleaned_response[9:]
             elif cleaned_response.startswith("```py"):
                 cleaned_response = cleaned_response[5:]
+            elif cleaned_response.startswith("```json"):
+                cleaned_response = cleaned_response[7:]
             elif cleaned_response.startswith("```sql"):
                 cleaned_response = cleaned_response[6:]
             elif cleaned_response.startswith("```"):
