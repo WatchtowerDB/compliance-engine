@@ -1,9 +1,13 @@
+import logging
 import os
+import sys
 from pathlib import Path
 
 from ..scripts.pci_compliance_checker import PCIComplianceChecker
 from .analysis_quality_evaluator import AnalysisQualityEvaluator
 from .gold_standard import create_analysis_quality_test_dataset
+
+logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 
 if __name__ == "__main__":
     print("Creating analysis quality test dataset...")
