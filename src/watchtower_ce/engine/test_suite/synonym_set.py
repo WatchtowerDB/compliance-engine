@@ -5,13 +5,14 @@ class SynonymSet:
         for word in words:
             if not isinstance(word, str):
                 raise TypeError("Synonyms must be strings")
-            if word.lower() not in temp:
+
+            if word.lower() not in [word.lower() for word in temp]:
                 temp.add(word)
 
         self._synonyms: frozenset[str] = frozenset(temp)
 
     def __contains__(self, word):
-        return word.lower() in self._synonyms
+        return word.lower() in [word.lower() for word in self._synonyms]
 
     def __iter__(self):
         return iter(self._synonyms)
