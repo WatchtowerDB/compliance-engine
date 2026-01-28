@@ -71,12 +71,12 @@ def execute_sql_assertion_task(assertion_id: int) -> tuple[int, str]:
     assertion.result = result[0]
     assertion.save(update_fields=["result"])
 
-    return assertion_id, result
+    return assertion_id, result[1]
 
 
 @shared_task
 def generate_compliance_recommendation_task(
-    assertion_id: int, assertion_output: str
+    assertion_id: int, query_output: str
 ) -> int | None:
     try:
         assertion = models.ComplianceAssertion.objects.get(id=assertion_id)
@@ -93,7 +93,7 @@ def generate_compliance_recommendation_task(
     try:
         recommendation = ml.analyze_failed_assertion(
             assertion=assertion.sql_query,
-            failure_result=assertion_output,
+            failure_result=query_output,
         )
     except Exception as exc:
         logger.exception(
@@ -108,29 +108,29 @@ def generate_compliance_recommendation_task(
 
 
 @shared_task
-def generate_recommendations_group(assertion_results: list[tuple[int, str]]):
+def generate_recommendations_group(assertion_output: list[tuple[int, str]]):
     """
     Generate recommendations for multiple assertions in parallel.
     """
 
-    if not assertion_results:
+    if not assertion_output:
         return []
 
     failed_assertion_ids = list(
         models.ComplianceAssertion.objects.filter(
-            id__in=map(lambda res: res[0], assertion_results),
+            id__in=map(lambda res: res[0], assertion_output),
             result__in=[False, None],
             recommendation__isnull=True,
         ).values_list("id", flat=True)
     )
 
-    filterd_results = filter(
-        lambda res: res[0] in failed_assertion_ids, assertion_results
+    filtered_results = filter(
+        lambda res: res[0] in failed_assertion_ids, assertion_output
     )
 
     group(
-        generate_compliance_recommendation_task.s(assertion_id, assertion_output)
-        for assertion_id, assertion_output in filterd_results
+        generate_compliance_recommendation_task.s(assertion_id, query_output)
+        for assertion_id, query_output in filtered_results
     ).apply_async()
 
 
