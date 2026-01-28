@@ -48,7 +48,7 @@ class ComplianceAssertionViewSet(viewsets.ReadOnlyModelViewSet):
     This viewset provides read-only access to compliance assertion records.
     """
 
-    queryset = models.ComplianceAssertion.objects.select_related(
+    queryset: QuerySet = models.ComplianceAssertion.objects.select_related(
         "schema", "client_db", "compliance_framework"
     )
     serializer_class = serializers.ComplianceAssertionSerializer
