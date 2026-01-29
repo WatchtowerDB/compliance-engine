@@ -1,18 +1,19 @@
 class SynonymSet:
     def __init__(self, *words: str):
-        temp: set[str] = set()
+        temp: dict[str, str] = {}
 
         for word in words:
             if not isinstance(word, str):
-                raise TypeError("Synonyms must be strings")
+                raise TypeError(f"Synonyms must be strings. Got {type(word).__name__}.")
 
-            if word.lower() not in [word.lower() for word in temp]:
-                temp.add(word)
+            lw = word.lower()
+            if lw not in temp:
+                temp[lw] = word
 
-        self._synonyms: frozenset[str] = frozenset(temp)
+        self._synonyms: frozenset[str] = frozenset(temp.values())
 
     def __contains__(self, word):
-        return word.lower() in [word.lower() for word in self._synonyms]
+        return any(word.lower() == syn.lower() for syn in self._synonyms)
 
     def __iter__(self):
         return iter(self._synonyms)
