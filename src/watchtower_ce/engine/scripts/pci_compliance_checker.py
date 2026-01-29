@@ -100,10 +100,13 @@ class PCIComplianceChecker(ComplianceChecker):
 
         Returns:
             str: A formatted prompt instructing the LLM to generate 3-6 comprehensive
-                 questions as a Python list of strings.
+                 questions as a JSON list of strings.
         """
         return textwrap.dedent(
             f"""
+            You are an expert PCI-DSS compliance auditor and database security specialist.
+
+            Task:
             Analyze the SQL schema and infer possible {self.standard} concerns.
             Generate ONLY 3-6 comprehensive rich questions an auditor would ask that
             directly relate to the following PCI-DSS requirements:
@@ -114,15 +117,16 @@ class PCIComplianceChecker(ComplianceChecker):
             - Requirement 10: Logging, monitoring, and audit trails for access to cardholder data
 
             Instructions:
-            1. Examine the schema for both clear (e.g., 'credit_card') and ambiguous (e.g., 'blob_data', 'user_info') columns.
-            2. DO NOT use the database code names, turn them into proper English names (e.g., "card number" instead of "card_number").
-            3. Generate questions that use PCI-DSS terminology (e.g., "PAN" instead of "card number", "SAD" instead of "security code", etc.).
-            4. Be specific (e.g., PAN and SAD are not the same thing and should be treated as so in your questions;
+            1. Examine the schema for both clear (e.g., "credit_card") and ambiguous (e.g., "blob_data", "user_info") columns.
+            2. Generate questions that use PCI-DSS terminology (e.g., "PAN" instead of "card number", "SAD" instead of "security code", etc.).
+            3. Be specific (e.g., PAN and SAD are not the same thing and should be treated as so in your questions;
                these are two separate topics, so two separate questions if needed).
-            5. Ensure questions are retrieval friendly to vector stores—they should sound like they are seeking specific guidance from the standard.
+            4. Avoid using raw database field names in the questions; translate them into natural English descriptions (e.g., "card number" instead of "card_number", etc.).
+            5. Ensure questions are retrieval friendly to vector stores. They should sound like they are seeking specific guidance from the standard.
             
-            Constraints:
-            - Return ONLY a Python list of strings.
+            Output:
+            - Respond ONLY with a valid JSON list of strings containing the questions.
+            - Ensure the output is valid JSON and respects proper escaping.
             - MAXIMUM 6 questions.
             - No introductory text or markdown formatting outside the list.
 
@@ -146,13 +150,15 @@ class PCIComplianceChecker(ComplianceChecker):
 
         Returns:
             str: A formatted prompt instructing the LLM to generate 2 comprehensive
-                 questions as a Python list of strings.
+                 questions as a JSON list of strings.
         """
         return textwrap.dedent(
-            f"""
+            rf"""
+            You are an expert PCI-DSS compliance auditor and database security specialist.
+
+            Task:
             Analyze the SQL assertion command and infer possible {self.standard} concerns.
-            Generate ONLY 2 comprehensive rich questions depending on what the assertion command checks for
-            that an auditor would ask that directly relate to the following PCI-DSS requirements:
+            Generate ONLY 2 comprehensive rich questions depending on what the assertion command checks for that an auditor would ask that directly relate to the following PCI-DSS requirements:
             - Requirement 3: Storage and protection of stored cardholder data (e.g., PAN, SAD, hashing, encryption, truncation)
             - Requirement 4: Protection of cardholder data during transmission (encryption in transit, key management assumptions)
             - Requirement 7: Restriction of access to cardholder data by business need-to-know
@@ -160,16 +166,17 @@ class PCIComplianceChecker(ComplianceChecker):
             - Requirement 10: Logging, monitoring, and audit trails for access to cardholder data
 
             Instructions:
-            1. Examine the assertion for both clear (e.g., 'credit_card') and ambiguous (e.g., 'blob_data', 'user_info') columns.
-            2. DO NOT use the database code names, turn them into proper English names (e.g., "card number" instead of "card_number").
-            3. Generate questions that use PCI-DSS terminology (e.g., "PAN" instead of "card number", "SAD" instead of "security code", etc.).
-            4. Be specific (e.g., PAN and SAD are not the same thing and should be treated as so in your questions;
+            1. Examine the assertion for both clear (e.g., "credit_card") and ambiguous (e.g., "blob_data", "user_info") columns.
+            2. Generate questions that use PCI-DSS terminology (e.g., "PAN" instead of "card number", "SAD" instead of "security code", etc.).
+            3. Be specific (e.g., PAN and SAD are not the same thing and should be treated as so in your questions;
                these are two separate topics, so two separate questions if needed).
+            4. Avoid using raw database field names in the questions; translate them into natural English descriptions (e.g., "card number" instead of "card_number", etc.).
             5. ONLY ask about what's relevant in the assertion (e.g., if the assertion mentions nothing of logging, then don't ask about it).
-            6. Ensure questions are retrieval friendly to vector stores—they should sound like they are seeking specific guidance from the standard.
+            6. Ensure questions are retrieval friendly to vector stores. They should sound like they are seeking specific guidance from the standard.
 
-            Constraints:
-            - Return ONLY a Python list of strings.
+            Output:
+            - Respond ONLY with a valid JSON list of strings containing the questions.
+            - Ensure the output is valid JSON and respects proper escaping.
             - EXACTLY 2 questions.
             - No introductory text or markdown formatting outside the list.
 
@@ -194,7 +201,7 @@ class PCIComplianceChecker(ComplianceChecker):
 
         Returns:
             str: A formatted prompt instructing the LLM to generate SQL assertions
-                 as a Python list of strings. Each assertion is a SELECT query that
+                 as a JSON list of strings. Each assertion is a SELECT query that
                  identifies compliance violations.
         """
         return textwrap.dedent(
@@ -227,10 +234,10 @@ class PCIComplianceChecker(ComplianceChecker):
             SQL Schema:
             {schema}
 
-            Generate as many comprehensive assertions as you need against the provided schema covering different {self.standard} requirements when necessary.
-
-            Respond **ONLY** with a Python list of SQL query strings. Nothing else.
-            Make sure it respects JSON formatting and escape sequences.
+            Output:
+            - Generate as many assertions as you need against the provided schema covering different {self.standard} requirements when necessary.
+            - Respond **ONLY** with a valid JSON list of strings containing the SQL queries.
+            - Ensure the output is valid JSON and respects proper escaping.
             """
         ).strip()
 
