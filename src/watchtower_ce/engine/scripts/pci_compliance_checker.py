@@ -171,8 +171,7 @@ class PCIComplianceChecker(ComplianceChecker):
             3. Be specific (e.g., PAN and SAD are not the same thing and should be treated as so in your questions;
                these are two separate topics, so two separate questions if needed).
             4. Avoid using raw database field names in the questions; translate them into natural English descriptions (e.g., "card number" instead of "card_number", etc.).
-            5. ONLY ask about what's relevant in the assertion (e.g., if the assertion mentions nothing of logging, then don't ask about it).
-            6. Ensure questions are retrieval friendly to vector stores. They should sound like they are seeking specific guidance from the standard.
+            5. Ensure questions are retrieval friendly to vector stores. They should sound like they are seeking specific guidance from the standard.
 
             Output:
             - Respond ONLY with a valid JSON list of strings containing the questions.
