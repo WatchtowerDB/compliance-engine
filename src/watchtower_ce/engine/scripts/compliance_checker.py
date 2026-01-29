@@ -342,7 +342,7 @@ class ComplianceChecker(ABC):
         than direct assertion-based queries.
 
         Args:
-            schema (str):
+            assertion (str):
                 The SQL assertion to analyze.
 
         Returns:
@@ -379,7 +379,9 @@ class ComplianceChecker(ABC):
             questions (list[str]):
                 List of compliance-related questions to search for.
             retrieval_k (int | None):
-                # TODO: FILL DOSCTRING
+                Optional override for the number of context chunks to retrieve per question.
+                When provided, this value is passed directly to `ContextRetriever.context`.
+                When ``None`` (the default), the retriever's own default retrieval configuration is used.
 
         Returns:
             str: Combined context from all retrievals, with double-newline separators

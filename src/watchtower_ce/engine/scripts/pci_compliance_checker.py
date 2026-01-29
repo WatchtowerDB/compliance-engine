@@ -145,7 +145,7 @@ class PCIComplianceChecker(ComplianceChecker):
         potential ambiguous columns.
 
         Args:
-            schema (str):
+            assertion (str):
                 The SQL assertion to analyze.
 
         Returns:
@@ -153,7 +153,7 @@ class PCIComplianceChecker(ComplianceChecker):
                  questions as a JSON list of strings.
         """
         return textwrap.dedent(
-            rf"""
+            f"""
             You are an expert PCI-DSS compliance auditor and database security specialist.
 
             Task:
