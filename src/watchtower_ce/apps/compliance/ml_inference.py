@@ -58,7 +58,7 @@ def execute_sql_assertion(connection_string: str, sql_query: str) -> tuple[bool,
         sql_query (str): SQL assertion query to execute.
 
     Returns:
-        bool: True if the assertion passes, False otherwise.
+        tuple[bool,str]: True and empty string if the assertion passes, False and query result otherwise.
     """
 
     clean_query = sql_query.strip().upper()
@@ -121,7 +121,8 @@ def _execute_psql(conn_str: str, sql_query: str) -> tuple[bool, str]:
         with psycopg.connect(conn_str) as conn:
             with conn.cursor() as cur:
                 cur.execute(sql_query)
-
+                passed = True
+                rows = []
                 if cur.description:
                     rows = cur.fetchmany(3)
                     passed = _passes(rows)
