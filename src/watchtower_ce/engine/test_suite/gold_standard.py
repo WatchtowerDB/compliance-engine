@@ -249,65 +249,96 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
 
     # ==================== REQUIREMENT 7: Requirement 7: Restrict Access to System Components and Cardholder Data by Business Need to Know ====================
 
+    # Test Case 5: Missing Access Controls
+    test_cases.append(
+        TestCase(
+            name="TC005_Missing_Access_Controls_Analysis",
+            description="Analysis quality for missing access control mechanisms",
+            failed_assertion="SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('payments', 'credit_cards', 'customer_cards') AND table_name NOT IN (SELECT table_name FROM information_schema.table_privileges WHERE grantee != 'PUBLIC')",
+            failure_result="table_name: payments\ntable_name: credit_cards",
+            schema_context="""
+        CREATE TABLE payments (
+            payment_id INT PRIMARY KEY,
+            card_number VARCHAR(19),
+            amount DECIMAL(10, 2)
+        );
+
+        CREATE TABLE credit_cards (
+            card_id INT PRIMARY KEY,
+            pan VARCHAR(19),
+            cardholder_name VARCHAR(100)
+        );
+        """,
+            ground_truth=GroundTruth(
+                violation_description="Unrestricted access to cardholder data",
+                pci_requirements=["Req 7.2", "Req 7.3"],
+                required_phrases={
+                    SynonymSet("access control", "access restriction", "authorization"),
+                    SynonymSet(
+                        "need to know",
+                        "need-to-know",
+                        "business need",
+                        "business-need",
+                        "access need",
+                        "access-need",
+                    ),
+                    SynonymSet(
+                        "least privilege",
+                        "least-privilege",
+                        "minimum privilege",
+                        "minimum necessary",
+                    ),
+                },
+                preferred_phrases=[
+                    SynonymSet(
+                        "separation of duties",
+                        "separation-of-duties",
+                        "separationof duty",
+                        "separation-of-duty",
+                    ),
+                    SynonymSet(
+                        "role based",
+                        "role-based",
+                        "RBAC",
+                        "attribute based",
+                        "attribute-based",
+                        "ABAC",
+                    ),
+                    SynonymSet(
+                        "authorized personnel",
+                        "authorized users",
+                        "authorized individuals",
+                    ),
+                    "job function",
+                    "data breach",
+                ],
+                remediation_steps=[
+                    SynonymSet(
+                        "Implement role-based access control / RBAC",
+                        "Configure role-based access control / RBAC",
+                        "Establish role-based access control / RBAC",
+                        "Implement attribute-based access control / ABAC",
+                        "Configure attribute-based access control / ABAC",
+                        "Establish attribute-based access control / ABAC",
+                    ),
+                    SynonymSet(
+                        "Define user roles and permissions",
+                        "Create user roles and permissions",
+                        "Establish user roles and permissions",
+                    ),
+                    SynonymSet(
+                        "Restrict access to authorized personnel only",
+                        "Limit access to authorized personnel only",
+                        "Revoke public access",
+                    ),
+                ],
+                sql_fix_required=True,
+            ),
+        )
+    )
+
     # ! THE FOLLOWING TEST CASES ARE AI GENERATED. THEY MAY NOT BE ACCURATE.
     # ! CHECK, REMOVE, OR REFINE THEM AFTER THE TEST SUITE IS FUNCTIONAL.
-    # # Test Case 5: Missing Access Controls
-    # test_cases.append(
-    #     TestCase(
-    #         name="TC005_Missing_Access_Controls_Analysis",
-    #         description="Analysis quality for missing access control mechanisms",
-    #         failed_assertion="SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('payments', 'credit_cards', 'customer_cards') AND table_name NOT IN (SELECT table_name FROM information_schema.table_privileges WHERE grantee != 'PUBLIC')",
-    #         failure_result="table_name: payments\ntable_name: credit_cards",
-    #         schema_context="""
-    #     CREATE TABLE payments (
-    #         payment_id INT PRIMARY KEY,
-    #         card_number VARCHAR(19),
-    #         amount DECIMAL(10, 2)
-    #     );
-
-    #     CREATE TABLE credit_cards (
-    #         card_id INT PRIMARY KEY,
-    #         pan VARCHAR(19),
-    #         cardholder_name VARCHAR(100)
-    #     );
-    #     """,
-    #         ground_truth=GroundTruth(
-    #             violation_description="Unrestricted access to cardholder data",
-    #             pci_requirements=["Req 7.1", "Req 7.2", "Req 7.2.1"],
-    #             required_phrases={
-    #                 SynonymSet("access control", "access restriction", "authorization"),
-    #                 SynonymSet("need to know", "need-to-know", "business need"),
-    #                 SynonymSet(
-    #                     "least privilege", "minimum privilege", "minimum necessary"
-    #                 ),
-    #             },
-    #             preferred_phrases=[
-    #                 SynonymSet("role-based", "RBAC", "role based"),
-    #                 "privilege",
-    #                 SynonymSet("authorized personnel", "authorized users"),
-    #                 "job function",
-    #             ],
-    #             remediation_steps=[
-    #                 SynonymSet(
-    #                     "Implement role-based access control",
-    #                     "Configure role-based access control",
-    #                     "Establish role-based access control",
-    #                 ),
-    #                 SynonymSet(
-    #                     "Define user roles and permissions",
-    #                     "Create user roles and permissions",
-    #                     "Establish user roles and permissions",
-    #                 ),
-    #                 SynonymSet(
-    #                     "Restrict access to authorized personnel only",
-    #                     "Limit access to authorized personnel only",
-    #                     "Revoke public access",
-    #                 ),
-    #             ],
-    #             sql_fix_required=True,
-    #         ),
-    #     )
-    # )
 
     # # # Test Case 6: Overly Permissive Access
     # # test_cases.append(
