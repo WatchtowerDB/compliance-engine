@@ -319,16 +319,22 @@ class AnalysisQualityEvaluator:
 
         return metrics
 
-    def generate_detailed_report(self, metrics: EvaluationMetrics) -> str:
+    def generate_detailed_report(
+        self, metrics: EvaluationMetrics, detailed_results: list[dict] | None = None
+    ) -> str:
         """
         Generate detailed report for research paper.
 
         Args:
             metrics: Computed metrics
+            detailed_results: Optional list of detailed results to include
 
         Returns:
             Formatted report string
         """
+        if detailed_results is None:
+            detailed_results = self.results
+
         report = []
         report.append("=" * 80)
         report.append("ANALYSIS QUALITY EVALUATION REPORT")
@@ -362,7 +368,7 @@ class AnalysisQualityEvaluator:
         report.append("PER-TEST-CASE BREAKDOWN:")
         report.append("-" * 80)
 
-        for result in self.results:
+        for result in detailed_results:
             report.append(f"\n[{result['test_case']}]")
             report.append(f"  Description: {result['description']}")
             report.append(
@@ -386,17 +392,25 @@ class AnalysisQualityEvaluator:
 
         return "\n".join(report)
 
-    def save_results(self, output_path: Path, metrics: EvaluationMetrics):
+    def save_results(
+        self,
+        output_path: Path,
+        metrics: EvaluationMetrics,
+        detailed_results: list[dict] | None = None,
+    ):
         """
         Save results to JSON file.
 
         Args:
             output_path: Path to save JSON
             metrics: Computed metrics
+            detailed_results: Optional list of detailed results to save
         """
         output_data = {
             "metrics": metrics.to_dict(),
-            "detailed_results": self.results,
+            "detailed_results": detailed_results
+            if detailed_results is not None
+            else self.results,
         }
 
         with open(output_path, "w") as f:
