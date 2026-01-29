@@ -1,0 +1,162 @@
+{
+  "metrics": {
+    "total_cases": 4,
+    "requirement_identification_rate": 1.0,
+    "required_phrases_coverage_rate": 0.75,
+    "preferred_phrases_coverage_rate": 0.5,
+    "remediation_completeness_rate": 1.0,
+    "sql_fix_provision_rate": 1.0,
+    "overall_quality_score": 0.875,
+    "raw_counts": {
+      "requirement_correctly_identified": 4,
+      "required_phrases_found": "9/12",
+      "preferred_phrases_found": "9/18",
+      "remediation_steps_found": "12/12",
+      "sql_fixes_provided": "3/3"
+    }
+  },
+  "detailed_results": [
+    {
+      "test_case": "TC001_CVV_Storage_Analysis",
+      "description": "Analysis quality for CVV storage violation",
+      "requirement_identified": true,
+      "required_phrases": {
+        "found": 2,
+        "total": 3,
+        "details": [
+          "Any of ['limited', 'not allowed', 'not stored', 'prohibited']",
+          "Any of ['CVC', 'CVV', 'card verification value']"
+        ]
+      },
+      "preferred_phrases": {
+        "found": 1,
+        "total": 4,
+        "details": [
+          "fraudulent transactions"
+        ]
+      },
+      "remediation_steps": {
+        "found": 3,
+        "total": 3,
+        "details": [
+          "Any of ['Delete CVV column / data from database', 'Drop CVV column / data from database', 'Remove CVV column / data from database']",
+          "Any of ['Implement Access Controls', 'Verifiy Access Controls']",
+          "Any of ['Document Policies and Business Justification', 'Review Policies and Business Justification']"
+        ]
+      },
+      "sql_fix": {
+        "provided": true,
+        "required": true
+      },
+      "analysis_text": "### VIOLATION SUMMARY\nThe failed assertion `SELECT * FROM customers WHERE cvv IS NOT NULL` indicates that the Credit Card Verification Value (CVV) data is being stored in the `customers` table. This violates PCI-DSS v4.0.1 requirement 3.3.1.2, which states that card verification code data is not to be stored upon completion of the authorization process.\n\n### STANDARD REFERENCE\n- **PCI-DSS v4.0.1, Requirement 3.3.1.2:** \"The card verification code is not stored upon completion of the authorizatio..."
+    },
+    {
+      "test_case": "TC002_Unencrypted_PAN_Analysis",
+      "description": "Analysis quality for unencrypted PAN storage",
+      "requirement_identified": true,
+      "required_phrases": {
+        "found": 2,
+        "total": 3,
+        "details": [
+          "Any of ['PAN', 'Primary Account Number']",
+          "Any of ['cleartext', 'cryptography', 'encrypt', 'plaintext', 'unecrypt']"
+        ]
+      },
+      "preferred_phrases": {
+        "found": 2,
+        "total": 5,
+        "details": [
+          "reconstruct",
+          "data breach"
+        ]
+      },
+      "remediation_steps": {
+        "found": 3,
+        "total": 3,
+        "details": [
+          "Any of ['Encrypt card number column using AES-256', 'Encrypt card_number column using AES-256']",
+          "Any of ['Implement encryption key management', 'Implement encryption key-management']",
+          "Any of ['Delete Plaintext Data', 'Drop Plaintext Data', 'Remove Plaintext Data']"
+        ]
+      },
+      "sql_fix": {
+        "provided": true,
+        "required": true
+      },
+      "analysis_text": "### VIOLATION SUMMARY\nThe compliance assertion has failed, indicating a violation of PCI-DSS v4.0.1 requirements related to the protection of stored account data.\n\n### STANDARD REFERENCE\nThe specific PCI-DSS v4.0.1 clauses violated include:\n\n- **Requirement 3.1**: Processes and mechanisms for protecting stored account data are defined and understood.\n- **Requirement 3.2**: Storage of account data is kept to a minimum.\n- **Requirement 3.5**: Primary account number (PAN) is secured wherever it is ..."
+    },
+    {
+      "test_case": "TC003_Track_Data_Analysis",
+      "description": "Analysis quality for track data violation",
+      "requirement_identified": true,
+      "required_phrases": {
+        "found": 2,
+        "total": 3,
+        "details": [
+          "Any of ['limited', 'not allowed', 'not stored', 'prohibited']",
+          "Any of ['full track', 'track 1', 'track 2']"
+        ]
+      },
+      "preferred_phrases": {
+        "found": 2,
+        "total": 3,
+        "details": [
+          "Any of ['counterfeit card', 'counterfeit payment card', 'reproduce card', 'reproduce payment card']",
+          "fraudulent transaction"
+        ]
+      },
+      "remediation_steps": {
+        "found": 3,
+        "total": 3,
+        "details": [
+          "Any of ['Delete track 1 data and track 2 data columns', 'Delete track1_data and track2_data columns', 'Drop track 1 data and track 2 data columns', 'Drop track1_data and track2_data columns', 'Remove track 1 data and track 2 data columns', 'Remove track1_data and track2_data columns']",
+          "Any of ['Delete all track data', 'Drop all track data', 'Remove all track data']",
+          "Any of ['Ensure data deletion after authorization', 'Ensure data removal after authorization']"
+        ]
+      },
+      "sql_fix": {
+        "provided": true,
+        "required": true
+      },
+      "analysis_text": "### VIOLATION SUMMARY:\nThe compliance assertion has failed due to the presence of full track data (track 1 and track 2) in the `card_swipes` table. This data includes sensitive information such as the Primary Account Number (PAN) and other track data.\n\n### STANDARD REFERENCE:\n- **Requirement 3.3.1.1**: The full contents of any track are not stored upon completion of the authorization process.\n- **Requirement 3.5.1**: PAN is rendered unreadable anywhere it is stored by using any of the following ..."
+    },
+    {
+      "test_case": "TC004_Unencrypted_Transmission_Analysis",
+      "description": "Analysis quality for unencrypted data transmission indicators",
+      "requirement_identified": true,
+      "required_phrases": {
+        "found": 3,
+        "total": 3,
+        "details": [
+          "Any of ['cryptography', 'encrypt', 'encrypted', 'encryption']",
+          "Any of ['HTTPS', 'SSL', 'TLS', 'TSL/SSL']",
+          "Any of ['transfer', 'transit', 'transmission', 'transmit']"
+        ]
+      },
+      "preferred_phrases": {
+        "found": 4,
+        "total": 6,
+        "details": [
+          "Any of ['robust cryptography', 'strong cryptography']",
+          "Any of ['open', 'public', 'untrusted']",
+          "Any of ['MITM', 'intercept', 'interception', 'man-in-the-middle', 'tamper']",
+          "Any of ['open network', 'public network', 'untrusted network']"
+        ]
+      },
+      "remediation_steps": {
+        "found": 3,
+        "total": 3,
+        "details": [
+          "Any of ['Change endpoints to HTTPS', 'Migrate endpoints to HTTPS', 'Update endpoints to use HTTPS']",
+          "Any of ['Enable TLS 1.2 or higher', 'Enable TLS 1.3', 'Enable TLS/SSL', 'Encrypt data at the session level', 'Implement TLS 1.2 or higher', 'Implement TLS 1.3', 'Implement TLS/SSL', 'Use TLS 1.2 or higher', 'Use TLS 1.3', 'Use TLS/SSL']",
+          "Any of ['Review certificate configuration', 'Validate certificate configuration', 'Verify certificate configuration']"
+        ]
+      },
+      "sql_fix": {
+        "provided": true,
+        "required": false
+      },
+      "analysis_text": "### VIOLATION SUMMARY\nThe compliance assertion has failed, indicating a violation of PCI-DSS v4.0.1 requirements. The specific violation is related to the transmission of cardholder data over open, public networks without proper encryption. The endpoints identified in the violation are `http://payment-gateway.petstore.com/process` and `http://api.vendor.com/card-data`.\n\n### STANDARD REFERENCE\nThe violation is related to the following PCI-DSS v4.0.1 requirements:\n- **Requirement 4.2**: PAN is pro..."
+    }
+  ]
+}
