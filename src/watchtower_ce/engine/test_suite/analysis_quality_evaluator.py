@@ -349,7 +349,7 @@ class AnalysisQualityEvaluator:
             f"  Required Phrases Coverage: {metrics.required_phrases_coverage_rate:.4f} ({metrics.required_phrases_coverage_rate * 100:.2f}%)"
         )
         report.append(
-            f"  Preferred Phrase Coverage: {metrics.preferred_phrases_coverage_rate:.4f} ({metrics.preferred_phrases_coverage_rate * 100:.2f}%)"
+            f"  Preferred Phrases Coverage: {metrics.preferred_phrases_coverage_rate:.4f} ({metrics.preferred_phrases_coverage_rate * 100:.2f}%)"
         )
         report.append(
             f"  Remediation Completeness: {metrics.remediation_completeness_rate:.4f} ({metrics.remediation_completeness_rate * 100:.2f}%)"
