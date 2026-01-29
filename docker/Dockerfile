@@ -56,7 +56,7 @@ RUN useradd -ms /usr/bin/bash watchtower && \
   apt-get install -y --no-install-recommends tzdata && \
   rm -rf /var/lib/apt/lists/*
 
-COPY --chown=watchtower:watchtower data/chroma_db /home/watchtower/chroma
+COPY --chown=watchtower:watchtower data/chroma_db /home/watchtower/chroma_db
 
 USER watchtower:watchtower
 
