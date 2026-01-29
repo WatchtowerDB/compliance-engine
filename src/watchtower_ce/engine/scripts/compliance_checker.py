@@ -358,7 +358,7 @@ class ComplianceChecker(ABC):
 
         # Use lower temperature for more consistent, focused question generation
         response = self.llm.generate(
-            prompt, max_tokens=1024, temperature=0.3, stream=False
+            prompt, max_tokens=512, temperature=0.3, stream=False
         )
 
         return self._parse_list_response(response, 2)
@@ -475,7 +475,7 @@ class ComplianceChecker(ABC):
         # Generate a question to retrieve relevant context for this specific violation
         logger.info("Generating questions from failed assertion: %s", assertion)
         questions = self._generate_assertion_questions(assertion)
-        context = self._retrieve_context_for_questions(questions, 3)
+        context = self._retrieve_context_for_questions(questions, 4)
 
         logger.debug("Retrieved context: %s", context)
 
@@ -485,7 +485,7 @@ class ComplianceChecker(ABC):
 
         logger.info("Analyzing failed assertion")
         response = self.llm.generate(
-            prompt, max_tokens=800, temperature=0.45, stream=True
+            prompt, max_tokens=800, temperature=0.65, stream=True
         )
         logger.info("Successfully analyzed failed assertion")
 
