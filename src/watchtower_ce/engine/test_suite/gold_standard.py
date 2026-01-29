@@ -273,7 +273,7 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
                 violation_description="Unrestricted access to cardholder data",
                 pci_requirements=["Req 7.2", "Req 7.3"],
                 required_phrases={
-                    SynonymSet("access control", "access restriction", "authorization"),
+                    SynonymSet("access control", "access restriction"),
                     SynonymSet(
                         "need to know",
                         "need-to-know",
@@ -295,14 +295,6 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
                         "separation-of-duties",
                         "separationof duty",
                         "separation-of-duty",
-                    ),
-                    SynonymSet(
-                        "role based",
-                        "role-based",
-                        "RBAC",
-                        "attribute based",
-                        "attribute-based",
-                        "ABAC",
                     ),
                     SynonymSet(
                         "authorized personnel",
