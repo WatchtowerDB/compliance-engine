@@ -47,9 +47,16 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
                     ),
                 },
                 preferred_phrases=[
-                    "need to know",
+                    SynonymSet(
+                        "need to know",
+                        "need-to-know",
+                        "business need",
+                        "business-need",
+                        "access need",
+                        "access-need",
+                    ),
                     SynonymSet("counterfeit payment cards", "counterfeit cards"),
-                    "fraudulent transactions",
+                    "fraudulent transaction",
                     SynonymSet("encrypt", "plaintext", "cleartext", "unencrypt"),
                 ],
                 remediation_steps=[
