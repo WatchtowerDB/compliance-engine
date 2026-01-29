@@ -1,31 +1,18 @@
 import psycopg
 import sqlite3
 import logging
-import os
 from typing import List, Sequence, Any
 from urllib.parse import urlparse
-from pathlib import Path
+from django.conf import settings
 from ...engine.scripts.pci_compliance_checker import PCIComplianceChecker
 
 logger = logging.getLogger(__name__)
 
-SCRIPT_DIR = Path(__file__).resolve().parents[4]
-
-MODEL_PATH: Path = Path(
-    os.getenv(
-        "WTCE_MODEL_PATH",
-        SCRIPT_DIR
-        / "models/base/Ministral-8B-Instruct-2410-GGUF/Ministral-8B-Instruct-2410-Q6_K_L.gguf",
-    )
-)
-
-CHROMA_DIR: Path = Path(os.getenv("WTCE_CHROMA_DIR", SCRIPT_DIR / "data/chroma_db"))
-
 
 def get_pci_checker_instance() -> PCIComplianceChecker:
     return PCIComplianceChecker(
-        model_path=MODEL_PATH,
-        chroma_dir=CHROMA_DIR,
+        model_path=settings.MODEL_PATH,
+        chroma_dir=settings.CHROMA_DIR,
         collection_name="PCI-DSS-v4.0.1",
         context_window=8192,
         n_gpu_layers=31,
