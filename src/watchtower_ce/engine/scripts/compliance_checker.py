@@ -245,6 +245,8 @@ class ComplianceChecker(ABC):
         Returns:
             list[str]: A list of strings extracted from the response
         """
+        logger.debug("Raw list response: %s", repr(response))
+
         try:
             # Clean up potential markdown formatting
             cleaned_response = response.strip()
