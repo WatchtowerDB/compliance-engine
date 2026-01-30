@@ -468,18 +468,17 @@ class ComplianceChecker(ABC):
                 The result returned by the failed assertion (violating rows/data).
 
         Returns:
-            str: A detailed analysis containing:
-                 - Explanation of the compliance violation
-                 - Relevant standard clauses
-                 - Specific remediation steps
-                 - SQL fixes where applicable
+            Iterator[CreateCompletionStreamResponse]: An iterator yielding chunks of the
+                generated analysis. This is used for streaming output.
 
         Example:
             >>> checker = PCIComplianceChecker(model_path, chroma_dir)
             >>> assertion = "SELECT * FROM customers WHERE cvv IS NOT NULL"
             >>> result = "id: 1, cvv: 123\\nid: 2, cvv: 456"
-            >>> analysis = checker.analyze_failed_assertion(assertion, result)
-            >>> print(analysis)
+            >>> stream_chunks = checker.analyze_failed_assertion(assertion, result)
+            >>> for chunk in stream_chunks:
+            ...     token = chunk["choices"][0]["text"]
+            ...     print(token, end="", flush=True)
         """
         # Generate a question to retrieve relevant context for this specific violation
         logger.info("Generating questions from failed assertion: %s", assertion)
@@ -496,35 +495,40 @@ class ComplianceChecker(ABC):
 
         return stream_chunks
 
-    def analyze_all_failed_assertions(
-        self, failed_assertions: dict[str, str]
-    ) -> dict[str, str]:
+    def analyze_failed_assertion_stdout(
+        self, assertion: str, failure_result: str
+    ) -> str:
         """
-        Analyze multiple failed assertions and provide remediation for each.
+        Analyze a failed assertion and return the full analysis text.
+
+        This is a convenience method that returns the complete analysis as a string,
+        useful for non-streaming contexts (e.g., tests, batch processing).
+        It "streams" the generation to stdout as it progresses.
 
         Args:
-            failed_assertions (dict[str, str]):
-                Dictionary mapping assertion queries to their failure results.
+            assertion (str): The SQL assertion query that failed.
+            failure_result (str): The result returned by the failed assertion.
 
         Returns:
-            dict[str, str]: Dictionary mapping each assertion to its analysis.
-
-        Example:
-            >>> failed = {
-            ...     "SELECT * FROM customers WHERE cvv IS NOT NULL": "id: 1, cvv: 123",
-            ...     "SELECT * FROM customers WHERE LENGTH(credit_card_number) = 16": "id: 2, cc: 1234567890123456"
-            ... }
-            >>> analyses = checker.analyze_all_failed_assertions(failed)
+            str: The complete analysis text.
         """
-        analyses = {}
-        total = len(failed_assertions)
+        logger.info("Generating questions from failed assertion: %s", assertion)
+        questions = self._generate_assertion_questions(assertion)
+        context = self._retrieve_context_for_questions(questions, 4)
 
-        for i, (assertion, result) in enumerate(failed_assertions.items(), 1):
-            logger.debug("Analyzing failed assertion (%s/%s)", i, total)
-            analysis = self.analyze_failed_assertion(assertion, result)
-            analyses[assertion] = analysis
+        logger.debug("Retrieved context: %s", context)
 
-        return analyses
+        prompt = self._build_assertion_analysis_prompt(
+            context, assertion, failure_result
+        )
+
+        logger.info("Analyzing failed assertion")
+        response = self.llm.generate(
+            prompt, max_tokens=800, temperature=0.65, stream=True
+        )
+        logger.info("Successfully analyzed failed assertion")
+
+        return response
 
     def close(self):
         """
