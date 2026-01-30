@@ -20,6 +20,7 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
     test_cases = []
 
     # ==================== REQUIREMENT 3: Protect Stored Account Data ====================
+
     # Test Case 1: CVV Storage Violation
     test_cases.append(
         TestCase(
@@ -300,15 +301,24 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
                     SynonymSet(
                         "separation of duties",
                         "separation-of-duties",
-                        "separationof duty",
+                        "separation of duty",
                         "separation-of-duty",
+                        "segregation of duties",
+                        "segregation-of-duties",
+                        "segregation of duty",
+                        "segregation-of-duty",
                     ),
                     SynonymSet(
                         "authorized personnel",
                         "authorized users",
                         "authorized individuals",
                     ),
-                    "job function",
+                    SynonymSet(
+                        "job function",
+                        "job classification",
+                        "job role",
+                        "business function",
+                    ),
                     "data breach",
                 ],
                 remediation_steps=[
@@ -336,68 +346,102 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
         )
     )
 
+    # Test Case 6: Overly Permissive Access
+    test_cases.append(
+        TestCase(
+            name="TC006_Overly_Permissive_Access_Analysis",
+            description="Analysis quality for overly broad access permissions",
+            failed_assertion="SELECT user_name, privilege_type FROM user_privileges WHERE privilege_type IN ('ALL', 'SUPER', 'GRANT') AND table_name IN ('cardholder_data', 'transactions', 'payment_info')",
+            failure_result="[app_user, ALL], [reporting_user, ALL]",
+            schema_context="""
+        CREATE TABLE user_privileges (
+            privilege_id INT PRIMARY KEY,
+            user_name VARCHAR(100),
+            table_name VARCHAR(100),
+            privilege_type VARCHAR(50)
+        );
+
+        CREATE TABLE cardholder_data (
+            customer_id INT PRIMARY KEY,
+            pan VARCHAR(19),
+            expiration_date VARCHAR(7)
+        );
+        """,
+            ground_truth=GroundTruth(
+                violation_description="Excessive privileges granted for cardholder data access",
+                pci_requirements=["Req 7.2", "Req 7.3"],
+                required_phrases={
+                    SynonymSet("access control", "access restriction"),
+                    SynonymSet(
+                        "need to know",
+                        "need-to-know",
+                        "business need",
+                        "business-need",
+                        "access need",
+                        "access-need",
+                    ),
+                    SynonymSet(
+                        "least privilege",
+                        "least-privilege",
+                        "minimum privilege",
+                        "minimum necessary",
+                    ),
+                    SynonymSet(
+                        "job function",
+                        "job classification",
+                        "job role",
+                        "business function",
+                    ),
+                },
+                preferred_phrases=[
+                    SynonymSet(
+                        "separation of duties",
+                        "separation-of-duties",
+                        "separation of duty",
+                        "separation-of-duty",
+                        "segregation of duties",
+                        "segregation-of-duties",
+                        "segregation of duty",
+                        "segregation-of-duty",
+                    ),
+                    SynonymSet("data loss", "data breach"),
+                    "unauthorized",
+                ],
+                remediation_steps=[
+                    SynonymSet(
+                        "Identify job functions and define roles",
+                        "Identify job functions and access needs",
+                    ),
+                    SynonymSet(
+                        "Implement role-based access control / RBAC",
+                        "Configure role-based access control / RBAC",
+                        "Establish role-based access control / RBAC",
+                        "Implement attribute-based access control / ABAC",
+                        "Configure attribute-based access control / ABAC",
+                        "Establish attribute-based access control / ABAC",
+                    ),
+                    SynonymSet(
+                        "Adjust privileges to the minimum required"
+                        "Provide minimum required permissions",
+                        "Update user privileges",
+                        "Reduce user privileges",
+                        "Limit user privileges",
+                        "Modify user privileges",
+                        "Review user privileges",
+                        "Audit user privileges",
+                        "Adjust user privileges",
+                        "Revoke excessive privileges",
+                        "Grant only necessary permissions",
+                        "Assign only necessary permissions",
+                    ),
+                ],
+                sql_fix_required=True,
+            ),
+        )
+    )
+
     # ! THE FOLLOWING TEST CASES ARE AI GENERATED. THEY MAY NOT BE ACCURATE.
     # ! CHECK, REMOVE, OR REFINE THEM AFTER THE TEST SUITE IS FUNCTIONAL.
-
-    # # # Test Case 6: Overly Permissive Access
-    # # test_cases.append(
-    # #     TestCase(
-    # #         name="TC006_Overly_Permissive_Access_Analysis",
-    # #         description="Analysis quality for overly broad access permissions",
-    # #         failed_assertion="SELECT user_name, privilege_type FROM user_privileges WHERE privilege_type IN ('ALL', 'SUPER', 'GRANT') AND table_name IN ('cardholder_data', 'transactions', 'payment_info')",
-    # #         failure_result="user_name: app_user, privilege_type: ALL\nuser_name: reporting_user, privilege_type: ALL",
-    # #         schema_context="""
-    # #     CREATE TABLE user_privileges (
-    # #         privilege_id INT PRIMARY KEY,
-    # #         user_name VARCHAR(100),
-    # #         table_name VARCHAR(100),
-    # #         privilege_type VARCHAR(50)
-    # #     );
-
-    # #     CREATE TABLE cardholder_data (
-    # #         customer_id INT PRIMARY KEY,
-    # #         pan VARCHAR(19),
-    # #         expiration_date VARCHAR(7)
-    # #     );
-    # #     """,
-    # #         ground_truth=GroundTruth(
-    # #             violation_description="Excessive privileges granted for cardholder data access",
-    # #             pci_requirements=["Req 7.2.2", "Req 7.2.4"],
-    # #             required_phrases={
-    # #                 SynonymSet(
-    # #                     "least privilege", "minimum privilege", "minimum necessary"
-    # #                 ),
-    # #                 SynonymSet("need to know", "need-to-know", "business need"),
-    # #                 SynonymSet("job function", "job role", "business function"),
-    # #             },
-    # #             preferred_phrases=[
-    # #                 "excessive privilege",
-    # #                 SynonymSet("granular", "specific", "limited"),
-    # #                 "privilege escalation",
-    # #                 SynonymSet("segregation of duties", "separation of duties"),
-    # #             ],
-    # #             remediation_steps=[
-    # #                 SynonymSet(
-    # #                     "Review and reduce user privileges",
-    # #                     "Audit and reduce user privileges",
-    # #                     "Revoke excessive privileges",
-    # #                 ),
-    # #                 SynonymSet(
-    # #                     "Grant only necessary permissions",
-    # #                     "Assign only necessary permissions",
-    # #                     "Provide minimum required permissions",
-    # #                 ),
-    # #                 SynonymSet(
-    # #                     "Implement principle of least privilege",
-    # #                     "Apply principle of least privilege",
-    # #                     "Enforce principle of least privilege",
-    # #                 ),
-    # #             ],
-    # #             sql_fix_required=True,
-    # #         ),
-    # #     )
-    # # )
-
     # # # ==================== REQUIREMENT 8: AUTHENTICATION ====================
 
     # # # Test Case 7: Weak Password Storage
