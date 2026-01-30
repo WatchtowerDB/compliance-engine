@@ -1,13 +1,13 @@
 import json
+import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 from warnings import deprecated
 
-from yaspin import yaspin
-from yaspin.spinners import Spinners
-
 from .context_retriever import ContextRetriever
 from .llm_inference import LLMInference
+
+logger = logging.getLogger(__name__)
 
 
 class ComplianceChecker(ABC):
@@ -84,17 +84,38 @@ class ComplianceChecker(ABC):
         )
 
     @abstractmethod
-    def _build_questions_prompt(self, schema: str) -> str:
+    def _build_schema_questions_prompt(self, schema: str) -> str:
         """
-        Construct a prompt for generating compliance-specific questions.
+        Construct a prompt for generating compliance-specific questions for an SQL schema.
 
         This method should create a prompt that instructs the LLM to analyze the
-        input (schema, config, etc.) and generate targeted questions that will be
+        input schema and generate targeted questions that will be
         used to retrieve relevant compliance documentation.
 
         Args:
             schema (str):
-                The artifact to analyze (SQL schema, config file, etc.).
+                The SQL schema to analyze.
+
+        Returns:
+            str: A prompt instructing the LLM to generate compliance questions.
+
+        Note:
+            Subclasses should instruct the model to return a Python list of strings.
+        """
+        pass
+
+    @abstractmethod
+    def _build_assertion_questions_prompt(self, assertion: str) -> str:
+        """
+        Construct a prompt for generating compliance-specific questions for an SQL assertion.
+
+        This method should create a prompt that instructs the LLM to analyze the
+        input assertion and generate targeted questions that will be
+        used to retrieve relevant compliance documentation.
+
+        Args:
+            assertion (str):
+                An sql assertion to analyze.
 
         Returns:
             str: A prompt instructing the LLM to generate compliance questions.
@@ -224,6 +245,8 @@ class ComplianceChecker(ABC):
         Returns:
             list[str]: A list of strings extracted from the response
         """
+        logger.debug("Raw list response: %s", repr(response))
+
         try:
             # Clean up potential markdown formatting
             cleaned_response = response.strip()
@@ -233,6 +256,8 @@ class ComplianceChecker(ABC):
                 cleaned_response = cleaned_response[9:]
             elif cleaned_response.startswith("```py"):
                 cleaned_response = cleaned_response[5:]
+            elif cleaned_response.startswith("```json"):
+                cleaned_response = cleaned_response[7:]
             elif cleaned_response.startswith("```sql"):
                 cleaned_response = cleaned_response[6:]
             elif cleaned_response.startswith("```"):
@@ -246,14 +271,14 @@ class ComplianceChecker(ABC):
             items = json.loads(cleaned_response)
 
             if not isinstance(items, list):
-                raise ValueError("[ERROR] Response is not a list.")
+                raise ValueError("Response is not a valid list.")
 
-            print(f"[INFO] Successfully parsed {len(items)} items from JSON.")
+            logger.debug("Successfully parsed %s items from JSON", len(items))
             return items
 
         except (json.JSONDecodeError, ValueError) as e:
-            print(f"[WARNING] Failed to parse response as JSON: {e}")
-            print(f"[WARNING] Raw response: {repr(response)}")
+            logger.warning("Failed to parse response as JSON: %s", e)
+            logger.warning("Raw response: %s", repr(response))
 
             # Fallback: extract items from text (one per line)
             lines = response.strip().split("\n")
@@ -268,24 +293,24 @@ class ComplianceChecker(ABC):
             # Limit to fallback_item_limit if we have too many items
             if len(items) > fallback_item_limit:
                 items = items[:fallback_item_limit]
-                print(f"[INFO] Extracted and limited to {len(items)} items from text.")
+                logger.debug("Extracted and limited to %s items from text", len(items))
             else:
-                print(f"[INFO] Extracted {len(items)} items from text.")
+                logger.debug("Extracted %s items from text", len(items))
 
             return items
 
-    def _generate_compliance_questions(self, schema: str) -> list[str]:
+    def _generate_schema_questions(self, schema: str) -> list[str]:
         """
-        Generate targeted compliance questions from the artifact using the LLM.
+        Generate targeted compliance questions from the schema using the LLM.
 
         This method uses the LLM to intelligently extract compliance concerns from
-        the input artifact. The generated questions are then used to query the
+        the input schema. The generated questions are then used to query the
         vector store for relevant documentation, making retrieval more focused
         than direct schema-based queries.
 
         Args:
             schema (str):
-                The artifact to analyze (SQL schema, configuration, etc.).
+                The SQL schema to analyze.
 
         Returns:
             list[str]: A list of compliance question strings. Returns up to 6 questions,
@@ -298,19 +323,51 @@ class ComplianceChecker(ABC):
             The method expects JSON output from the LLM but has robust fallback
             handling for malformed responses, including stripping markdown code blocks.
         """
-        prompt = self._build_questions_prompt(schema)
+        prompt = self._build_schema_questions_prompt(schema)
 
-        with yaspin(
-            Spinners.arc, text="[INFO] Generating compliance questions from schema..."
-        ):
-            # Use lower temperature for more consistent, focused question generation
-            response = self.llm.generate(
-                prompt, max_tokens=1024, temperature=0.3, stream=False
-            )
+        # Use lower temperature for more consistent, focused question generation
+        response = self.llm.generate(
+            prompt, max_tokens=1024, temperature=0.3, stream=False
+        )
 
         return self._parse_list_response(response)
 
-    def _retrieve_context_for_questions(self, questions: list[str]) -> str:
+    def _generate_assertion_questions(self, assertion: str) -> list[str]:
+        """
+        Generate targeted compliance questions from the assertion using the LLM.
+
+        This method uses the LLM to intelligently extract compliance concerns from
+        the input assertion. The generated questions are then used to query the
+        vector store for relevant documentation, making retrieval more focused
+        than direct assertion-based queries.
+
+        Args:
+            assertion (str):
+                The SQL assertion to analyze.
+
+        Returns:
+            list[str]: A list of compliance question strings. Returns up to 2 questions,
+                       even if JSON parsing fails (fallback to text extraction).
+
+        Raises:
+            No exceptions are raised - parsing failures trigger fallback logic.
+
+        Note:
+            The method expects JSON output from the LLM but has robust fallback
+            handling for malformed responses, including stripping markdown code blocks.
+        """
+        prompt = self._build_assertion_questions_prompt(assertion)
+
+        # Use lower temperature for more consistent, focused question generation
+        response = self.llm.generate(
+            prompt, max_tokens=512, temperature=0.3, stream=False
+        )
+
+        return self._parse_list_response(response, 2)
+
+    def _retrieve_context_for_questions(
+        self, questions: list[str], retrieval_k: int | None = None
+    ) -> str:
         """
         Retrieve relevant compliance documentation for multiple questions.
 
@@ -321,22 +378,35 @@ class ComplianceChecker(ABC):
         Args:
             questions (list[str]):
                 List of compliance-related questions to search for.
+            retrieval_k (int | None):
+                Optional override for the number of context chunks to retrieve per question.
+                When provided, this value is passed directly to `ContextRetriever.context`.
+                When ``None`` (the default), the retriever's own default retrieval configuration is used.
 
         Returns:
             str: Combined context from all retrievals, with double-newline separators
                  between unique document chunks.
         """
-        print(f"[INFO] Retrieving context for {len(questions)} questions...")
+        logger.info("Retrieving context for %s questions", len(questions))
         all_contexts = set()  # Using sets for automatic de-duplication of contexts
 
         for i, question in enumerate(questions, 1):
-            print(f"[INFO] Retrieving context for question {i}/{len(questions)}")
-            for context in self.context_retriever.context(question):
-                all_contexts.add(context.page_content)
+            logger.debug(
+                'Retrieving context for question (%s/%s): "%s"',
+                i,
+                len(questions),
+                question,
+            )
+            if retrieval_k:
+                for context in self.context_retriever.context(question, retrieval_k):
+                    all_contexts.add(context.page_content)
+            else:
+                for context in self.context_retriever.context(question):
+                    all_contexts.add(context.page_content)
 
         combined_context = "\n\n--- Context chunks seperator ---\n\n".join(all_contexts)
 
-        print("[INFO] Retrieved and combined all contexts.")
+        logger.info("Successfully retrieved context for %s questions", len(questions))
         return combined_context
 
     def generate_assertions(self, schema: str) -> list[str]:
@@ -363,18 +433,19 @@ class ComplianceChecker(ABC):
             >>> for assertion in assertions:
             ...     print(assertion)
         """
-        questions = self._generate_compliance_questions(schema)
+        logger.info("Generating compliance questions from schema")
+        questions = self._generate_schema_questions(schema)
         context = self._retrieve_context_for_questions(questions)
 
         prompt = self._build_assertions_prompt(context, schema)
 
-        with yaspin(Spinners.arc, text="[INFO] Generating SQL assertions..."):
-            response = self.llm.generate(
-                prompt, max_tokens=2048, temperature=0.3, stream=False
-            )
+        logger.info("Generating SQL assertions")
+        response = self.llm.generate(
+            prompt, max_tokens=2048, temperature=0.3, stream=False
+        )
 
         assertions = self._parse_list_response(response, fallback_item_limit=10)
-        print(f"[INFO] Generated {len(assertions)} SQL assertions.")
+        logger.info("Successfully generated %s SQL assertions", len(assertions))
 
         return assertions
 
@@ -406,20 +477,21 @@ class ComplianceChecker(ABC):
             >>> print(analysis)
         """
         # Generate a question to retrieve relevant context for this specific violation
-        question = f"What are the compliance requirements related to: {assertion}"
+        logger.info("Generating questions from failed assertion: %s", assertion)
+        questions = self._generate_assertion_questions(assertion)
+        context = self._retrieve_context_for_questions(questions, 4)
 
-        print("[INFO] Retrieving context for failed assertion...")
-        context = self.context_retriever.retrieve(question, 4)
+        logger.debug("Retrieved context: %s", context)
 
-        print("[INFO] Analyzing failed assertion...")
         prompt = self._build_assertion_analysis_prompt(
             context, assertion, failure_result
         )
 
+        logger.info("Analyzing failed assertion")
         response = self.llm.generate(
-            prompt, max_tokens=2048, temperature=0.4, stream=True
+            prompt, max_tokens=800, temperature=0.65, stream=True
         )
-        print("[INFO] Analysis complete.")
+        logger.info("Successfully analyzed failed assertion")
 
         return response
 
@@ -447,9 +519,7 @@ class ComplianceChecker(ABC):
         total = len(failed_assertions)
 
         for i, (assertion, result) in enumerate(failed_assertions.items(), 1):
-            print(f"\n[INFO] Analyzing failed assertion {i}/{total}")
-            print(f"[INFO] Assertion: {assertion[:80]}...")
-
+            logger.debug("Analyzing failed assertion (%s/%s)", i, total)
             analysis = self.analyze_failed_assertion(assertion, result)
             analyses[assertion] = analysis
 

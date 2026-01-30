@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.9.1-cudnn-runtime-ubuntu24.04 AS base
+FROM nvidia/cuda:13.1.1-cudnn-devel-ubuntu24.04 AS base
 
 # NOTE: Install UV
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
@@ -13,7 +13,8 @@ FROM base AS build
 
 ARG VERSION=0.0.0
 
-ENV SETUPTOOLS_SCM_PRETEND_VERSION="${VERSION}"
+ENV SETUPTOOLS_SCM_PRETEND_VERSION="${VERSION}" \
+  CMAKE_ARGS="-DGGML_CUDA=on"
 
 WORKDIR /app
 
@@ -55,7 +56,7 @@ RUN useradd -ms /usr/bin/bash watchtower && \
   apt-get install -y --no-install-recommends tzdata && \
   rm -rf /var/lib/apt/lists/*
 
-COPY --chown=watchtower:watchtower data/ /home/watchtower/chroma
+COPY --chown=watchtower:watchtower data/chroma_db /home/watchtower/chroma_db
 
 USER watchtower:watchtower
 

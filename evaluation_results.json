@@ -1,0 +1,204 @@
+{
+  "metrics": {
+    "total_cases": 5,
+    "requirement_identification_rate": 1.0,
+    "required_phrases_coverage_rate": 0.9333,
+    "preferred_phrases_coverage_rate": 0.6522,
+    "remediation_completeness_rate": 1.0,
+    "sql_fix_provision_rate": 1.0,
+    "overall_quality_score": 0.9345,
+    "raw_counts": {
+      "requirement_correctly_identified": 5,
+      "required_phrases_found": "14/15",
+      "preferred_phrases_found": "15/23",
+      "remediation_steps_found": "15/15",
+      "sql_fixes_provided": "4/4"
+    }
+  },
+  "detailed_results": [
+    {
+      "test_case": "TC001_CVV_Storage_Analysis",
+      "description": "Analysis quality for CVV storage violation",
+      "requirement_identified": true,
+      "required_phrases": {
+        "found": 3,
+        "total": 3,
+        "details": [
+          "Any of ['CVC', 'CVV', 'card verification value']",
+          "Any of ['SAD', 'Sensitive Authentication Data', 'Sensitive Cardholder Data']",
+          "Any of ['limited', 'not allowed', 'not stored', 'prohibited']"
+        ]
+      },
+      "preferred_phrases": {
+        "found": 2,
+        "total": 4,
+        "details": [
+          "fraudulent transactions",
+          "Any of ['cleartext', 'encrypt', 'plaintext', 'unencrypt']"
+        ]
+      },
+      "remediation_steps": {
+        "found": 3,
+        "total": 3,
+        "details": [
+          "Any of ['Delete CVV column / data from database', 'Drop CVV column / data from database', 'Remove CVV column / data from database']",
+          "Any of ['Implement Access Controls', 'Verifiy Access Controls']",
+          "Any of ['Document Policies and Business Justification', 'Review Policies and Business Justification']"
+        ]
+      },
+      "sql_fix": {
+        "provided": true,
+        "required": true
+      },
+      "analysis_text": "### VIOLATION SUMMARY\nThe compliance assertion has failed, indicating a violation related to the storage and handling of sensitive authentication data (SAD), specifically the CVV (Card Verification Value) numbers.\n\n### STANDARD REFERENCE\nThe violation specifically affects PCI-DSS v4.0.1 Requirement 3.3.2 and 3.3.3. Requirement 3.3.2 states that SAD that is stored electronically prior to completion of authorization must be encrypted using strong cryptography. Requirement 3.3.3 mandates that any s..."
+    },
+    {
+      "test_case": "TC002_Unencrypted_PAN_Analysis",
+      "description": "Analysis quality for unencrypted PAN storage",
+      "requirement_identified": true,
+      "required_phrases": {
+        "found": 3,
+        "total": 3,
+        "details": [
+          "hash",
+          "Any of ['PAN', 'Primary Account Number']",
+          "Any of ['cleartext', 'cryptography', 'encrypt', 'plaintext', 'unecrypt']"
+        ]
+      },
+      "preferred_phrases": {
+        "found": 2,
+        "total": 5,
+        "details": [
+          "Any of ['4 digit', '4-digit', 'four digit', 'four-digit']",
+          "unreadable"
+        ]
+      },
+      "remediation_steps": {
+        "found": 3,
+        "total": 3,
+        "details": [
+          "Any of ['Encrypt card number column using AES-256', 'Encrypt card_number column using AES-256']",
+          "Any of ['Implement encryption key management', 'Implement encryption key-management']",
+          "Any of ['Delete Plaintext Data', 'Drop Plaintext Data', 'Remove Plaintext Data']"
+        ]
+      },
+      "sql_fix": {
+        "provided": true,
+        "required": true
+      },
+      "analysis_text": "### VIOLATION SUMMARY\nThe compliance assertion has failed due to the presence of cleartext Primary Account Numbers (PANs) in the `transactions` table. This indicates that the PANs are not being rendered unreadable, which violates the PCI-DSS v4.0.1 requirement for protecting stored account data.\n\n### STANDARD REFERENCE\nThe specific PCI-DSS v4.0.1 clauses violated include:\n- **3.5.1 PAN is rendered unreadable anywhere it is stored by using any of the following approaches**: This requirement manda..."
+    },
+    {
+      "test_case": "TC003_Track_Data_Analysis",
+      "description": "Analysis quality for track data violation",
+      "requirement_identified": true,
+      "required_phrases": {
+        "found": 2,
+        "total": 3,
+        "details": [
+          "Any of ['full track', 'track 1', 'track 2']",
+          "Any of ['limited', 'not allowed', 'not stored', 'prohibited']"
+        ]
+      },
+      "preferred_phrases": {
+        "found": 3,
+        "total": 3,
+        "details": [
+          "Any of ['chip', 'magnetic stripe', 'magnetic-stripe']",
+          "Any of ['counterfeit card', 'counterfeit payment card', 'reproduce card', 'reproduce payment card']",
+          "fraudulent transaction"
+        ]
+      },
+      "remediation_steps": {
+        "found": 3,
+        "total": 3,
+        "details": [
+          "Any of ['Delete track 1 data and track 2 data columns', 'Delete track1_data and track2_data columns', 'Drop track 1 data and track 2 data columns', 'Drop track1_data and track2_data columns', 'Remove track 1 data and track 2 data columns', 'Remove track1_data and track2_data columns']",
+          "Any of ['Delete all track data', 'Drop all track data', 'Remove all track data']",
+          "Any of ['Ensure data deletion after authorization', 'Ensure data removal after authorization']"
+        ]
+      },
+      "sql_fix": {
+        "provided": true,
+        "required": true
+      },
+      "analysis_text": "### VIOLATION SUMMARY:\nThe compliance assertion has failed due to the storage of full track data from magnetic stripe swipes. This is in direct violation of PCI-DSS v4.0.1 requirement 3.3.1.1, which mandates that the full contents of any track are not stored upon completion of the authorization process.\n\n### STANDARD REFERENCE:\nPCI-DSS v4.0.1, Section 3.3.1.1:\n```\nThe full contents of any track are not stored upon completion of the authorization process.\n```\n\n### SECURITY IMPACT:\nStoring the ful..."
+    },
+    {
+      "test_case": "TC004_Unencrypted_Transmission_Analysis",
+      "description": "Analysis quality for unencrypted data transmission indicators",
+      "requirement_identified": true,
+      "required_phrases": {
+        "found": 3,
+        "total": 3,
+        "details": [
+          "Any of ['HTTPS', 'SSL', 'TLS', 'TSL/SSL']",
+          "Any of ['transfer', 'transit', 'transmission', 'transmit']",
+          "Any of ['cryptography', 'encrypt', 'encrypted', 'encryption']"
+        ]
+      },
+      "preferred_phrases": {
+        "found": 5,
+        "total": 6,
+        "details": [
+          "Any of ['robust cryptography', 'strong cryptography']",
+          "Any of ['open', 'public', 'untrusted']",
+          "data breach",
+          "Any of ['MITM', 'intercept', 'interception', 'man-in-the-middle', 'tamper']",
+          "Any of ['open network', 'public network', 'untrusted network']"
+        ]
+      },
+      "remediation_steps": {
+        "found": 3,
+        "total": 3,
+        "details": [
+          "Any of ['Change endpoints to HTTPS', 'Migrate endpoints to HTTPS', 'Update endpoints to use HTTPS']",
+          "Any of ['Enable TLS 1.2 or higher', 'Enable TLS 1.3', 'Enable TLS/SSL', 'Encrypt data at the session level', 'Implement TLS 1.2 or higher', 'Implement TLS 1.3', 'Implement TLS/SSL', 'Use TLS 1.2 or higher', 'Use TLS 1.3', 'Use TLS/SSL']",
+          "Any of ['Review certificate configuration', 'Validate certificate configuration', 'Verify certificate configuration']"
+        ]
+      },
+      "sql_fix": {
+        "provided": true,
+        "required": false
+      },
+      "analysis_text": "### VIOLATION SUMMARY\nThe compliance assertion has failed, indicating a PCI-DSS v4.0.1 violation. The failed assertion is:\n```\nSELECT * FROM api_configs WHERE endpoint LIKE 'http://%' AND endpoint NOT LIKE 'http://localhost%'\n```\nThis query identifies endpoints that are accessible over the public internet but are not local endpoints.\n\n### STANDARD REFERENCE\nThe specific PCI-DSS v4.0.1 requirement violated is:\n**4.2 PAN is protected with strong cryptography during transmission.**\nThis requirement..."
+    },
+    {
+      "test_case": "TC005_Missing_Access_Controls_Analysis",
+      "description": "Analysis quality for missing access control mechanisms",
+      "requirement_identified": true,
+      "required_phrases": {
+        "found": 3,
+        "total": 3,
+        "details": [
+          "Any of ['access control', 'access restriction', 'authorization']",
+          "Any of ['access need', 'access-need', 'business need', 'business-need', 'need to know', 'need-to-know']",
+          "Any of ['least privilege', 'least-privilege', 'minimum necessary', 'minimum privilege']"
+        ]
+      },
+      "preferred_phrases": {
+        "found": 3,
+        "total": 5,
+        "details": [
+          "Any of ['ABAC', 'RBAC', 'attribute based', 'attribute-based', 'role based', 'role-based']",
+          "job function",
+          "data breach"
+        ]
+      },
+      "remediation_steps": {
+        "found": 3,
+        "total": 3,
+        "details": [
+          "Any of ['Configure attribute-based access control / ABAC', 'Configure role-based access control / RBAC', 'Establish attribute-based access control / ABAC', 'Establish role-based access control / RBAC', 'Implement attribute-based access control / ABAC', 'Implement role-based access control / RBAC']",
+          "Any of ['Create user roles and permissions', 'Define user roles and permissions', 'Establish user roles and permissions']",
+          "Any of ['Limit access to authorized personnel only', 'Restrict access to authorized personnel only', 'Revoke public access']"
+        ]
+      },
+      "sql_fix": {
+        "provided": true,
+        "required": true
+      },
+      "analysis_text": "### VIOLATION SUMMARY\nThe failed assertion indicates that certain tables in the database (`payments`, `credit_cards`, `customer_cards`) do not have appropriate access controls in place, allowing unauthorized access to potentially sensitive data. This directly violates PCI-DSS v4.0.1 requirements related to access control.\n\n### STANDARD REFERENCE\n- **7.3.1**: An access control system(s) is in place that restricts access based on a user\u2019s need to know and covers all system components.\n- **7.2.4**:..."
+    }
+  ]
+}

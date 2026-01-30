@@ -50,7 +50,7 @@ def infer_sql_assertions_task(
 
 
 @shared_task
-def execute_sql_assertion_task(assertion_id: int) -> int:
+def execute_sql_assertion_task(assertion_id: int) -> tuple[int, str]:
     """
     Execute a single SQL compliance assertion and store the result.
     """
@@ -61,21 +61,23 @@ def execute_sql_assertion_task(assertion_id: int) -> int:
             "ComplianceAssertion %s not found. Skipping execution.",
             assertion_id,
         )
-        return assertion_id
+        return assertion_id, ""
 
     result = ml.execute_sql_assertion(
         assertion.client_db.connection_string,
         assertion.sql_query,
     )
 
-    assertion.result = result
+    assertion.result = result[0]
     assertion.save(update_fields=["result"])
 
-    return assertion_id
+    return assertion_id, result[1]
 
 
 @shared_task
-def generate_compliance_recommendation_task(assertion_id: int) -> int | None:
+def generate_compliance_recommendation_task(
+    assertion_id: int, query_output: str
+) -> int | None:
     try:
         assertion = models.ComplianceAssertion.objects.get(id=assertion_id)
     except models.ComplianceAssertion.DoesNotExist:
@@ -91,7 +93,7 @@ def generate_compliance_recommendation_task(assertion_id: int) -> int | None:
     try:
         recommendation = ml.analyze_failed_assertion(
             assertion=assertion.sql_query,
-            failure_result=str(assertion.result),
+            failure_result=query_output,
         )
     except Exception as exc:
         logger.exception(
@@ -106,24 +108,29 @@ def generate_compliance_recommendation_task(assertion_id: int) -> int | None:
 
 
 @shared_task
-def generate_recommendations_group(assertion_ids: list[int]):
+def generate_recommendations_group(assertion_output: list[tuple[int, str]]):
     """
     Generate recommendations for multiple assertions in parallel.
     """
-    if not assertion_ids:
+
+    if not assertion_output:
         return []
 
     failed_assertion_ids = list(
         models.ComplianceAssertion.objects.filter(
-            id__in=assertion_ids,
+            id__in=map(lambda res: res[0], assertion_output),
             result__in=[False, None],
             recommendation__isnull=True,
         ).values_list("id", flat=True)
     )
 
+    filtered_results = filter(
+        lambda res: res[0] in failed_assertion_ids, assertion_output
+    )
+
     group(
-        generate_compliance_recommendation_task.s(assertion_id)
-        for assertion_id in failed_assertion_ids
+        generate_compliance_recommendation_task.s(assertion_id, query_output)
+        for assertion_id, query_output in filtered_results
     ).apply_async()
 
 

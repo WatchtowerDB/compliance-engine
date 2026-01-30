@@ -1,22 +1,29 @@
 #!/usr/bin/env python3
 
+import logging
 import os
+import sys
 from pathlib import Path
 
 from .models.download_model import download_model
 from .scripts.pci_compliance_checker import PCIComplianceChecker
 
-SCRIPT_DIR = Path(__file__).parent
+# Configure logging to output to stdout
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stdout,
+)
+
+SCRIPT_DIR = Path(__file__).parent.parent.parent.parent
 MODEL_PATH: Path = Path(
     os.getenv(
         "WTCE_MODEL_PATH",
-        SCRIPT_DIR.parent
-        / "engine/models/base/Ministral-8B-Instruct-2410-GGUF/Ministral-8B-Instruct-2410-Q6_K_L.gguf",
+        SCRIPT_DIR
+        / "models/base/Ministral-8B-Instruct-2410-GGUF/Ministral-8B-Instruct-2410-Q6_K_L.gguf",
     )
 )
-CHROMA_DIR: Path = Path(
-    os.getenv("WTCE_CHROMA_DIR", SCRIPT_DIR.parent.parent.parent / "data/chroma_db")
-)
+CHROMA_DIR: Path = Path(os.getenv("WTCE_CHROMA_DIR", SCRIPT_DIR / "data/chroma_db"))
 
 if not MODEL_PATH.exists():
     # There already are guardrails within this function but container logic is a little hard to predict.
@@ -72,7 +79,11 @@ CREATE TABLE payment_methods (
 
 # Initialize the PCI compliance checker
 checker = PCIComplianceChecker(
-    model_path=MODEL_PATH, chroma_dir=CHROMA_DIR, collection_name="PCI-DSS-v4.0.1"
+    model_path=MODEL_PATH,
+    chroma_dir=CHROMA_DIR,
+    collection_name="PCI-DSS-v4.0.1",
+    context_window=7168,
+    n_gpu_layers=34,
 )
 
 print("=" * 80)
@@ -96,8 +107,8 @@ print("=" * 80)
 
 # In prod, these would come from external execution. These values are mock (or as close I can get to it :P)
 failed_assertions = {
-    "SELECT * FROM customers WHERE credit_card_number IS NOT NULL AND credit_card_number NOT LIKE '%[a-fA-F0-9]%'": "id: 1, credit_card_number: 5555 5555 5555 4444",
-    "SELECT * FROM transactions WHERE card_number IS NOT NULL AND card_number NOT LIKE '%[a-fA-F0-9]%'": "transaction_id: 1, card_number: 5200 8282 8282 8210",
+    r"SELECT * FROM customers WHERE credit_card_number IS NOT NULL AND credit_card_number NOT LIKE '%%%%';": "id: 1, credit_card_number: 5555 5555 5555 4444",
+    r"SELECT * FROM transactions WHERE card_number IS NOT NULL AND card_number NOT LIKE '%%%%'": "transaction_id: 1, card_number: 5200 8282 8282 8210",
 }
 print(f"Failed_assertions (mock): {failed_assertions}\n")
 

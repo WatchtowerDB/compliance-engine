@@ -1,3 +1,4 @@
+import logging
 import textwrap
 from pathlib import Path
 from typing import Generator
@@ -5,8 +6,8 @@ from typing import Generator
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
-from yaspin import yaspin
-from yaspin.spinners import Spinners
+
+logger = logging.getLogger(__name__)
 
 
 class ContextRetriever:
@@ -63,17 +64,19 @@ class ContextRetriever:
         self._embedding_model: HuggingFaceEmbeddings
         self._retriever: Chroma
 
-        with yaspin(Spinners.arc, text="[INFO] Loading embedding model..."):
-            self._embedding_model = HuggingFaceEmbeddings(model_name=embedding_model)
-        print(f'[INFO] Successfully loaded embedding model "{embedding_model}".')
+        logger.info('Loading embedding model "%s"', embedding_model)
+        self._embedding_model = HuggingFaceEmbeddings(model_name=embedding_model)
+        logger.info('Successfully loaded embedding model "%s"', embedding_model)
 
-        with yaspin(Spinners.arc, text="[INFO] Initializing Chroma retriever..."):
-            self._retriever = Chroma(
-                persist_directory=str(self.chroma_dir),
-                collection_name=self.collection_name,
-                embedding_function=self._embedding_model,
-            )
-        print("[INFO] Successfully initialized Chroma retriever.")
+        logger.info('Initializing Chroma retriever for "%s"', self.collection_name)
+        self._retriever = Chroma(
+            persist_directory=str(self.chroma_dir),
+            collection_name=self.collection_name,
+            embedding_function=self._embedding_model,
+        )
+        logger.info(
+            'Successfully initialized Chroma retriever for "%s"', self.collection_name
+        )
 
     def context(
         self, query: str, retrieval_k: int | None = None
@@ -103,9 +106,19 @@ class ContextRetriever:
         """
         current_k = retrieval_k if retrieval_k else self.retrieval_k
 
-        with yaspin(Spinners.arc, text=f"[INFO] Retrieving top {current_k} chunks..."):
-            results = self._retriever.similarity_search(query, k=current_k)
-        print(f"[INFO] Retrieved context from {self.collection_name} collection.")
+        logger.debug(
+            'Retrieving top %s chunks from "%s" collection for query "%s"',
+            current_k,
+            self.collection_name,
+            query,
+        )
+        results = self._retriever.similarity_search(query, k=current_k)
+        logger.debug(
+            'Successfully retrieved top %s chunks from "%s" collection for query "%s"',
+            current_k,
+            self.collection_name,
+            query,
+        )
 
         for doc in results:
             yield doc

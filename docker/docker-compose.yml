@@ -1,0 +1,54 @@
+services:
+  watchtower_ce:
+    build:
+      dockerfile: ./docker/Dockerfile
+      context: ..
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../models/base/Ministral-8B-Instruct-2410-GGUF:/data/models:ro
+      - ../src:/app/src
+    environment:
+      WTCE_MODEL_PATH: /data/models/Ministral-8B-Instruct-2410-Q6_K_L.gguf
+      WTCE_CHROMA_DIR: /home/watchtower/chroma_db
+      PYTHONPATH: /app/src
+      DJANGO_ENVIRONMENT: prod
+    runtime: nvidia
+    gpus: all
+
+  redis:
+    image: redis:latest
+
+  celery:
+    build:
+      dockerfile: ./docker/Dockerfile
+      context: ..
+    entrypoint: celery -A watchtower_ce worker -P solo -l INFO
+    restart: always
+    depends_on:
+      - redis
+    volumes:
+      - ../models/base/Ministral-8B-Instruct-2410-GGUF:/data/models:ro
+      - ../src:/app/src
+    environment:
+      WTCE_MODEL_PATH: /data/models/Ministral-8B-Instruct-2410-Q6_K_L.gguf
+      WTCE_CHROMA_DIR: /home/watchtower/chroma_db
+      PYTHONPATH: /app/src
+      DJANGO_ENVIRONMENT: prod
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    runtime: nvidia
+    gpus: all
+
+  db:
+    image: postgres:latest
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    restart: always
+    environment:
+      POSTGRES_DB: watchtower_ce
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password
+
+volumes:
+  postgres_data:
