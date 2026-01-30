@@ -2,7 +2,10 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Iterator
 from warnings import deprecated
+
+from llama_cpp import CreateCompletionStreamResponse
 
 from .context_retriever import ContextRetriever
 from .llm_inference import LLMInference
@@ -449,7 +452,9 @@ class ComplianceChecker(ABC):
 
         return assertions
 
-    def analyze_failed_assertion(self, assertion: str, failure_result: str) -> str:
+    def analyze_failed_assertion(
+        self, assertion: str, failure_result: str
+    ) -> Iterator[CreateCompletionStreamResponse]:
         """
         Analyze a failed assertion and provide remediation recommendations.
 
@@ -487,13 +492,9 @@ class ComplianceChecker(ABC):
             context, assertion, failure_result
         )
 
-        logger.info("Analyzing failed assertion")
-        response = self.llm.generate(
-            prompt, max_tokens=800, temperature=0.65, stream=True
-        )
-        logger.info("Successfully analyzed failed assertion")
+        stream_chunks = self.llm.stream_chunks(prompt, max_tokens=800, temperature=0.65)
 
-        return response
+        return stream_chunks
 
     def analyze_all_failed_assertions(
         self, failed_assertions: dict[str, str]

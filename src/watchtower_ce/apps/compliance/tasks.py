@@ -89,17 +89,35 @@ def generate_compliance_recommendation_task(
 
     if assertion.result is not False:
         return assertion_id
+    recommendation: str = ""
 
     try:
-        recommendation = ml.analyze_failed_assertion(
-            assertion=assertion.sql_query,
-            failure_result=query_output,
+        logger.info("Analyzing failed assertion")
+
+        stream_chunks = ml.analyze_failed_assertion(
+            assertion.sql_query,
+            query_output,
         )
+        response_tokens = []
+
+        for chunk in stream_chunks:
+            token = chunk["choices"][0]["text"]  # type: ignore (chunk can be str or something else if stream is False, but it isn't)
+            # TODO: API FUNCTION CALL
+            response_tokens.append(token)
+
+        logger.info("Successfully analyzed failed assertion")
+        recommendation: str = "".join(response_tokens).strip()
+
+    except ValueError as exc:
+        logger.exception(exc)
+        raise exc
     except Exception as exc:
         logger.exception(
             "Failed to generate recommendation for assertion %s", assertion_id
         )
         raise exc
+    if recommendation:
+        pass  # TODO: IMPLEMEMT FALLBACK LOGIC
 
     assertion.recommendation = recommendation
     assertion.save(update_fields=["recommendation"])

@@ -1,9 +1,12 @@
-import psycopg
-import sqlite3
 import logging
-from typing import List, Sequence, Any
+import sqlite3
+from typing import Any, Iterator, List, Sequence
 from urllib.parse import urlparse
+
+import psycopg
 from django.conf import settings
+from llama_cpp import CreateCompletionStreamResponse
+
 from ...engine.scripts.pci_compliance_checker import PCIComplianceChecker
 
 logger = logging.getLogger(__name__)
@@ -82,7 +85,9 @@ def execute_sql_assertion(connection_string: str, sql_query: str) -> tuple[bool,
         return False, ""
 
 
-def analyze_failed_assertion(assertion: str, failure_result: str) -> str:
+def analyze_failed_assertion(
+    assertion: str, failure_result: str
+) -> Iterator[CreateCompletionStreamResponse] | str:
     """Analyze a failed SQL assertion and generate remediation guidance.
 
     This function represents the ML / LLM-based reasoning layer that
@@ -97,15 +102,14 @@ def analyze_failed_assertion(assertion: str, failure_result: str) -> str:
     """
 
     try:
-        recommendation = get_pci_checker_instance().analyze_failed_assertion(
+        stream_chunks = get_pci_checker_instance().analyze_failed_assertion(
             assertion, failure_result
         )
 
-        return recommendation
+        return stream_chunks
 
     except Exception as e:
-        logger.exception("ML Engine Failure (analyze_failed_assertion): %s", e)
-        return "Analysis unavailable. Please review the SQL violation manually."
+        raise ValueError("ML Engine Failure (analyze_failed_assertion): %s", e)
 
 
 def _execute_psql(conn_str: str, sql_query: str) -> tuple[bool, str]:
