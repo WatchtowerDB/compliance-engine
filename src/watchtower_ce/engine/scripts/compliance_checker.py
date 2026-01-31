@@ -37,7 +37,7 @@ class ComplianceChecker(ABC):
         model_path: Path | str,
         chroma_dir: Path | str,
         collection_name: str,
-        embedding_model: str = "sentence-transformers/all-MiniLM-L12-v2",
+        embedding_model: Path | str = "sentence-transformers/all-MiniLM-L12-v2",
         retrieval_k: int = 4,
         context_window: int = 4096,
         n_gpu_layers: int = -1,
@@ -54,8 +54,8 @@ class ComplianceChecker(ABC):
                 Directory containing the Chroma vector database.
             collection_name (str):
                 Name of the Chroma collection with compliance documents.
-            embedding_model (str):
-                HuggingFace model for text embeddings.
+            embedding_model (Path | str):
+                HuggingFace model identifier or local path for text embeddings.
                 Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`.
             retrieval_k (int):
                 Number of similar documents to retrieve per query. Defaults to `4`.

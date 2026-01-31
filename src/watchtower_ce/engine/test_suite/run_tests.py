@@ -30,6 +30,7 @@ if __name__ == "__main__":
         model_path=MODEL_PATH,
         chroma_dir=CHROMA_DIR,
         collection_name="PCI-DSS-v4.0.1",
+        embedding_model="models/embeddings/all-MiniLM-L12-v2",
         context_window=8192,
         n_gpu_layers=31,
     )

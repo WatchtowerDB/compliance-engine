@@ -5,7 +5,7 @@ import os
 import sys
 from pathlib import Path
 
-from .models.download_model import download_model
+from .packaging.download_model import download_model
 from .scripts.pci_compliance_checker import PCIComplianceChecker
 
 # Configure logging to output to stdout
@@ -82,8 +82,9 @@ checker = PCIComplianceChecker(
     model_path=MODEL_PATH,
     chroma_dir=CHROMA_DIR,
     collection_name="PCI-DSS-v4.0.1",
-    context_window=7168,
-    n_gpu_layers=34,
+    embedding_model="models/embeddings/all-MiniLM-L12-v2",
+    context_window=8192,
+    n_gpu_layers=31,
 )
 
 print("=" * 80)
