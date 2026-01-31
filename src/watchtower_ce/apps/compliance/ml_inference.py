@@ -1,9 +1,11 @@
-import psycopg
-import sqlite3
 import logging
-from typing import List, Sequence, Any
+import sqlite3
+from typing import Any, List, Sequence
 from urllib.parse import urlparse
+
+import psycopg
 from django.conf import settings
+
 from ...engine.scripts.pci_compliance_checker import PCIComplianceChecker
 
 logger = logging.getLogger(__name__)
@@ -11,9 +13,10 @@ logger = logging.getLogger(__name__)
 
 def get_pci_checker_instance() -> PCIComplianceChecker:
     return PCIComplianceChecker(
-        model_path=settings.MODEL_PATH,
+        base_model_path=settings.BASE_MODEL_PATH,
         chroma_dir=settings.CHROMA_DIR,
         collection_name="PCI-DSS-v4.0.1",
+        embedding_model=settings.EMBEDDING_MODEL_DIR,
         context_window=8192,
         n_gpu_layers=31,
     )

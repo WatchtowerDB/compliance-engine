@@ -20,8 +20,9 @@ __STYLE_YELLOW='\e[33m'
 __STYLE_BYELLOW='\e[33;1m'
 
 __REQUIRED_ENV_VARS=(
-  WTCE_MODEL_PATH
+  WTCE_BASE_MODEL_PATH
   WTCE_CHROMA_DIR
+  WTCE_EMBEDDING_MODEL_DIR
 )
 
 # --------------------
@@ -73,12 +74,16 @@ _check_dependencies() {
     fi
   done
 
-  if [ ! -f "${WTCE_MODEL_PATH:-}" ]; then
-    __errexit "Specified model path is not a regular file: ${WTCE_MODEL_PATH:-}"
+  if [ ! -f "${WTCE_BASE_MODEL_PATH:-}" ]; then
+    __errexit "Specified model path is not a regular file: ${WTCE_BASE_MODEL_PATH:-}"
   fi
 
   if [ ! -d "${WTCE_CHROMA_DIR:-}" ]; then
     __errexit "WTCE_CHROMA_DIR not a valid directory: ${WTCE_CHROMA_DIR:-}"
+  fi
+
+  if [ ! -d "${WTCE_EMBEDDING_MODEL_DIR:-}" ]; then
+    __errexit "WTCE_EMBEDDING_MODEL_DIR not a valid directory: ${WTCE_EMBEDDING_MODEL_DIR:-}"
   fi
 }
 

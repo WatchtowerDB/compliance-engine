@@ -9,7 +9,7 @@ services:
       - ../models/base/Ministral-8B-Instruct-2410-GGUF:/data/models:ro
       - ../src:/app/src
     environment:
-      WTCE_MODEL_PATH: /data/models/Ministral-8B-Instruct-2410-Q6_K_L.gguf
+      WTCE_BASE_MODEL_PATH: /data/models/Ministral-8B-Instruct-2410-Q6_K_L.gguf
       WTCE_CHROMA_DIR: /home/watchtower/chroma_db
       PYTHONPATH: /app/src
       DJANGO_ENVIRONMENT: prod
@@ -31,7 +31,7 @@ services:
       - ../models/base/Ministral-8B-Instruct-2410-GGUF:/data/models:ro
       - ../src:/app/src
     environment:
-      WTCE_MODEL_PATH: /data/models/Ministral-8B-Instruct-2410-Q6_K_L.gguf
+      WTCE_BASE_MODEL_PATH: /data/models/Ministral-8B-Instruct-2410-Q6_K_L.gguf
       WTCE_CHROMA_DIR: /home/watchtower/chroma_db
       PYTHONPATH: /app/src
       DJANGO_ENVIRONMENT: prod

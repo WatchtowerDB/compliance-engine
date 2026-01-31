@@ -1,7 +1,10 @@
+#!/usr/bin/env python3
+
 import logging
-import os
 import sys
 from pathlib import Path
+
+from django.conf import settings
 
 from ..scripts.pci_compliance_checker import PCIComplianceChecker
 from .analysis_quality_evaluator import AnalysisQualityEvaluator
@@ -16,21 +19,11 @@ if __name__ == "__main__":
 
     evaluator = AnalysisQualityEvaluator(test_cases)
 
-    SCRIPT_DIR = Path(__file__).parent.parent.parent.parent.parent
-    MODEL_PATH: Path = Path(
-        os.getenv(
-            "WTCE_MODEL_PATH",
-            SCRIPT_DIR
-            / "models/base/Ministral-8B-Instruct-2410-GGUF/Ministral-8B-Instruct-2410-Q6_K_L.gguf",
-        )
-    )
-    CHROMA_DIR: Path = Path(os.getenv("WTCE_CHROMA_DIR", SCRIPT_DIR / "data/chroma_db"))
-
     checker = PCIComplianceChecker(
-        model_path=MODEL_PATH,
-        chroma_dir=CHROMA_DIR,
+        base_model_path=settings.BASE_MODEL_PATH,
+        chroma_dir=settings.CHROMA_DIR,
         collection_name="PCI-DSS-v4.0.1",
-        embedding_model="models/embeddings/all-MiniLM-L12-v2",
+        embedding_model=settings.EMBEDDING_MODEL_DIR,
         context_window=8192,
         n_gpu_layers=31,
     )

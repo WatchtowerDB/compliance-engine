@@ -34,7 +34,7 @@ class ComplianceChecker(ABC):
 
     def __init__(
         self,
-        model_path: Path | str,
+        base_model_path: Path | str,
         chroma_dir: Path | str,
         collection_name: str,
         embedding_model: Path | str = "sentence-transformers/all-MiniLM-L12-v2",
@@ -48,7 +48,7 @@ class ComplianceChecker(ABC):
         Initialize the compliance checker with RAG components.
 
         Args:
-            model_path (Path | str):
+            base_model_path (Path | str):
                 Path to the GGUF model file for LLM inference.
             chroma_dir (Path | str):
                 Directory containing the Chroma vector database.
@@ -76,7 +76,7 @@ class ComplianceChecker(ABC):
             retrieval_k=retrieval_k,
         )
         self.llm = LLMInference(
-            model_path=model_path,
+            model_path=base_model_path,
             context_window=context_window,
             n_gpu_layers=n_gpu_layers,
             prompt_template=prompt_template,
@@ -427,7 +427,7 @@ class ComplianceChecker(ABC):
                       rows only when violations exist (empty = compliant).
 
         Example:
-            >>> checker = PCIComplianceChecker(model_path, chroma_dir)
+            >>> checker = PCIComplianceChecker(base_model_path, chroma_dir)
             >>> assertions = checker.generate_assertions(schema)
             >>> # Execute assertions externally
             >>> for assertion in assertions:
@@ -470,7 +470,7 @@ class ComplianceChecker(ABC):
                  - SQL fixes where applicable
 
         Example:
-            >>> checker = PCIComplianceChecker(model_path, chroma_dir)
+            >>> checker = PCIComplianceChecker(base_model_path, chroma_dir)
             >>> assertion = "SELECT * FROM customers WHERE cvv IS NOT NULL"
             >>> result = "id: 1, cvv: 123\\nid: 2, cvv: 456"
             >>> analysis = checker.analyze_failed_assertion(assertion, result)
@@ -533,7 +533,7 @@ class ComplianceChecker(ABC):
         Should be called when the compliance checker is no longer needed.
 
         Example:
-            >>> checker = PCIComplianceChecker(model_path, chroma_dir)
+            >>> checker = PCIComplianceChecker(base_model_path, chroma_dir)
             >>> try:
             ...     assertions = checker.generate_assertions(schema)
             ... finally:
