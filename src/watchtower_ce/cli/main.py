@@ -1,5 +1,6 @@
 import click
 
+from .download import download
 from .server import server
 
 
@@ -10,3 +11,4 @@ def main():
 
 
 main.add_command(server)
+main.add_command(download)
