@@ -489,7 +489,7 @@ class ComplianceChecker(ABC):
 
         logger.info("Analyzing failed assertion")
         response = self.llm.generate(
-            prompt, max_tokens=800, temperature=0.65, stream=True
+            prompt, max_tokens=900, temperature=0.65, stream=True
         )
         logger.info("Successfully analyzed failed assertion")
 
