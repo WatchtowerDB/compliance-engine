@@ -8,15 +8,25 @@ from ...engine.scripts.pci_compliance_checker import PCIComplianceChecker
 
 logger = logging.getLogger(__name__)
 
+_PCI_CHECKER_INSTANCE: PCIComplianceChecker | None = None
+
 
 def get_pci_checker_instance() -> PCIComplianceChecker:
-    return PCIComplianceChecker(
-        model_path=settings.MODEL_PATH,
-        chroma_dir=settings.CHROMA_DIR,
-        collection_name="PCI-DSS-v4.0.1",
-        context_window=8192,
-        n_gpu_layers=31,
-    )
+    global _PCI_CHECKER_INSTANCE
+    if _PCI_CHECKER_INSTANCE is None:
+        _PCI_CHECKER_INSTANCE = PCIComplianceChecker(
+            model_path=settings.MODEL_PATH,
+            chroma_dir=settings.CHROMA_DIR,
+            collection_name="PCI-DSS-v4.0.1",
+            context_window=8192,
+            n_gpu_layers=31,
+        )
+    return _PCI_CHECKER_INSTANCE
+
+
+def is_model_loaded() -> bool:
+    """Check if the PCI Compliance Checker model is currently loaded in memory."""
+    return _PCI_CHECKER_INSTANCE is not None
 
 
 def generate_assertions(schema: str) -> List[str]:

@@ -1,4 +1,4 @@
-from django.urls import URLPattern, URLResolver
+from django.urls import URLPattern, URLResolver, path
 from rest_framework import routers
 
 from . import views
@@ -10,4 +10,7 @@ router.register("clientdbschema", views.ClientDBSchemaViewSet)
 router.register("assertions", views.ComplianceAssertionViewSet)
 router.register("checks", views.ComplianceCheckViewSet)
 
-urlpatterns: list[URLPattern | URLResolver] = router.urls
+urlpatterns: list[URLPattern | URLResolver] = [
+    *router.urls,
+    path("model/init/", views.trigger_model_init, name="trigger-model-init"),
+]

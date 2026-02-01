@@ -7,6 +7,25 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task
+def initialize_model_task():
+    """
+    Initializes the PCI Compliance Checker model in the worker process.
+    """
+    logger.info("Starting model initialization...")
+
+    if ml.is_model_loaded():
+        logger.info("Model is already loaded.")
+        return
+
+    try:
+        # This performs the heavy loading
+        ml.get_pci_checker_instance()
+        logger.info("Model initialized successfully.")
+    except Exception as e:
+        logger.exception(f"Model initialization failed: {e}")
+
+
+@shared_task
 def infer_sql_assertions_task(
     schema_id: int,
     client_db_id: int,

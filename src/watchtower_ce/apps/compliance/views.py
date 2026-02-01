@@ -1,8 +1,11 @@
 from django.db.models import QuerySet
 from rest_framework import viewsets
 from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from .tasks import (
     schedule_sql_assertion_pipeline,
+    initialize_model_task,
 )
 from . import models, serializers
 from .filters import ComplianceAssertionFilter, ClientDBSchemaFilter
@@ -91,3 +94,24 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
             },
             status=201,
         )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def trigger_model_init(request):
+    """
+    Triggers the asynchronous initialization of the PCI Compliance Model.
+
+    Returns:
+        202 Accepted: If the task was successfully submitted.
+    """
+    # Trigger the task defined in your reference tasks.py
+    initialize_model_task.delay()
+
+    return Response(
+        {
+            "status": "triggered",
+            "message": "Model initialization started in the background.",
+        },
+        status=202,
+    )
