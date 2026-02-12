@@ -1,7 +1,4 @@
-from typing import List
-
-
-def generate_assertions(schema: str) -> List[str]:
+def generate_assertions(schema: str) -> list[str]:
     """Generate SQL compliance assertions from schema metadata.
 
     This function represents the ML / rules-based inference layer.

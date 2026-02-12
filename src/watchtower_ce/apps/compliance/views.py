@@ -1,6 +1,8 @@
 from django.db.models import QuerySet
-from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
 from .tasks import (
     schedule_sql_assertion_pipeline,
 )
@@ -32,7 +34,6 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.ClientDBSchemaSerializer
     filterset_class = ClientDBSchemaFilter
 
-    # Disallow updates/deletes
     def update(self, request, *args, **kwargs):
         return Response({"detail": "Update not allowed."}, status=405)
 
@@ -41,6 +42,38 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         return Response({"detail": "Delete not allowed."}, status=405)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        parser_classes=[MultiPartParser, FormParser],
+        url_path="upload-schema",
+    )
+    def upload_schema(self, request):
+        """
+        Upload a .sql file to create a new ClientDBSchema.
+
+        All validation is handled by ClientDBSchemaUploadSerializer.
+
+        Expected form data:
+        - sql_file: The .sql file to upload (required)
+        - client_db: ID of the ClientDB (required)
+        - name: Name for the schema (optional, defaults to filename)
+        - description: Description of the schema (optional)
+        """
+        serializer = serializers.ClientDBSchemaUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        schema = serializer.save()
+
+        response_serializer = self.get_serializer(schema)
+        return Response(
+            {
+                "message": "Schema uploaded successfully.",
+                "schema": response_serializer.data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class ComplianceAssertionViewSet(viewsets.ReadOnlyModelViewSet):

@@ -26,17 +26,20 @@ class ClientDB(models.Model):
 
 
 class ClientDBSchema(models.Model):
-    client_db: models.ForeignKey = models.ForeignKey(
+    client_db = models.ForeignKey(
         "ClientDB", on_delete=models.CASCADE, related_name="schemas"
     )
-    schema_json: models.JSONField = models.JSONField()
-    created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self) -> str:
-        return f"Schema of {self.client_db.name} at {self.created_at}"
+    name = models.CharField(max_length=255, null=True, blank=True)
+    description = models.TextField(blank=True, null=True)
+    sql_definition = models.TextField(null=True, blank=True)
+
+    schema_json = models.JSONField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering: tuple[str, ...] = ("id",)
+        ordering = ("id",)
 
 
 class ComplianceAssertion(models.Model):
