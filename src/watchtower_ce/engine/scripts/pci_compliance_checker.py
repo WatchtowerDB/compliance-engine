@@ -158,11 +158,11 @@ class PCIComplianceChecker(ComplianceChecker):
 
             Task:
             Analyze the SQL assertion command and infer possible {self.standard} concerns.
-            Generate ONLY 2 comprehensive rich questions depending on what the assertion command checks for that an auditor would ask that directly relate to the following PCI-DSS requirements:
+            Generate ONLY 4 comprehensive rich questions depending on what the assertion command checks for that an auditor would ask that directly relate to the following PCI-DSS requirements:
             - Requirement 3: Storage and protection of stored cardholder data (e.g., PAN, SAD, hashing, encryption, truncation)
             - Requirement 4: Protection of cardholder data during transmission (encryption in transit, key management assumptions)
             - Requirement 7: Restriction of access to cardholder data by business need-to-know
-            - Requirement 8: Identification and authentication of users accessing cardholder data
+            - Requirement 8: Identification and authentication of users and administrators accessing system components (password hashing, MFA)
             - Requirement 10: Logging, monitoring, and audit trails for access to cardholder data
 
             Instructions:
@@ -171,12 +171,13 @@ class PCIComplianceChecker(ComplianceChecker):
             3. Be specific (e.g., PAN and SAD are not the same thing and should be treated as so in your questions;
                these are two separate topics, so two separate questions if needed).
             4. Avoid using raw database field names in the questions; translate them into natural English descriptions (e.g., "card number" instead of "card_number", etc.).
-            5. Ensure questions are retrieval friendly to vector stores. They should sound like they are seeking specific guidance from the standard.
+            5. End your questions with "according to requirement <requirement number you are asking about> ?"
+            6. Ensure questions are retrieval friendly to vector stores. They should be written with many keywords to help with searching.
 
             Output:
             - Respond ONLY with a valid JSON list of strings containing the questions.
             - Ensure the output is valid JSON and respects proper escaping.
-            - EXACTLY 2 questions.
+            - EXACTLY 4 questions.
             - No introductory text or markdown formatting outside the list.
 
             Assertion:
