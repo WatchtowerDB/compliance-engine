@@ -26,7 +26,7 @@ class ClientDB(models.Model):
 
 
 class ClientDBSchema(models.Model):
-    client_db = models.ForeignKey(
+    client_db: models.ForeignKey = models.ForeignKey(
         "ClientDB", on_delete=models.CASCADE, related_name="schemas"
     )
 
@@ -39,7 +39,7 @@ class ClientDBSchema(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ("id",)
+        ordering: tuple[str, ...] = ("id",)
 
 
 class ComplianceAssertion(models.Model):
