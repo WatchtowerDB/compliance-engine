@@ -47,7 +47,7 @@ class PDFToChroma:
         persist_dir: str | Path,
         collection_name: str | None = None,
         overwrite: bool = False,
-        model_name: str = "sentence-transformers/all-MiniLM-L12-v2",
+        model_name: Path | str = "sentence-transformers/all-MiniLM-L12-v2",
         separators: list[str] | None = None,
         chunk_size: int = 1000,
         chunk_overlap: int = 100,
@@ -65,8 +65,10 @@ class PDFToChroma:
             overwrite (bool, optional):
                 If `True`, any existing collection with the same name will be deleted and recreated.
                 Defaults to `False`.
-            model_name (str, optional):
-                Name of the Hugging Face embedding model to use. Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`.
+            model_name (Path, str, optional):
+                HuggingFace model identifier or local path for text embeddings.
+                Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`, a lightweight
+                but effective sentence embedding model.
             separators (list[str], optional):
                 If set, `PDFToChroma` will split the chunks based on these separators.
                 If not, it will use `chunk_size` and `chunk_overlap`.
@@ -97,7 +99,7 @@ class PDFToChroma:
         if self._embedding_model is None:
             with yaspin(Spinners.arc, text="[INFO] Loading embedding model..."):
                 self._embedding_model = HuggingFaceEmbeddings(
-                    model_name=self.model_name
+                    model_name=str(self.model_name)
                 )
             print(f"[INFO] Successfully loaded embedding model {self.model_name}.")
 
