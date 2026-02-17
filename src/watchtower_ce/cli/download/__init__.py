@@ -5,7 +5,7 @@ from .embedding import embedding
 
 
 @click.group(help="Download a model")
-@click.help_option("--help", "-h")
+@click.help_option("-h", "--help")
 def download():
     pass
 
