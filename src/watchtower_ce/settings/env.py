@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(
     os.getenv(
         "DJANGO_ENV_FILEPATH",
-        BASE_DIR / f"env/{os.getenv('DJANGO_ENVIRONMENT', '').lower()}.env",
+        BASE_DIR / f"env/{os.getenv('DJANGO_ENVIRONMENT', 'dev').lower()}.env",
     )
 )
 
