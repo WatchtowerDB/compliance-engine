@@ -3,8 +3,8 @@ import sys
 from pathlib import Path
 
 import click
-from django.conf import settings
 
+from .. import settings
 from ..engine.scripts.pci_compliance_checker import PCIComplianceChecker
 from ..engine.test_suite.analysis_quality_evaluator import AnalysisQualityEvaluator
 from ..engine.test_suite.evaluation_metrics import EvaluationMetrics
