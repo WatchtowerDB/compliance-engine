@@ -33,7 +33,8 @@ FROM base AS runtime
 
 ENV DJANGO_SETTINGS_MODULE=watchtower_ce.settings \
   DJANGO_DB_PATH=/home/watchtower/db.sqlite3 \
-  WTCE_CHROMA_DIR=/home/watchtower/chroma
+  WTCE_CHROMA_DIR=/home/watchtower/chroma \
+  WTCE_EMBEDDING_MODEL_DIR=/home/watchtower/models/embedding
 
 ARG SOURCE_URL=https://github.com/watchtowerdb/compliance-engine \
   VCS_REF=HEAD \
@@ -59,6 +60,8 @@ RUN useradd -ms /usr/bin/bash watchtower && \
 COPY --chown=watchtower:watchtower data/chroma_db /home/watchtower/chroma_db
 
 USER watchtower:watchtower
+
+RUN wtce download embedding -o /home/watchtower/models/embedding
 
 EXPOSE 8000
 
