@@ -5,7 +5,6 @@ import sys
 
 from django.conf import settings
 
-from .packaging.download_model import download_model
 from .scripts.pci_compliance_checker import PCIComplianceChecker
 
 # Configure logging to output to stdout
@@ -17,12 +16,7 @@ logging.basicConfig(
 
 
 if not settings.BASE_MODEL_PATH.exists():
-    # There already are guardrails within this function but container logic is a little hard to predict.
-    download_model(
-        "bartowski/Ministral-8B-Instruct-2410-GGUF",
-        "Ministral-8B-Instruct-2410-GGUF",
-        ["Ministral-8B-Instruct-2410-Q6_K_L.gguf"],
-    )
+    raise FileNotFoundError("Base model path not found.")
 
 
 # Example schema with multiple PCI-DSS violations
