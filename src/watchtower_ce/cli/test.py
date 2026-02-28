@@ -37,11 +37,12 @@ def test(
 
     evaluator = AnalysisQualityEvaluator(test_cases)
 
-    print(
+    if not (
         settings.BASE_MODEL_PATH
-    )  # TODO: REMOVE THESE AFTER FIXING THE ISSUE (IF THERE IS ONE)
-    print(settings.CHROMA_DIR)
-    print(settings.EMBEDDING_MODEL_DIR)
+        and settings.CHROMA_DIR
+        and settings.EMBEDDING_MODEL_DIR
+    ):
+        raise ValueError("Environment variables not properly initialized.")
 
     checker = PCIComplianceChecker(
         base_model_path=settings.BASE_MODEL_PATH,
