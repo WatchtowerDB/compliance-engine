@@ -61,7 +61,8 @@ COPY --chown=watchtower:watchtower data/chroma_db /home/watchtower/chroma_db
 
 USER watchtower:watchtower
 
-RUN wtce download embedding -o /home/watchtower/models/embedding
+RUN --mount=type=cache,target=/home/watchtower/models/embedding \
+  wtce download embedding -o $WTCE_EMBEDDING_MODEL_DIR
 
 EXPOSE 8000
 
