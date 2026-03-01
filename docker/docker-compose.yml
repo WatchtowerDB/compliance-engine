@@ -10,7 +10,6 @@ services:
       - ../src:/app/src
     environment:
       WTCE_BASE_MODEL_PATH: /home/watchtower/models/base/Ministral-8B-Instruct-2410-Q6_K_L.gguf
-      WTCE_CHROMA_DIR: /home/watchtower/chroma_db
       PYTHONPATH: /app/src
       DJANGO_ENVIRONMENT: prod
     runtime: nvidia
@@ -32,7 +31,6 @@ services:
       - ../src:/app/src
     environment:
       WTCE_BASE_MODEL_PATH: /home/watchtower/models/base/Ministral-8B-Instruct-2410-Q6_K_L.gguf
-      WTCE_CHROMA_DIR: /home/watchtower/chroma_db
       PYTHONPATH: /app/src
       DJANGO_ENVIRONMENT: prod
     extra_hosts:

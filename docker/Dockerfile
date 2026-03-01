@@ -59,10 +59,11 @@ RUN useradd -ms /usr/bin/bash watchtower && \
 
 COPY --chown=watchtower:watchtower data/chroma_db $WTCE_CHROMA_DIR
 
-USER watchtower:watchtower
-
 RUN --mount=type=cache,target=/home/watchtower/models/embedding \
-  wtce download embedding -o $WTCE_EMBEDDING_MODEL_DIR
+  wtce download embedding -o $WTCE_EMBEDDING_MODEL_DIR && \
+  chown -R watchtower:watchtower $WTCE_EMBEDDING_MODEL_DIR
+
+USER watchtower:watchtower
 
 EXPOSE 8000
 
