@@ -44,6 +44,11 @@ def embedding(
     else:
         absolute_path = Path(output_dir).resolve()
 
+    # Check if directory already exists and is not empty
+    if absolute_path.exists() and any(absolute_path.iterdir()):
+        print(f"Directory '{absolute_path}' already exists and is not empty.")
+        return
+
     # Ensure parent directory exists
     absolute_path.mkdir(parents=True, exist_ok=True)
 

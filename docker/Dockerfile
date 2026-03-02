@@ -59,8 +59,9 @@ RUN useradd -ms /usr/bin/bash watchtower && \
 
 COPY --chown=watchtower:watchtower data/chroma_db $WTCE_CHROMA_DIR
 
-RUN --mount=type=cache,target=/home/watchtower/models/embedding \
-  wtce download embedding -o $WTCE_EMBEDDING_MODEL_DIR && \
+RUN --mount=type=cache,target=/tmp/models/embedding \
+  wtce download embedding -o /tmp/models/embedding && \
+  mkdir -p $WTCE_EMBEDDING_MODEL_DIR && cp -r /tmp/models/embedding/* $WTCE_EMBEDDING_MODEL_DIR && \
   chown -R watchtower:watchtower $WTCE_EMBEDDING_MODEL_DIR
 
 USER watchtower:watchtower
