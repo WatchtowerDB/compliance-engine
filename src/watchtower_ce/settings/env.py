@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(
     os.getenv(
         "DJANGO_ENV_FILEPATH",
-        BASE_DIR / f"env/{os.getenv('DJANGO_ENVIRONMENT', '').lower()}.env",
+        BASE_DIR / f"env/{os.getenv('DJANGO_ENVIRONMENT', 'dev').lower()}.env",
     )
 )
 
@@ -48,9 +48,16 @@ DATABASES: dict[str, dict[str, str | Path]] = {
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 
-MODEL_PATH: t.Optional[Path] = (
-    Path(os.environ["WTCE_MODEL_PATH"]) if os.getenv("WTCE_MODEL_PATH") else None
+BASE_MODEL_PATH: t.Optional[Path] = (
+    Path(os.environ["WTCE_BASE_MODEL_PATH"])
+    if os.getenv("WTCE_BASE_MODEL_PATH")
+    else None
 )
 CHROMA_DIR: t.Optional[Path] = (
     Path(os.environ["WTCE_CHROMA_DIR"]) if os.getenv("WTCE_CHROMA_DIR") else None
+)
+EMBEDDING_MODEL_DIR: t.Optional[Path] = (
+    Path(os.environ["WTCE_EMBEDDING_MODEL_DIR"])
+    if os.getenv("WTCE_EMBEDDING_MODEL_DIR")
+    else None
 )

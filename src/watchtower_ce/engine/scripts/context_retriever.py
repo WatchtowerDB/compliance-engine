@@ -35,7 +35,7 @@ class ContextRetriever:
         self,
         chroma_dir: Path | str,
         collection_name: str,
-        embedding_model: str = "sentence-transformers/all-MiniLM-L12-v2",
+        embedding_model: Path | str = "sentence-transformers/all-MiniLM-L12-v2",
         retrieval_k: int = 4,
     ) -> None:
         """
@@ -46,8 +46,8 @@ class ContextRetriever:
                 Path to the directory containing the persisted Chroma database.
             collection_name (str):
                 Name of the collection within the Chroma database to use.
-            embedding_model (str):
-                HuggingFace model identifier for text embeddings.
+            embedding_model (Path | str):
+                HuggingFace model identifier or local path for text embeddings.
                 Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`, a lightweight
                 but effective sentence embedding model.
             retrieval_k (int):
@@ -65,7 +65,7 @@ class ContextRetriever:
         self._retriever: Chroma
 
         logger.info('Loading embedding model "%s"', embedding_model)
-        self._embedding_model = HuggingFaceEmbeddings(model_name=embedding_model)
+        self._embedding_model = HuggingFaceEmbeddings(model_name=str(embedding_model))
         logger.info('Successfully loaded embedding model "%s"', embedding_model)
 
         logger.info('Initializing Chroma retriever for "%s"', self.collection_name)

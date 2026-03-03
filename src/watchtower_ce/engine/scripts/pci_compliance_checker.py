@@ -44,9 +44,10 @@ class PCIComplianceChecker(ComplianceChecker):
 
     def __init__(
         self,
-        model_path: Path | str,
+        base_model_path: Path | str,
         chroma_dir: Path | str,
         collection_name: str = "PCI-DSS-v4.0.1",
+        embedding_model: Path | str = "sentence-transformers/all-MiniLM-L12-v2",
         retrieval_k: int = 2,
         context_window: int = 5120,
         n_gpu_layers: int = -1,
@@ -55,12 +56,15 @@ class PCIComplianceChecker(ComplianceChecker):
         Initialize the PCI-DSS compliance checker.
 
         Args:
-            model_path (Path | str):
+            base_model_path (Path | str):
                 Path to the GGUF model file for LLM inference.
             chroma_dir (Path | str):
                 Directory containing the Chroma vector database with PCI-DSS documentation.
             collection_name (str):
                 Name of the Chroma collection. Defaults to `"PCI-DSS-v4.0.1"`.
+            embedding_model (Path | str):
+                HuggingFace model identifier or local path for text embeddings.
+                Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`.
             retrieval_k (int):
                 Number of document chunks to retrieve per question.
                 Defaults to `2` (more focused retrieval for PCI-DSS specific queries).
@@ -75,9 +79,10 @@ class PCIComplianceChecker(ComplianceChecker):
             return
 
         super().__init__(
-            model_path=model_path,
+            base_model_path=base_model_path,
             chroma_dir=chroma_dir,
             collection_name=collection_name,
+            embedding_model=embedding_model,
             retrieval_k=retrieval_k,
             context_window=context_window,
             n_gpu_layers=n_gpu_layers,
