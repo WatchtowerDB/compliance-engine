@@ -51,17 +51,6 @@ class ClientDBSchemaUploadSerializer(serializers.Serializer):
             "incorrect_type": "Invalid client_db type.",
         },
     )
-    name = serializers.CharField(
-        max_length=255,
-        required=False,
-        allow_blank=True,
-        help_text="Name for the schema. Defaults to filename if not provided.",
-    )
-    description = serializers.CharField(
-        required=False,
-        allow_blank=True,
-        help_text="Optional description of the schema.",
-    )
 
     def validate_sql_file(self, value):
         """
@@ -104,17 +93,9 @@ class ClientDBSchemaUploadSerializer(serializers.Serializer):
 
         sql_content = sql_file.read().decode("utf-8")
 
-        name = validated_data.get("name")
-        if not name:
-            name = sql_file.name.replace(".sql", "")
-
-        description = validated_data.get("description", "")
-
         schema = ClientDBSchema.objects.create(
             client_db=client_db,
-            name=name,
             sql_definition=sql_content,
-            description=description,
         )
 
         return schema

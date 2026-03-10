@@ -3,9 +3,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
-from .tasks import (
-    schedule_sql_assertion_pipeline,
-)
+from .tasks import schedule_sql_assertion_pipeline
 from . import models, serializers
 from .filters import ComplianceAssertionFilter, ClientDBSchemaFilter
 
@@ -58,8 +56,7 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
         Expected form data:
         - sql_file: The .sql file to upload (required)
         - client_db: ID of the ClientDB (required)
-        - name: Name for the schema (optional, defaults to filename)
-        - description: Description of the schema (optional)
+
         """
         serializer = serializers.ClientDBSchemaUploadSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

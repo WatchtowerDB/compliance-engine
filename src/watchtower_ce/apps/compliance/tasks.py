@@ -34,7 +34,7 @@ def infer_sql_assertions_task(
         )
         return []
 
-    sql_assertions = ml.generate_assertions(schema.schema_json)
+    sql_assertions = ml.generate_assertions(schema.sql_definition)
 
     assertion_ids = [
         models.ComplianceAssertion.objects.create(
