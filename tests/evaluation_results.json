@@ -70,10 +70,7 @@
       "preferred_phrases": {
         "found": 2,
         "total": 5,
-        "details": [
-          "reconstruct",
-          "unreadable"
-        ]
+        "details": ["reconstruct", "unreadable"]
       },
       "remediation_steps": {
         "found": 3,
@@ -106,9 +103,7 @@
       "preferred_phrases": {
         "found": 1,
         "total": 3,
-        "details": [
-          "fraudulent transaction"
-        ]
+        "details": ["fraudulent transaction"]
       },
       "remediation_steps": {
         "found": 3,
@@ -218,10 +213,7 @@
       "preferred_phrases": {
         "found": 2,
         "total": 3,
-        "details": [
-          "Any of ['data breach', 'data loss']",
-          "unauthorized"
-        ]
+        "details": ["Any of ['data breach', 'data loss']", "unauthorized"]
       },
       "remediation_steps": {
         "found": 3,
@@ -442,10 +434,7 @@
       "preferred_phrases": {
         "found": 2,
         "total": 3,
-        "details": [
-          "Any of ['data breach', 'data loss']",
-          "unauthorized"
-        ]
+        "details": ["Any of ['data breach', 'data loss']", "unauthorized"]
       },
       "remediation_steps": {
         "found": 3,
@@ -516,10 +505,7 @@
       "preferred_phrases": {
         "found": 2,
         "total": 5,
-        "details": [
-          "Any of ['data breach', 'security breach']",
-          "unreadable"
-        ]
+        "details": ["Any of ['data breach', 'security breach']", "unreadable"]
       },
       "remediation_steps": {
         "found": 3,
@@ -666,10 +652,7 @@
       "preferred_phrases": {
         "found": 2,
         "total": 3,
-        "details": [
-          "Any of ['data breach', 'data loss']",
-          "unauthorized"
-        ]
+        "details": ["Any of ['data breach', 'data loss']", "unauthorized"]
       },
       "remediation_steps": {
         "found": 3,
@@ -741,9 +724,7 @@
       "preferred_phrases": {
         "found": 1,
         "total": 5,
-        "details": [
-          "unreadable"
-        ]
+        "details": ["unreadable"]
       },
       "remediation_steps": {
         "found": 2,
@@ -886,9 +867,7 @@
       "preferred_phrases": {
         "found": 1,
         "total": 3,
-        "details": [
-          "unauthorized"
-        ]
+        "details": ["unauthorized"]
       },
       "remediation_steps": {
         "found": 3,
@@ -957,9 +936,7 @@
       "preferred_phrases": {
         "found": 1,
         "total": 5,
-        "details": [
-          "Any of ['data breach', 'security breach']"
-        ]
+        "details": ["Any of ['data breach', 'security breach']"]
       },
       "remediation_steps": {
         "found": 3,
@@ -992,9 +969,7 @@
       "preferred_phrases": {
         "found": 1,
         "total": 3,
-        "details": [
-          "fraudulent transaction"
-        ]
+        "details": ["fraudulent transaction"]
       },
       "remediation_steps": {
         "found": 3,
@@ -1107,10 +1082,7 @@
       "preferred_phrases": {
         "found": 2,
         "total": 3,
-        "details": [
-          "Any of ['data breach', 'data loss']",
-          "unauthorized"
-        ]
+        "details": ["Any of ['data breach', 'data loss']", "unauthorized"]
       },
       "remediation_steps": {
         "found": 3,
@@ -1180,9 +1152,7 @@
       "preferred_phrases": {
         "found": 1,
         "total": 5,
-        "details": [
-          "Any of ['data breach', 'security breach']"
-        ]
+        "details": ["Any of ['data breach', 'security breach']"]
       },
       "remediation_steps": {
         "found": 3,
@@ -1323,10 +1293,7 @@
       "preferred_phrases": {
         "found": 2,
         "total": 3,
-        "details": [
-          "Any of ['data breach', 'data loss']",
-          "unauthorized"
-        ]
+        "details": ["Any of ['data breach', 'data loss']", "unauthorized"]
       },
       "remediation_steps": {
         "found": 3,

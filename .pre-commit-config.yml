@@ -1,0 +1,48 @@
+repos:
+  # NOTE: Generic
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+  # NOTE: YAML
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+  # NOTE: Python
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.8
+    hooks:
+      - id: ruff-check
+      - id: ruff-format
+  # NOTE: Local CLIs
+  - repo: local
+    hooks:
+      # NOTE: Shell scripts
+      - id: shellcheck
+        name: shellcheck
+        language: unsupported
+        types_or: [shell]
+        entry: shellcheck
+      - id: shfmt
+        name: shfmt
+        language: unsupported
+        types_or: [shell]
+        entry: shfmt
+      # NOTE: TOML
+      - id: taplo-lint
+        name: taplo-lint
+        language: unsupported
+        types_or: [toml]
+        entry: taplo lint
+      - id: taplo-format
+        name: taplo-format
+        language: unsupported
+        types_or: [toml]
+        entry: taplo format --check
+      # NOTE: MD and YAML
+      - id: prettier
+        name: prettier
+        language: unsupported
+        types_or: [html, css, javascript, markdown, yaml]
+        entry: prettier
