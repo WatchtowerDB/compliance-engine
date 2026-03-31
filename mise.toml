@@ -1,5 +1,6 @@
 [settings]
 python.compile = false
+lockfile = true
 
 [tools]
 # NOTE: Python
@@ -9,7 +10,8 @@ uv = "latest"
 ruff = "latest"
 shellcheck = "latest"
 shfmt = "latest"
-prettier = "latest"
+oxfmt = "latest"
+oxlint = "latest"
 taplo = "latest"
 # NOTE: Utils
 gum = "latest"
