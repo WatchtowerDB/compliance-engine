@@ -113,9 +113,12 @@ celery -A watchtower_ce worker -l INFO
 '''
 
 [tasks.stop]
-description = "Stop all running dev containers (requires containers to have 'wtce-' prefix)"
+description = "Stop all running dev containers (requires containers to have the defined prefix)"
 wait_for = ["devserver", "celery"]
 tools = { docker-cli = "29" }
+usage = '''
+flag "-p --prefix <prefix>" help="Prefix used for all project containers" default="wtce-"
+'''
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -128,5 +131,33 @@ if [ -n "${_CONTAINER_IDS}" ]; then
   docker container stop ${_CONTAINER_IDS} >/dev/null
 else
   gum log -l info "No wtce containers are running"
+fi
+'''
+
+[tasks.clean]
+description = "Remove all development containers and volumes (requires containers to have the defined prefix)"
+depends = ["stop"]
+tools = { docker-cli = "29" }
+usage = '''
+flag "-p --prefix <prefix>" help="Prefix used for all project containers" default="wtce-"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+_CONTAINER_IDS="$(docker container ls -aqf name="${usage_prefix}")"
+_CONTAINER_IDS="${_CONTAINER_IDS//$'\n'/ }"
+if [ -n "${_CONTAINER_IDS}" ]; then
+  for id in ${_CONTAINER_IDS}; do
+    _ATTACHED_VOLUMES="$(docker container inspect --format '{% raw %}{{ range .Mounts }}{{ if eq .Type "volume" }}{{ .Name }}{{ "\n" }}{{ end }}{{ end }}{% endraw %}' "${id}")"
+
+    gum log -l warn "Removing container: ${id}"
+    docker container rm -f "${id}"
+
+    gum log -l warn "Removing attached volumes: ${_ATTACHED_VOLUMES//$'\n'/ }"
+    docker volume rm ${_ATTACHED_VOLUMES}
+  done
+else
+  gum log -l info "No containers found with prefix: ${usage_prefix}"
 fi
 '''
