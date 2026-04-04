@@ -5,17 +5,16 @@ lockfile = true
 [tools]
 # NOTE: Python
 python = "3.13"
-uv = "latest"
+uv = "0.11"
 # NOTE: Formatter and linters
-ruff = "latest"
-shellcheck = "latest"
-shfmt = "latest"
-oxfmt = "latest"
-oxlint = "latest"
-taplo = "latest"
+ruff = "0.15"
+shellcheck = "0.11"
+shfmt = "3.13"
+oxfmt = "0.43"
+taplo = "0.10"
 # NOTE: Utils
-gum = "latest"
-prek = "latest"
+gum = "0.17"
+prek = "0.3"
 
 [env]
 _.python.venv = { create = true, path = ".venv" }
@@ -23,15 +22,17 @@ PYTHONPATH = "{{ config_root }}/src"
 DJANGO_SETTINGS_MODULE = "watchtower_ce.settings"
 DATABASE_URL = "postgresql://wtce:wtce@localhost:5432/wtce"
 
-[tasks.sync]
-description = "Sync project dependencies"
-alias = "s"
+[tasks.install]
+description = "Install project dependencies"
+alias = "i"
 usage = '''
-flag "-a --ai" help="Install AI dependencies" default="false"
+flag "-a --all-dependencies" help="Install all dependencies" default="false"
 '''
-run = '''
-uv sync --active {% if usage.ai %}--all-groups --all-extras{% else %}--extra dev,tests{% endif %}
-'''
+run = [
+  "mise install",
+  "uv sync --active {% if usage.all_dependencies %}--all-groups --all-extras{% else %}--extra dev,tests{% endif %}",
+  "prek install",
+]
 
 [tasks.postgres]
 description = "Start development PostgreSQL database"
