@@ -1,20 +1,20 @@
-import json
-import redis
 import datetime
+import json
+
+import redis
+from django.conf import settings
 from django.db.models import QuerySet
 from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
-from django.conf import settings
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework import status, viewsets
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
-from .tasks import schedule_sql_assertion_pipeline, initialize_model_task
+from rest_framework.response import Response
 
 from . import models, serializers
-from .filters import ComplianceAssertionFilter, ClientDBSchemaFilter
+from .filters import ClientDBSchemaFilter, ComplianceAssertionFilter
+from .tasks import initialize_model_task, schedule_sql_assertion_pipeline
 
 
 class ComplianceFrameworkViewSet(viewsets.ReadOnlyModelViewSet):

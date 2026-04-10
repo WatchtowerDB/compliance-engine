@@ -1,13 +1,16 @@
-import redis
-import logging
 import datetime
+import logging
 import uuid
-from . import models
-from . import ml_inference as ml
-from django.conf import settings
-from cloudevents.http import CloudEvent
+from typing import Optional
+
+import redis
+from celery import chain, chord, group, shared_task
 from cloudevents.conversion import to_structured
-from celery import shared_task, chain, chord, group
+from cloudevents.http import CloudEvent
+from django.conf import settings
+
+from . import ml_inference as ml
+from . import models
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +18,7 @@ redis_client = redis.Redis.from_url(settings.CELERY_BROKER_URL)
 
 
 def publish_event(
-    check_id: int, event_type_suffix: str, data: dict, subject: str = None
+    check_id: int, event_type_suffix: str, data: dict, subject: Optional[str] = None
 ):
     """
     Publishes a CloudEvent (v1.0.2) to Redis using the official Python SDK.

@@ -1,9 +1,9 @@
 import logging
 import sqlite3
-import psycopg
 from typing import Any, Iterator, List, Sequence
 from urllib.parse import urlparse
 
+import psycopg
 from django.conf import settings
 from llama_cpp import CreateCompletionStreamResponse
 
