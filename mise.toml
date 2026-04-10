@@ -30,7 +30,7 @@ flag "-a --all-dependencies" help="Install all dependencies" default="false"
 '''
 run = [
   "mise install",
-  "uv sync --active {% if usage.all_dependencies %}--all-groups --all-extras{% else %}--extra dev --extra tests{% endif %}",
+  "uv sync --frozen --active {% if usage.all_dependencies %}--all-groups --all-extras{% else %}--extra dev --extra tests{% endif %}",
   "prek install",
 ]
 
