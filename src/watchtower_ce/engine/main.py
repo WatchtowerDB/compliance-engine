@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
 import logging
-import os
 import sys
-from pathlib import Path
 
-from .models.download_model import download_model
+from django.conf import settings
+
 from .scripts.pci_compliance_checker import PCIComplianceChecker
 
 # Configure logging to output to stdout
@@ -15,23 +14,9 @@ logging.basicConfig(
     stream=sys.stdout,
 )
 
-SCRIPT_DIR = Path(__file__).parent.parent.parent.parent
-MODEL_PATH: Path = Path(
-    os.getenv(
-        "WTCE_MODEL_PATH",
-        SCRIPT_DIR
-        / "models/base/Ministral-8B-Instruct-2410-GGUF/Ministral-8B-Instruct-2410-Q6_K_L.gguf",
-    )
-)
-CHROMA_DIR: Path = Path(os.getenv("WTCE_CHROMA_DIR", SCRIPT_DIR / "data/chroma_db"))
 
-if not MODEL_PATH.exists():
-    # There already are guardrails within this function but container logic is a little hard to predict.
-    download_model(
-        "bartowski/Ministral-8B-Instruct-2410-GGUF",
-        "Ministral-8B-Instruct-2410-GGUF",
-        ["Ministral-8B-Instruct-2410-Q6_K_L.gguf"],
-    )
+if not settings.BASE_MODEL_PATH.exists():
+    raise FileNotFoundError("Base model path not found.")
 
 
 # Example schema with multiple PCI-DSS violations
@@ -79,11 +64,12 @@ CREATE TABLE payment_methods (
 
 # Initialize the PCI compliance checker
 checker = PCIComplianceChecker(
-    model_path=MODEL_PATH,
-    chroma_dir=CHROMA_DIR,
+    base_model_path=settings.BASE_MODEL_PATH,
+    chroma_dir=settings.CHROMA_DIR,
     collection_name="PCI-DSS-v4.0.1",
-    context_window=7168,
-    n_gpu_layers=34,
+    embedding_model=settings.EMBEDDING_MODEL_DIR,
+    context_window=8192,
+    n_gpu_layers=31,
 )
 
 print("=" * 80)

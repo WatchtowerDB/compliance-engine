@@ -27,6 +27,31 @@ class EvaluationMetrics:
     sql_fixes_provided: int = 0
     sql_fixes_required: int = 0
 
+    def __add__(self, other: "EvaluationMetrics") -> "EvaluationMetrics":
+        """Aggregate two metrics objects by summing their counts."""
+        if not isinstance(other, EvaluationMetrics):
+            raise TypeError("Can only add EvaluationMetrics objects.")
+
+        return EvaluationMetrics(
+            total_cases=self.total_cases + other.total_cases,
+            requirement_correctly_identified=self.requirement_correctly_identified
+            + other.requirement_correctly_identified,
+            required_phrases_found=self.required_phrases_found
+            + other.required_phrases_found,
+            required_phrases_total=self.required_phrases_total
+            + other.required_phrases_total,
+            preferred_phrases_found=self.preferred_phrases_found
+            + other.preferred_phrases_found,
+            preferred_phrases_total=self.preferred_phrases_total
+            + other.preferred_phrases_total,
+            remediation_steps_found=self.remediation_steps_found
+            + other.remediation_steps_found,
+            remediation_steps_total=self.remediation_steps_total
+            + other.remediation_steps_total,
+            sql_fixes_provided=self.sql_fixes_provided + other.sql_fixes_provided,
+            sql_fixes_required=self.sql_fixes_required + other.sql_fixes_required,
+        )
+
     @property
     def requirement_identification_rate(self) -> float:
         """% of analyses that correctly identified the PCI requirement"""

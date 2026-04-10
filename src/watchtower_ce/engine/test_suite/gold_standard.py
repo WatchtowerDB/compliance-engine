@@ -20,6 +20,7 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
     test_cases = []
 
     # ==================== REQUIREMENT 3: Protect Stored Account Data ====================
+
     # Test Case 1: CVV Storage Violation
     test_cases.append(
         TestCase(
@@ -47,9 +48,16 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
                     ),
                 },
                 preferred_phrases=[
-                    "need to know",
+                    SynonymSet(
+                        "need to know",
+                        "need-to-know",
+                        "business need",
+                        "business-need",
+                        "access need",
+                        "access-need",
+                    ),
                     SynonymSet("counterfeit payment cards", "counterfeit cards"),
-                    "fraudulent transactions",
+                    "fraudulent transaction",
                     SynonymSet("encrypt", "plaintext", "cleartext", "unencrypt"),
                 ],
                 remediation_steps=[
@@ -91,28 +99,35 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
                     SynonymSet(
                         "encrypt", "plaintext", "cryptography", "unecrypt", "cleartext"
                     ),
-                    "hash",
+                    "unauthorized",
                 },
                 preferred_phrases=[
                     SynonymSet("defense in depth", "defense-in-depth"),
                     SynonymSet("4 digit", "4-digit", "four digit", "four-digit"),
                     "reconstruct",
-                    "data breach",
+                    SynonymSet("data breach", "security breach"),
                     "unreadable",
                 ],
                 remediation_steps=[
                     SynonymSet(
                         "Encrypt card_number column using AES-256",
                         "Encrypt card number column using AES-256",
+                        "Encrypt PAN using AES-256",
+                        "Encrypt PAN using AES-256",
                     ),
                     SynonymSet(
                         "Implement encryption key management",
                         "Implement encryption key-management",
+                        "Use encryption key management",
+                        "Use encryption key-management",
                     ),
                     SynonymSet(
-                        "Remove Plaintext Data",
-                        "Drop Plaintext Data",
-                        "Delete Plaintext Data",
+                        "Remove plaintext data",
+                        "Drop plaintext data",
+                        "Delete plaintext data",
+                        "Remove cleartext data",
+                        "Drop cleartext data",
+                        "Delete cleartext data",
                     ),
                 ],
                 sql_fix_required=True,
@@ -126,7 +141,7 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
             name="TC003_Track_Data_Analysis",
             description="Analysis quality for track data violation",
             failed_assertion="SELECT * FROM card_swipes WHERE track1_data IS NOT NULL OR track2_data IS NOT NULL",
-            failure_result="id: 5, track1_data: %B4532...^DOE/JOHN^..., track2_data: 4532...",
+            failure_result=r"id: 5, track1_data: %B4532...^DOE/JOHN^..., track2_data: 4532...",
             schema_context="""
         CREATE TABLE card_swipes (
             id INT PRIMARY KEY,
@@ -207,7 +222,7 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
                 preferred_phrases=[
                     SynonymSet("strong cryptography", "robust cryptography"),
                     SynonymSet("open", "public", "untrusted"),
-                    "data breach",
+                    SynonymSet("data breach", "security breach"),
                     SynonymSet(
                         "man-in-the-middle",
                         "MITM",
@@ -273,7 +288,7 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
                 violation_description="Unrestricted access to cardholder data",
                 pci_requirements=["Req 7.2", "Req 7.3"],
                 required_phrases={
-                    SynonymSet("access control", "access restriction", "authorization"),
+                    SynonymSet("access control", "access restriction"),
                     SynonymSet(
                         "need to know",
                         "need-to-know",
@@ -293,24 +308,25 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
                     SynonymSet(
                         "separation of duties",
                         "separation-of-duties",
-                        "separationof duty",
+                        "separation of duty",
                         "separation-of-duty",
-                    ),
-                    SynonymSet(
-                        "role based",
-                        "role-based",
-                        "RBAC",
-                        "attribute based",
-                        "attribute-based",
-                        "ABAC",
+                        "segregation of duties",
+                        "segregation-of-duties",
+                        "segregation of duty",
+                        "segregation-of-duty",
                     ),
                     SynonymSet(
                         "authorized personnel",
                         "authorized users",
                         "authorized individuals",
                     ),
-                    "job function",
-                    "data breach",
+                    SynonymSet(
+                        "job function",
+                        "job classification",
+                        "job role",
+                        "business function",
+                    ),
+                    SynonymSet("data breach", "security breach"),
                 ],
                 remediation_steps=[
                     SynonymSet(
@@ -337,122 +353,168 @@ def create_analysis_quality_test_dataset() -> list[TestCase]:
         )
     )
 
+    # Test Case 6: Overly Permissive Access
+    test_cases.append(
+        TestCase(
+            name="TC006_Overly_Permissive_Access_Analysis",
+            description="Analysis quality for overly broad access permissions",
+            failed_assertion="SELECT user_name, privilege_type FROM user_privileges WHERE privilege_type IN ('ALL', 'SUPER', 'GRANT') AND table_name IN ('cardholder_data', 'transactions', 'payment_info')",
+            failure_result="[app_user, ALL], [reporting_user, ALL]",
+            schema_context="""
+        CREATE TABLE user_privileges (
+            privilege_id INT PRIMARY KEY,
+            user_name VARCHAR(100),
+            table_name VARCHAR(100),
+            privilege_type VARCHAR(50)
+        );
+
+        CREATE TABLE cardholder_data (
+            customer_id INT PRIMARY KEY,
+            pan VARCHAR(19),
+            expiration_date VARCHAR(7)
+        );
+        """,
+            ground_truth=GroundTruth(
+                violation_description="Excessive privileges granted for cardholder data access",
+                pci_requirements=["Req 7.1", "Req 7.2", "Req 7.3"],
+                required_phrases={
+                    SynonymSet("access control", "access restriction"),
+                    SynonymSet(
+                        "need to know",
+                        "need-to-know",
+                        "business need",
+                        "business-need",
+                        "access need",
+                        "access-need",
+                    ),
+                    SynonymSet(
+                        "least privilege",
+                        "least-privilege",
+                        "minimum privilege",
+                        "minimum necessary",
+                    ),
+                    SynonymSet(
+                        "job function",
+                        "job classification",
+                        "job role",
+                        "business function",
+                    ),
+                },
+                preferred_phrases=[
+                    SynonymSet(
+                        "separation of duties",
+                        "separation-of-duties",
+                        "separation of duty",
+                        "separation-of-duty",
+                        "segregation of duties",
+                        "segregation-of-duties",
+                        "segregation of duty",
+                        "segregation-of-duty",
+                    ),
+                    SynonymSet("data loss", "data breach"),
+                    "unauthorized",
+                ],
+                remediation_steps=[
+                    SynonymSet(
+                        "Identify job functions and define roles",
+                        "Identify job functions and access needs",
+                    ),
+                    SynonymSet(
+                        "Implement role-based access control / RBAC",
+                        "Configure role-based access control / RBAC",
+                        "Establish role-based access control / RBAC",
+                        "Implement attribute-based access control / ABAC",
+                        "Configure attribute-based access control / ABAC",
+                        "Establish attribute-based access control / ABAC",
+                    ),
+                    SynonymSet(
+                        "Adjust privileges to the minimum required"
+                        "Provide minimum required permissions",
+                        "Update user privileges",
+                        "Reduce user privileges",
+                        "Limit user privileges",
+                        "Modify user privileges",
+                        "Review user privileges",
+                        "Audit user privileges",
+                        "Adjust user privileges",
+                        "Revoke excessive privileges",
+                        "Grant only necessary permissions",
+                        "Assign only necessary permissions",
+                    ),
+                ],
+                sql_fix_required=True,
+            ),
+        )
+    )
+
     # ! THE FOLLOWING TEST CASES ARE AI GENERATED. THEY MAY NOT BE ACCURATE.
     # ! CHECK, REMOVE, OR REFINE THEM AFTER THE TEST SUITE IS FUNCTIONAL.
+    # ==================== REQUIREMENT 8: AUTHENTICATION ====================
 
-    # # # Test Case 6: Overly Permissive Access
-    # # test_cases.append(
-    # #     TestCase(
-    # #         name="TC006_Overly_Permissive_Access_Analysis",
-    # #         description="Analysis quality for overly broad access permissions",
-    # #         failed_assertion="SELECT user_name, privilege_type FROM user_privileges WHERE privilege_type IN ('ALL', 'SUPER', 'GRANT') AND table_name IN ('cardholder_data', 'transactions', 'payment_info')",
-    # #         failure_result="user_name: app_user, privilege_type: ALL\nuser_name: reporting_user, privilege_type: ALL",
-    # #         schema_context="""
-    # #     CREATE TABLE user_privileges (
-    # #         privilege_id INT PRIMARY KEY,
-    # #         user_name VARCHAR(100),
-    # #         table_name VARCHAR(100),
-    # #         privilege_type VARCHAR(50)
-    # #     );
-
-    # #     CREATE TABLE cardholder_data (
-    # #         customer_id INT PRIMARY KEY,
-    # #         pan VARCHAR(19),
-    # #         expiration_date VARCHAR(7)
-    # #     );
-    # #     """,
-    # #         ground_truth=GroundTruth(
-    # #             violation_description="Excessive privileges granted for cardholder data access",
-    # #             pci_requirements=["Req 7.2.2", "Req 7.2.4"],
-    # #             required_phrases={
-    # #                 SynonymSet(
-    # #                     "least privilege", "minimum privilege", "minimum necessary"
-    # #                 ),
-    # #                 SynonymSet("need to know", "need-to-know", "business need"),
-    # #                 SynonymSet("job function", "job role", "business function"),
-    # #             },
-    # #             preferred_phrases=[
-    # #                 "excessive privilege",
-    # #                 SynonymSet("granular", "specific", "limited"),
-    # #                 "privilege escalation",
-    # #                 SynonymSet("segregation of duties", "separation of duties"),
-    # #             ],
-    # #             remediation_steps=[
-    # #                 SynonymSet(
-    # #                     "Review and reduce user privileges",
-    # #                     "Audit and reduce user privileges",
-    # #                     "Revoke excessive privileges",
-    # #                 ),
-    # #                 SynonymSet(
-    # #                     "Grant only necessary permissions",
-    # #                     "Assign only necessary permissions",
-    # #                     "Provide minimum required permissions",
-    # #                 ),
-    # #                 SynonymSet(
-    # #                     "Implement principle of least privilege",
-    # #                     "Apply principle of least privilege",
-    # #                     "Enforce principle of least privilege",
-    # #                 ),
-    # #             ],
-    # #             sql_fix_required=True,
-    # #         ),
-    # #     )
-    # # )
-
-    # # # ==================== REQUIREMENT 8: AUTHENTICATION ====================
-
-    # # # Test Case 7: Weak Password Storage
-    # # test_cases.append(
-    # #     TestCase(
-    # #         name="TC007_Weak_Password_Storage_Analysis",
-    # #         description="Analysis quality for weak password hashing",
-    # #         failed_assertion="SELECT user_id, username FROM users WHERE password_hash IS NOT NULL AND (LENGTH(password_hash) < 32 OR password_hash NOT LIKE '%$%')",
-    # #         failure_result="user_id: 100, username: admin\nuser_id: 101, username: cashier1",
-    # #         schema_context="""
-    # #     CREATE TABLE users (
-    # #         user_id INT PRIMARY KEY,
-    # #         username VARCHAR(100),
-    # #         password_hash VARCHAR(255),
-    # #         access_level VARCHAR(50)
-    # #     );
-    # #     """,
-    # #         ground_truth=GroundTruth(
-    # #             violation_description="Weak or inadequate password hashing",
-    # #             pci_requirements=["Req 8.3.2", "Req 8.3.6"],
-    # #             required_phrases={
-    # #                 SynonymSet("hash", "hashing", "cryptographic hash"),
-    # #                 SynonymSet("salt", "salted", "salting"),
-    # #                 SynonymSet("one-way", "irreversible", "non-reversible"),
-    # #             },
-    # #             preferred_phrases=[
-    # #                 SynonymSet("bcrypt", "PBKDF2", "scrypt", "Argon2"),
-    # #                 SynonymSet(
-    # #                     "strong hash", "secure hash", "cryptographic hash function"
-    # #                 ),
-    # #                 "password security",
-    # #                 "authentication credential",
-    # #             ],
-    # #             remediation_steps=[
-    # #                 SynonymSet(
-    # #                     "Implement strong password hashing algorithm",
-    # #                     "Use strong password hashing algorithm",
-    # #                     "Apply strong password hashing algorithm",
-    # #                 ),
-    # #                 SynonymSet(
-    # #                     "Use bcrypt, PBKDF2, or Argon2",
-    # #                     "Implement bcrypt, PBKDF2, or Argon2",
-    # #                     "Migrate to bcrypt, PBKDF2, or Argon2",
-    # #                 ),
-    # #                 SynonymSet(
-    # #                     "Apply salt to password hashes",
-    # #                     "Include salt in password hashes",
-    # #                     "Add salt to password hashing",
-    # #                 ),
-    # #             ],
-    # #             sql_fix_required=False,
-    # #         ),
-    # #     )
-    # # )
+    # # Test Case 7: Weak Password Storage
+    # test_cases.append(
+    #     TestCase(
+    #         name="TC007_Weak_Password_Storage_Analysis",
+    #         description="Analysis quality for weak password hashing",
+    #         failed_assertion=r"SELECT user_id, username FROM users WHERE password_hash IS NOT NULL AND (LENGTH(password_hash) < 32 OR password_hash NOT LIKE '%$%')",
+    #         failure_result="user_id: 100, username: admin\nuser_id: 101, username: cashier1",
+    #         schema_context="""
+    #     CREATE TABLE users (
+    #         user_id INT PRIMARY KEY,
+    #         username VARCHAR(100),
+    #         password_hash VARCHAR(255),
+    #         access_level VARCHAR(50)
+    #     );
+    #     """,
+    #         ground_truth=GroundTruth(
+    #             violation_description="Weak or inadequate password hashing",
+    #             pci_requirements=["Req 8.3", "Req 8.6"],
+    #             required_phrases={
+    #                 SynonymSet("hash", "hashing"),
+    #                 "authentication",
+    #                 SynonymSet("one way", "one-way", "irreversible", "non-reversible"),
+    #             },
+    #             preferred_phrases=[
+    #                 "factor",
+    #                 "characters",
+    #                 SynonymSet("salt", "salted", "salting"),
+    #                 SynonymSet("bcrypt", "PBKDF2", "scrypt", "Argon2"),
+    #                 SynonymSet(
+    #                     "password policy",
+    #                     "password requirements",
+    #                     "password guidelines",
+    #                 ),
+    #             ],
+    #             remediation_steps=[
+    #                 SynonymSet(
+    #                     "Generate strong passwords",
+    #                     "Create strong passwords",
+    #                     "Uodate passwords of affected accounts",
+    #                 ),
+    #                 SynonymSet(
+    #                     "Implement strong password hashing algorithm",
+    #                     "Use strong password hashing algorithm",
+    #                     "Apply strong password hashing algorithm",
+    #                     "Implement strong password hashing function",
+    #                     "Use strong password hashing function",
+    #                     "Apply strong password hashing function",
+    #                     "Hash passwords securely",
+    #                 ),
+    #                 SynonymSet(
+    #                     "Use bcrypt, PBKDF2, or Argon2",
+    #                     "Implement bcrypt, PBKDF2, or Argon2",
+    #                     "Migrate to bcrypt, PBKDF2, or Argon2",
+    #                 ),
+    #                 SynonymSet(
+    #                     "Apply salt to password hashes",
+    #                     "Include salt in password hashes",
+    #                     "Add salt to password hashing",
+    #                 ),
+    #             ],
+    #             sql_fix_required=True,
+    #         ),
+    #     )
+    # )
 
     # # # Test Case 8: Missing Multi-Factor Authentication Tracking
     # # test_cases.append(

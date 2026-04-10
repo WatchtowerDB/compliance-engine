@@ -133,6 +133,10 @@ def infer_sql_assertions_task(
         models.ClientDBSchema.DoesNotExist,
         models.ComplianceFramework.DoesNotExist,
     ) as e:
+        logger.warning(
+            "ClientDBSchema or ComplianceFramework %s not found. Skipping assertion inference.",
+            schema_id,
+        )
         publish_event(
             check_id,
             "pipeline.error",
@@ -141,7 +145,7 @@ def infer_sql_assertions_task(
         return []
 
     try:
-        sql_assertions = ml.generate_assertions(schema.schema_json)
+        sql_assertions = ml.generate_assertions(schema.sql_definition)
 
         assertion_ids = [
             models.ComplianceAssertion.objects.create(
@@ -237,6 +241,10 @@ def generate_compliance_recommendation_task(
     try:
         assertion = models.ComplianceAssertion.objects.get(id=assertion_id)
     except models.ComplianceAssertion.DoesNotExist:
+        logger.warning(
+            "ComplianceAssertion %s not found. Skipping recommendation task.",
+            assertion_id,
+        )
         return None
 
     if assertion.result is not False:

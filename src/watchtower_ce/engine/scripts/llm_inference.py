@@ -2,8 +2,6 @@ import logging
 from pathlib import Path
 from typing import Iterator
 
-from llama_cpp import CreateCompletionStreamResponse, Llama
-
 logger = logging.getLogger(__name__)
 
 
@@ -62,6 +60,9 @@ class LLMInference:
             FileNotFoundError: If the model file doesn't exist.
             ValueError: If the model file is not in valid GGUF format.
         """
+        # Lazy-importing for llama-cpp to avoid it being loaded each time llm_inference.py is referenced
+        from llama_cpp import Llama
+
         self.model_path = Path(model_path)
         self.prompt_template = prompt_template
         self.stop = stop
@@ -78,7 +79,7 @@ class LLMInference:
 
     def stream_chunks(
         self, prompt: str, max_tokens: int = 1024, temperature: float = 0.4
-    ) -> Iterator[CreateCompletionStreamResponse]:
+    ) -> Iterator:
         """
         Generate text as a stream of chunks, returning the raw iterator.
 

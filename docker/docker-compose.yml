@@ -6,11 +6,10 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ../models/base/Ministral-8B-Instruct-2410-GGUF:/data/models:ro
+      - ../models/base/Ministral-8B-Instruct-2410-GGUF:/home/watchtower/models/base:ro
       - ../src:/app/src
     environment:
-      WTCE_MODEL_PATH: /data/models/Ministral-8B-Instruct-2410-Q6_K_L.gguf
-      WTCE_CHROMA_DIR: /home/watchtower/chroma_db
+      WTCE_BASE_MODEL_PATH: /home/watchtower/models/base/Ministral-8B-Instruct-2410-Q6_K_L.gguf
       PYTHONPATH: /app/src
       DJANGO_ENVIRONMENT: prod
     runtime: nvidia
@@ -28,11 +27,10 @@ services:
     depends_on:
       - redis
     volumes:
-      - ../models/base/Ministral-8B-Instruct-2410-GGUF:/data/models:ro
+      - ../models/base/Ministral-8B-Instruct-2410-GGUF:/home/watchtower/models/base:ro
       - ../src:/app/src
     environment:
-      WTCE_MODEL_PATH: /data/models/Ministral-8B-Instruct-2410-Q6_K_L.gguf
-      WTCE_CHROMA_DIR: /home/watchtower/chroma_db
+      WTCE_BASE_MODEL_PATH: /home/watchtower/models/base/Ministral-8B-Instruct-2410-Q6_K_L.gguf
       PYTHONPATH: /app/src
       DJANGO_ENVIRONMENT: prod
     extra_hosts:

@@ -44,9 +44,10 @@ class PCIComplianceChecker(ComplianceChecker):
 
     def __init__(
         self,
-        model_path: Path | str,
+        base_model_path: Path | str,
         chroma_dir: Path | str,
         collection_name: str = "PCI-DSS-v4.0.1",
+        embedding_model: Path | str = "sentence-transformers/all-MiniLM-L12-v2",
         retrieval_k: int = 2,
         context_window: int = 5120,
         n_gpu_layers: int = -1,
@@ -55,12 +56,15 @@ class PCIComplianceChecker(ComplianceChecker):
         Initialize the PCI-DSS compliance checker.
 
         Args:
-            model_path (Path | str):
+            base_model_path (Path | str):
                 Path to the GGUF model file for LLM inference.
             chroma_dir (Path | str):
                 Directory containing the Chroma vector database with PCI-DSS documentation.
             collection_name (str):
                 Name of the Chroma collection. Defaults to `"PCI-DSS-v4.0.1"`.
+            embedding_model (Path | str):
+                HuggingFace model identifier or local path for text embeddings.
+                Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`.
             retrieval_k (int):
                 Number of document chunks to retrieve per question.
                 Defaults to `2` (more focused retrieval for PCI-DSS specific queries).
@@ -75,9 +79,10 @@ class PCIComplianceChecker(ComplianceChecker):
             return
 
         super().__init__(
-            model_path=model_path,
+            base_model_path=base_model_path,
             chroma_dir=chroma_dir,
             collection_name=collection_name,
+            embedding_model=embedding_model,
             retrieval_k=retrieval_k,
             context_window=context_window,
             n_gpu_layers=n_gpu_layers,
@@ -158,11 +163,11 @@ class PCIComplianceChecker(ComplianceChecker):
 
             Task:
             Analyze the SQL assertion command and infer possible {self.standard} concerns.
-            Generate ONLY 2 comprehensive rich questions depending on what the assertion command checks for that an auditor would ask that directly relate to the following PCI-DSS requirements:
+            Generate ONLY 4 comprehensive rich questions depending on what the assertion command checks for that an auditor would ask that directly relate to the following PCI-DSS requirements:
             - Requirement 3: Storage and protection of stored cardholder data (e.g., PAN, SAD, hashing, encryption, truncation)
             - Requirement 4: Protection of cardholder data during transmission (encryption in transit, key management assumptions)
             - Requirement 7: Restriction of access to cardholder data by business need-to-know
-            - Requirement 8: Identification and authentication of users accessing cardholder data
+            - Requirement 8: Identification and authentication of users and administrators accessing system components (password hashing, MFA)
             - Requirement 10: Logging, monitoring, and audit trails for access to cardholder data
 
             Instructions:
@@ -171,12 +176,13 @@ class PCIComplianceChecker(ComplianceChecker):
             3. Be specific (e.g., PAN and SAD are not the same thing and should be treated as so in your questions;
                these are two separate topics, so two separate questions if needed).
             4. Avoid using raw database field names in the questions; translate them into natural English descriptions (e.g., "card number" instead of "card_number", etc.).
-            5. Ensure questions are retrieval friendly to vector stores. They should sound like they are seeking specific guidance from the standard.
+            5. End your questions with "according to requirement <requirement number you are asking about> ?"
+            6. Ensure questions are retrieval friendly to vector stores. They should be written with many keywords to help with searching.
 
             Output:
             - Respond ONLY with a valid JSON list of strings containing the questions.
             - Ensure the output is valid JSON and respects proper escaping.
-            - EXACTLY 2 questions.
+            - EXACTLY 4 questions.
             - No introductory text or markdown formatting outside the list.
 
             Assertion:

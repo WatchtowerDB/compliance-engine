@@ -1,0 +1,166 @@
+[settings]
+python.compile = false
+lockfile = true
+
+[tools]
+# NOTE: Python
+python = "3.13"
+uv = "0.11"
+# NOTE: Formatter and linters
+ruff = "0.15"
+shellcheck = "0.11"
+shfmt = "3.13"
+oxfmt = "0.43"
+taplo = "0.10"
+# NOTE: Utils
+gum = "0.17"
+prek = "0.3"
+
+[env]
+_.python.venv = { create = true, path = ".venv" }
+PYTHONPATH = "{{ config_root }}/src"
+DJANGO_SETTINGS_MODULE = "watchtower_ce.settings"
+DATABASE_URL = "postgresql://wtce:wtce@localhost:5432/wtce"
+
+[tasks.install]
+description = "Install project dependencies"
+alias = "i"
+usage = '''
+flag "-a --all-dependencies" help="Install all dependencies" default="false"
+'''
+run = [
+  "mise install",
+  "uv sync --active {% if usage.all_dependencies %}--all-groups --all-extras{% else %}--extra dev --extra tests{% endif %}",
+  "prek install",
+]
+
+[tasks.postgres]
+description = "Start development PostgreSQL database"
+tools = { docker-cli = "29" }
+alias = "pg"
+usage = '''
+flag "-n --container-name <container-name>" help="Name for the postgres container" default="wtce-postgres-dev"
+flag "-i --container-image <container-image>" help="Image to use for creating the postgres container" default="postgres:18-alpine"
+flag "-P --port <port>" help="Port to listen on for postgresql connections" default="5432"
+flag "-u --username <username>" help="superuser username" default="wtce"
+flag "-p --password <password>" help="superuser password" default="wtce"
+flag "-d --database <database>" help="initial database name" default="wtce"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ -n "$(docker container ls -qaf "name=${usage_container_name}")" ]; then
+  gum log -l info "Starting postgres container: ${usage_container_name?}"
+  docker container start "${usage_container_name}"
+else
+  gum spin --title "Creating postgres container" -- \
+  docker container run -d \
+  --name "${usage_container_name}" \
+  -e "POSTGRES_USER=${usage_username}" \
+  -e "POSTGRES_PASSWORD=${usage_password}" \
+  -e "POSTGRES_DB=${usage_database}" \
+  -p "${usage_port}:5432" \
+  -v "${usage_container_name}-data:/var/lib/postgresql/data" \
+  "${usage_container_image}"
+fi
+'''
+
+[tasks.redis]
+description = "Start development Redis instance"
+tools = { docker-cli = "29" }
+usage = '''
+flag "-n --container-name <container-name>" help="Name for the redis container" default="wtce-redis-dev"
+flag "-i --container-image <container-image>" help="Image to use for creating the redis container" default="redis:alpine"
+flag "-P --port <port>" help="Port to listen on for redis connections" default="6379"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ -n "$(docker container ls -qaf "name=${usage_container_name}")" ]; then
+  gum log -l info "Starting redis container: ${usage_container_name?}"
+  docker container start "${usage_container_name}"
+else
+  gum spin --title "Creating redis container" -- \
+  docker container run -d \
+  --name "${usage_container_name}" \
+  -p "${usage_port}:6379" \
+  "${usage_container_image}" \
+  redis-server
+fi
+'''
+
+[tasks.migrate]
+description = "Run database migrations"
+depends = ["postgres"]
+alias = "m"
+run = '''
+django-admin makemigrations
+django-admin migrate
+'''
+
+[tasks.devserver]
+description = "Run development server"
+depends = ["migrate"]
+alias = "dev"
+run = '''
+django-admin runserver
+'''
+
+[tasks.celery]
+description = "Run celery worker"
+depends = ["redis"]
+run = '''
+celery -A watchtower_ce worker -l INFO
+'''
+
+[tasks.stop]
+description = "Stop all running dev containers (requires containers to have the defined prefix)"
+wait_for = ["devserver", "celery"]
+tools = { docker-cli = "29" }
+usage = '''
+flag "-p --prefix <prefix>" help="Prefix used for all project containers" default="wtce-"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+_CONTAINER_IDS="$(docker container ls -aqf name=wtce-)"
+_CONTAINER_IDS="${_CONTAINER_IDS//$'\n'/ }"
+
+if [ -n "${_CONTAINER_IDS}" ]; then
+  gum log -l warn "Stopping containers: ${_CONTAINER_IDS}"
+  docker container stop ${_CONTAINER_IDS} >/dev/null
+else
+  gum log -l info "No wtce containers are running"
+fi
+'''
+
+[tasks.clean]
+description = "Remove all development containers and volumes (requires containers to have the defined prefix)"
+depends = ["stop"]
+tools = { docker-cli = "29" }
+usage = '''
+flag "-p --prefix <prefix>" help="Prefix used for all project containers" default="wtce-"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+_CONTAINER_IDS="$(docker container ls -aqf name="${usage_prefix}")"
+_CONTAINER_IDS="${_CONTAINER_IDS//$'\n'/ }"
+if [ -n "${_CONTAINER_IDS}" ]; then
+  for id in ${_CONTAINER_IDS}; do
+    _ATTACHED_VOLUMES="$(docker container inspect --format '{% raw %}{{ range .Mounts }}{{ if eq .Type "volume" }}{{ .Name }}{{ "\n" }}{{ end }}{{ end }}{% endraw %}' "${id}")"
+
+    gum log -l warn "Removing container: ${id}"
+    docker container rm -f "${id}"
+
+    gum log -l warn "Removing attached volumes: ${_ATTACHED_VOLUMES//$'\n'/ }"
+    docker volume rm ${_ATTACHED_VOLUMES}
+  done
+else
+  gum log -l info "No containers found with prefix: ${usage_prefix}"
+fi
+'''
