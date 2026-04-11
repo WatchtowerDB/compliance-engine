@@ -21,6 +21,7 @@ _.python.venv = { create = true, path = ".venv" }
 PYTHONPATH = "{{ config_root }}/src"
 DJANGO_SETTINGS_MODULE = "watchtower_ce.settings"
 DATABASE_URL = "postgresql://wtce:wtce@localhost:5432/wtce"
+CMAKE_ARGS = "-DGGML_CUDA=on"
 
 [tasks.install]
 description = "Install project dependencies"
