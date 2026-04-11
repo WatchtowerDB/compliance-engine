@@ -16,7 +16,7 @@ POST {{rootURL}}/compliance/clientdb/
 Content-Type: application/json 
 Authorization: Bearer {{token}}
 
-{ "name": "Production Payment DB", "connection_string": "postgresql://myuser:mypassword@host.docker.internal:5433/mydatabase", "description": "Main database storing customer transaction data" }
+{ "name": "Production Payment DB", "connection_string": "postgresql://myuser:mypassword@localhost:5433/mydatabase", "description": "Main database storing customer transaction data" }
 
 ###{ "name": "Production Payment DB", "connection_string": "postgresql://myuser:mypassword@localhost:5433/mydatabase", "description": "Main database storing customer transaction data" }
 
