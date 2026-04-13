@@ -15,6 +15,13 @@ repos:
     rev: v0.43.0
     hooks:
       - id: oxfmt
+        types_or: [markdown, html, yaml]
+  # NOTE: TOML
+  - repo: https://github.com/tombi-toml/tombi-pre-commit
+    rev: v0.9.17
+    hooks:
+      - id: tombi-format
+      - id: tombi-lint
   # NOTE: Local CLIs
   - repo: local
     hooks:
@@ -29,14 +36,4 @@ repos:
         language: unsupported
         types_or: [shell]
         entry: shfmt
-      # NOTE: TOML
-      - id: taplo-lint
-        name: taplo-lint
-        language: unsupported
-        types_or: [toml]
-        entry: taplo lint
-      - id: taplo-format
-        name: taplo-format
-        language: unsupported
-        types_or: [toml]
-        entry: taplo format --check
+        args: [--write, -i, "2"]
