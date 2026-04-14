@@ -70,18 +70,6 @@ def initialize_model_task():
         },
     )
 
-    if ml.is_model_loaded():
-        publish_event(
-            0,
-            "phase.update",
-            {
-                "step": "model_initialization",
-                "status": "completed",
-                "message": "Model already loaded.",
-            },
-        )
-        return
-
     try:
         ml.get_pci_checker_instance()
         publish_event(
