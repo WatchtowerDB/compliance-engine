@@ -102,6 +102,29 @@ class LLMInference:
         )
         logger.info('Successfully loaded model from "%s"', self.model_path.name)
 
+    @property
+    def settings(self) -> dict:
+        """
+        Get the current model settings as a dictionary. Not writable.
+
+        This property provides a convenient way to access the model's configuration
+        parameters, which can be useful for debugging, logging, or passing settings
+        to other components.
+
+        Returns:
+            dict: A dictionary containing the model's configuration settings.
+        """
+        return {
+            "model_path": str(self.model_path),
+            "context_window": self.context_window,
+            "n_gpu_layers": self.n_gpu_layers,
+            "prompt_template": self.prompt_template,
+            "stop": self.stop,
+            "top_k": self.top_k,
+            "fa": self.fa,
+            "swa_full": self.swa_full,
+        }
+
     def stream_chunks(
         self, prompt: str, max_tokens: int = 2048, temperature: float = 0.4
     ) -> Iterator:
