@@ -49,8 +49,13 @@ class PCIComplianceChecker(ComplianceChecker):
         collection_name: str = "PCI-DSS-v4.0.1",
         embedding_model: Path | str = "sentence-transformers/all-MiniLM-L12-v2",
         retrieval_k: int = 2,
-        context_window: int = 5120,
+        context_window: int = 131072,
         n_gpu_layers: int = -1,
+        prompt_template: str = "<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
+        stop: str | list[str] | None = ["<turn|>"],
+        top_k: int = 64,
+        fa: bool = True,
+        swa_full: bool | None = None,
     ) -> None:
         """
         Initialize the PCI-DSS compliance checker.
@@ -69,11 +74,23 @@ class PCIComplianceChecker(ComplianceChecker):
                 Number of document chunks to retrieve per question.
                 Defaults to `2` (more focused retrieval for PCI-DSS specific queries).
             context_window (int):
-                Maximum context length in tokens. Defaults to `5120`
-                (the maximum comfortable size for Ministral 8B on an 8GB GPU).
+                Maximum context length in tokens. Defaults to `131072`, the maximum for Gemma-4-E4B-it-Q5_K_M.
             n_gpu_layers (int):
                 GPU layer offloading. `-1` for all layers (recommended).
                 Defaults to `-1`.
+            prompt_template (str):
+                Template for formatting LLM prompts. Should include `{prompt}`
+                placeholder. Defaults to Gemma 4's format: `"<|turn>user\n{prompt}<turn|>\n<|turn>model\n"`.
+            stop (str | list[str] | None):
+                Stop sequences for generation. Defaults to `["<turn|>"]`.
+            top_k (int):
+                The number of highest probability tokens to keep for top-k sampling.
+                Higher values increase diversity but may reduce coherence. Defaults to `64`, Gemma 4's default.
+            fa (bool):
+                Whether to use flash attention (if supported by the model and hardware). Defaults to `True`.
+            swa_full (bool | None):
+                Whether to use SWA-Full attention (if supported by the model and hardware).
+                Defaults to `None`, and leave it like that if you don't know what it is.
         """
         if hasattr(self, "_initialized") and self._initialized:
             return
@@ -86,6 +103,11 @@ class PCIComplianceChecker(ComplianceChecker):
             retrieval_k=retrieval_k,
             context_window=context_window,
             n_gpu_layers=n_gpu_layers,
+            prompt_template=prompt_template,
+            stop=stop,
+            top_k=top_k,
+            fa=fa,
+            swa_full=swa_full,
         )
         self.standard = "PCI-DSS v4.0.1"
         self._initialized: bool = True
@@ -108,6 +130,7 @@ class PCIComplianceChecker(ComplianceChecker):
                  questions as a JSON list of strings.
         """
         return textwrap.dedent(
+            # TODO: Refine ALL prompts with respect to the new more powerful model.
             f"""
             You are an expert PCI-DSS compliance auditor and database security specialist.
 
@@ -129,11 +152,14 @@ class PCIComplianceChecker(ComplianceChecker):
             4. Avoid using raw database field names in the questions; translate them into natural English descriptions (e.g., "card number" instead of "card_number", etc.).
             5. Ensure questions are retrieval friendly to vector stores. They should sound like they are seeking specific guidance from the standard.
             
-            Output:
+            Response:
             - Respond ONLY with a valid JSON list of strings containing the questions.
             - Ensure the output is valid JSON and respects proper escaping.
             - MAXIMUM 6 questions.
-            - No introductory text or markdown formatting outside the list.
+            - Do NOT include any comments of any kind, introductory text, or any markdown formatting.
+
+            Output example:
+            ["<question 1>", "<question 2>", ...]
 
             Schema:
             {schema}
@@ -183,7 +209,10 @@ class PCIComplianceChecker(ComplianceChecker):
             - Respond ONLY with a valid JSON list of strings containing the questions.
             - Ensure the output is valid JSON and respects proper escaping.
             - EXACTLY 4 questions.
-            - No introductory text or markdown formatting outside the list.
+            - Do NOT include any comments of any kind, introductory text, or any markdown formatting.
+
+            Output example:
+            ["<question 1>", "<question 2>", "<question 3>", "<question 4>"]
 
             Assertion:
             {assertion}
@@ -209,6 +238,10 @@ class PCIComplianceChecker(ComplianceChecker):
                  as a JSON list of strings. Each assertion is a SELECT query that
                  identifies compliance violations.
         """
+        # TODO: Experiment with changing
+        # "- Include descriptive column aliases explaining the violation"
+        # to
+        # "- Be as simple and direct as possible while still being effective at identifying violations"
         return textwrap.dedent(
             f"""
             You are an expert PCI-DSS compliance auditor and SQL specialist.
@@ -243,6 +276,10 @@ class PCIComplianceChecker(ComplianceChecker):
             - Generate as many assertions as you need against the provided schema covering different {self.standard} requirements when necessary.
             - Respond **ONLY** with a valid JSON list of strings containing the SQL queries.
             - Ensure the output is valid JSON and respects proper escaping.
+            - Do NOT include any comments of any kind, introductory text, or any markdown formatting.
+
+            Output example:
+            ["<assertion SQL query 1>", "<assertion SQL query 2>", ...]
             """
         ).strip()
 

@@ -18,8 +18,13 @@ def get_pci_checker_instance() -> PCIComplianceChecker:
         chroma_dir=settings.CHROMA_DIR,
         collection_name="PCI-DSS-v4.0.1",
         embedding_model=settings.EMBEDDING_MODEL_DIR,
-        context_window=8192,
-        n_gpu_layers=31,
+        context_window=131072,  # Set lower if you set `fa` to `False` or `swa_full` to `True` since both increase VRAM usage.
+        n_gpu_layers=-1,
+        prompt_template="<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
+        stop=["<turn|>"],
+        top_k=64,  # Set a little lower if facing VRAM constraints.
+        fa=True,
+        swa_full=False,
     )
 
 

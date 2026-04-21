@@ -15,7 +15,7 @@ from huggingface_hub import snapshot_download
     "--name",
     type=str,
     help="Model name/identifier on HuggingFace Hub.",
-    default="bartowski/Ministral-8B-Instruct-2410-GGUF",
+    default="unsloth/gemma-4-E4B-it-GGUF",
 )
 @click.option(
     "-o",

@@ -42,10 +42,13 @@ class ComplianceChecker(ABC):
         collection_name: str,
         embedding_model: Path | str = "sentence-transformers/all-MiniLM-L12-v2",
         retrieval_k: int = 4,
-        context_window: int = 4096,
+        context_window: int = 8192,
         n_gpu_layers: int = -1,
-        prompt_template: str = "[INST] {prompt} [/INST]",
-        stop: str | list[str] | None = ["[INST]", "[/INST]"],
+        prompt_template: str = "<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
+        stop: str | list[str] | None = ["<turn|>"],
+        top_k: int = 64,
+        fa: bool = True,
+        swa_full: bool | None = None,
     ) -> None:
         """
         Initialize the compliance checker with RAG components.
@@ -63,14 +66,22 @@ class ComplianceChecker(ABC):
             retrieval_k (int):
                 Number of similar documents to retrieve per query. Defaults to `4`.
             context_window (int):
-                Maximum context length for the LLM in tokens. Defaults to `4096`.
+                Maximum context length for the LLM in tokens. Defaults to `8192`.
             n_gpu_layers (int):
                 GPU layers to offload. `-1` for all, `0` for CPU only. Defaults to `-1`.
             prompt_template (str):
                 Template for formatting LLM prompts. Should include `{prompt}`
-                placeholder. Defaults to Mistral format: `"[INST] {prompt} [/INST]"`.
+                placeholder. Defaults to Gemma 4's format: `"<|turn>user\n{prompt}<turn|>\n<|turn>model\n"`.
             stop (str | list[str] | None):
-                Stop sequences for generation. Defaults to `["[INST]", "[/INST]"]`.
+                Stop sequences for generation. Defaults to `["<turn|>"]`.
+            top_k (int):
+                The number of highest probability tokens to keep for top-k sampling.
+                Higher values increase diversity but may reduce coherence. Defaults to `64`, Gemma 4's default.
+            fa (bool):
+                Whether to use flash attention (if supported by the model and hardware). Defaults to `True`.
+            swa_full (bool | None):
+                Whether to use SWA-Full attention (if supported by the model and hardware).
+                Defaults to `None`, and leave it like that if you don't know what it is.
         """
         self.context_retriever = ContextRetriever(
             chroma_dir=chroma_dir,
@@ -84,6 +95,9 @@ class ComplianceChecker(ABC):
             n_gpu_layers=n_gpu_layers,
             prompt_template=prompt_template,
             stop=stop,
+            top_k=top_k,
+            fa=fa,
+            swa_full=swa_full,
         )
 
     @abstractmethod
@@ -253,6 +267,7 @@ class ComplianceChecker(ABC):
         try:
             # Clean up potential markdown formatting
             cleaned_response = response.strip()
+            cleaned_response = cleaned_response.replace("\n", " ")
             if cleaned_response.startswith("```python3"):
                 cleaned_response = cleaned_response[10:]
             elif cleaned_response.startswith("```python"):
@@ -329,6 +344,13 @@ class ComplianceChecker(ABC):
         prompt = self._build_schema_questions_prompt(schema)
 
         # Use lower temperature for more consistent, focused question generation
+        # TODO: Change the temperature to what works best with Gemma 4 in all of the code base.
+        # It should be 1.0, but testing is adequate to confirm for our use case and prompt style.
+        #
+        # Refer to:
+        # - https://arxiv.org/html/2506.07295v1
+        # - https://unsloth.ai/docs/models/gemma-4
+        # - https://ollama.com/library/gemma4:latest
         response = self.llm.generate(
             prompt, max_tokens=1024, temperature=0.3, stream=False
         )
@@ -363,7 +385,7 @@ class ComplianceChecker(ABC):
 
         # Use lower temperature for more consistent, focused question generation
         response = self.llm.generate(
-            prompt, max_tokens=512, temperature=0.1, stream=False
+            prompt, max_tokens=2048, temperature=0.1, stream=False
         )
 
         return self._parse_list_response(response, 4)
@@ -444,7 +466,7 @@ class ComplianceChecker(ABC):
 
         logger.info("Generating SQL assertions")
         response = self.llm.generate(
-            prompt, max_tokens=2048, temperature=0.3, stream=False
+            prompt, max_tokens=2048, temperature=0.1, stream=False
         )
 
         assertions = self._parse_list_response(response, fallback_item_limit=10)
@@ -491,7 +513,9 @@ class ComplianceChecker(ABC):
             context, assertion, failure_result
         )
 
-        stream_chunks = self.llm.stream_chunks(prompt, max_tokens=800, temperature=0.65)
+        stream_chunks = self.llm.stream_chunks(
+            prompt, max_tokens=2048, temperature=0.65
+        )
 
         return stream_chunks
 
@@ -524,7 +548,7 @@ class ComplianceChecker(ABC):
 
         logger.info("Analyzing failed assertion")
         response = self.llm.generate(
-            prompt, max_tokens=800, temperature=0.9, stream=True
+            prompt, max_tokens=2048, temperature=0.9, stream=True
         )
         logger.info("Successfully analyzed failed assertion")
 
