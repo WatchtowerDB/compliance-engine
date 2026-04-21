@@ -513,9 +513,7 @@ class ComplianceChecker(ABC):
             context, assertion, failure_result
         )
 
-        stream_chunks = self.llm.stream_chunks(
-            prompt, max_tokens=2048, temperature=0.65
-        )
+        stream_chunks = self.llm.stream_chunks(prompt, max_tokens=2048, temperature=0.9)
 
         return stream_chunks
 
