@@ -289,6 +289,23 @@ class LLMInference:
         else:
             return self._generate_non_stream(prompt, max_tokens, temperature)
 
+    def count_tokens(self, text: str) -> int:
+        """
+        Count the number of tokens in a string using the model's native tokenizer.
+
+        This is useful for ensuring inputs stay within a model's context_window.
+
+        Args:
+            text (str): The text to count tokens for.
+
+        Returns:
+            int: The token count.
+        """
+        if not text:
+            return 0
+
+        return len(self.model.tokenize(text.encode("utf-8"), add_bos=False))
+
     def close(self):
         """
         Clean up model resources and free memory.

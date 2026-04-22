@@ -543,6 +543,15 @@ class ComplianceChecker(ABC):
         prompt = self._build_assertion_analysis_prompt(
             context, assertion, failure_result
         )
+        import timeit
+
+        start_time = timeit.default_timer()
+        logger.debug("Tokens in prompt: %s", self.count_tokens(prompt))
+        end_time = timeit.default_timer()
+        logger.debug(
+            "Time taken to count tokens: %.2f seconds",
+            end_time - start_time,
+        )
 
         logger.info("Analyzing failed assertion")
         response = self.llm.generate(
@@ -551,6 +560,24 @@ class ComplianceChecker(ABC):
         logger.info("Successfully analyzed failed assertion")
 
         return response
+
+    def count_tokens(self, text: str) -> int:
+        """
+        Count the number of tokens in a string using the model's native tokenizer.
+
+        This is useful for ensuring inputs stay within a model's context_window.
+
+        Note: If using this method in a debug logging statement, it's best to add a check for whether
+        debug logging is enabled before calling this method (e.g., `if logger.isEnabledFor(logging.DEBUG):`),
+        as tokenization can be computationally expensive.
+
+        Args:
+            text (str): The text to count tokens for.
+
+        Returns:
+            int: The token count.
+        """
+        return self.llm.count_tokens(text)
 
     def close(self):
         """
