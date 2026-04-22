@@ -543,15 +543,6 @@ class ComplianceChecker(ABC):
         prompt = self._build_assertion_analysis_prompt(
             context, assertion, failure_result
         )
-        import timeit
-
-        start_time = timeit.default_timer()
-        logger.debug("Tokens in prompt: %s", self.count_tokens(prompt))
-        end_time = timeit.default_timer()
-        logger.debug(
-            "Time taken to count tokens: %.2f seconds",
-            end_time - start_time,
-        )
 
         logger.info("Analyzing failed assertion")
         response = self.llm.generate(
