@@ -48,7 +48,11 @@ class ComplianceAssertion(models.Model):
     schema: models.ForeignKey = models.ForeignKey(
         "ClientDBSchema", on_delete=models.CASCADE, related_name="compliance_assertions"
     )
+    compliance_check: models.ForeignKey = models.ForeignKey(
+        "ComplianceCheck", on_delete=models.CASCADE, related_name="assertions"
+    )
     sql_query: models.TextField = models.TextField()
+    query_output: models.TextField = models.TextField(null=True, blank=True)
     result: models.BooleanField = models.BooleanField(null=True)
     recommendation: models.TextField = models.TextField(
         null=True,

@@ -29,10 +29,13 @@ class LLMInference:
     def __init__(
         self,
         model_path: Path | str,
-        context_window: int = 4096,
+        context_window: int = 8192,
         n_gpu_layers: int = -1,
         prompt_template: str = "{prompt}",  # i.e., just the prompt, which is highly unlikely
         stop: str | list[str] | None = None,
+        top_k: int = 40,
+        fa: bool = False,
+        swa_full: bool | None = None,
     ) -> None:
         """
         Initialize the LLM inference engine with a GGUF model.
@@ -42,7 +45,7 @@ class LLMInference:
                 Path to the GGUF format model file.
             context_window (int):
                 Maximum context length (in tokens) the model can handle.
-                Defaults to `4096`. Larger values require more memory.
+                Defaults to `8192`. Larger values require more memory.
             n_gpu_layers (int):
                 Number of model layers to offload to GPU. Use `-1` to offload
                 all layers (recommended for GPU acceleration). Use `0` for CPU-only mode.
@@ -51,10 +54,25 @@ class LLMInference:
                 Format string for structuring prompts. Should contain
                 `{prompt}` placeholder. For example, Mistral uses `"[INST] {prompt} [/INST]"`.
                 Defaults to `"{prompt}"` (no formatting).
+
+                It's worth noting that this way of formatting prompts, while is the most flexible,
+                is not necessarily the most efficient/robust one. Each model may have its own
+                inference library/api that provides better interfaces for model-specific settings.
+
+                If the project decides to commit to a single model, this way of formatting prompts
+                should be replaced with the model's native way.
             stop (str | list[str] | None):
                 Stop sequence(s) that signal the model to stop generating. Can be
                 a single string or list of strings. Common examples include special
                 tokens like `"[INST]"`, `"</s>"`, or custom markers. Defaults to `None`.
+            top_k (int):
+                The number of highest probability tokens to keep for top-k sampling.
+                Higher values increase diversity but may reduce coherence. Defaults to `40`.
+            fa (bool):
+                Whether to use flash attention (if supported by the model and hardware). Defaults to `False`.
+            swa_full (bool | None):
+                Whether to use SWA-Full attention (if supported by the model and hardware).
+                Defaults to `None`, and leave it like that if you don't know what it is.
 
         Raises:
             FileNotFoundError: If the model file doesn't exist.
@@ -64,21 +82,51 @@ class LLMInference:
         from llama_cpp import Llama
 
         self.model_path = Path(model_path)
+        self.context_window = context_window
+        self.n_gpu_layers = n_gpu_layers
         self.prompt_template = prompt_template
         self.stop = stop
+        self.top_k = top_k
+        self.fa = fa
+        self.swa_full = swa_full
         self.model: Llama
 
         logger.info('Loading model from "%s"', self.model_path.name)
         self.model = Llama(
             model_path=str(self.model_path),
-            n_gpu_layers=n_gpu_layers,
-            n_ctx=context_window,
+            n_gpu_layers=self.n_gpu_layers,
+            n_ctx=self.context_window,
+            flash_attn=self.fa,
+            swa_full=self.swa_full,
             verbose=False,
         )
         logger.info('Successfully loaded model from "%s"', self.model_path.name)
 
+    @property
+    def settings(self) -> dict:
+        """
+        Get the current model settings as a dictionary. Not writable.
+
+        This property provides a convenient way to access the model's configuration
+        parameters, which can be useful for debugging, logging, or passing settings
+        to other components.
+
+        Returns:
+            dict: A dictionary containing the model's configuration settings.
+        """
+        return {
+            "model_path": str(self.model_path),
+            "context_window": self.context_window,
+            "n_gpu_layers": self.n_gpu_layers,
+            "prompt_template": self.prompt_template,
+            "stop": self.stop,
+            "top_k": self.top_k,
+            "fa": self.fa,
+            "swa_full": self.swa_full,
+        }
+
     def stream_chunks(
-        self, prompt: str, max_tokens: int = 1024, temperature: float = 0.4
+        self, prompt: str, max_tokens: int = 2048, temperature: float = 0.4
     ) -> Iterator:
         """
         Generate text as a stream of chunks, returning the raw iterator.
@@ -93,7 +141,7 @@ class LLMInference:
             max_tokens (int):
                 Maximum number of tokens to generate. Note: this is a
                 soft limit - generation may stop earlier due to stop sequences
-                or end-of-text tokens. Defaults to `1024`.
+                or end-of-text tokens. Defaults to `2048`.
             temperature (float):
                 Sampling temperature controlling randomness. Lower values
                 (e.g., `0.1`-`0.4`) produce more focused/deterministic output. Higher
@@ -119,6 +167,7 @@ class LLMInference:
             max_tokens=max_tokens,
             temperature=temperature,
             stop=self.stop,
+            top_k=64,
             stream=True,
             echo=False,
         )  # type: ignore
@@ -188,6 +237,7 @@ class LLMInference:
             max_tokens=max_tokens,
             temperature=temperature,
             stop=self.stop,
+            top_k=64,
             stream=False,
             echo=False,
         )
@@ -196,7 +246,7 @@ class LLMInference:
     def generate(
         self,
         prompt: str,
-        max_tokens: int = 1024,
+        max_tokens: int = 2048,
         temperature: float = 0.4,
         stream: bool = True,
     ) -> str:
@@ -211,7 +261,7 @@ class LLMInference:
                 The input text prompt to generate from. Will be formatted using
                 the `prompt_template` specified during initialization.
             max_tokens (int):
-                Maximum number of tokens to generate. Defaults to `1024`.
+                Maximum number of tokens to generate. Defaults to `2048`.
             temperature (float):
                 Controls randomness in generation. Range is typically `0.0`-`2.0`.
                 - `0.0`-`0.3`: Very focused, deterministic (good for factual tasks)
@@ -238,6 +288,23 @@ class LLMInference:
             return self._generate_stream(prompt, max_tokens, temperature)
         else:
             return self._generate_non_stream(prompt, max_tokens, temperature)
+
+    def count_tokens(self, text: str) -> int:
+        """
+        Count the number of tokens in a string using the model's native tokenizer.
+
+        This is useful for ensuring inputs stay within a model's context_window.
+
+        Args:
+            text (str): The text to count tokens for.
+
+        Returns:
+            int: The token count.
+        """
+        if not text:
+            return 0
+
+        return len(self.model.tokenize(text.encode("utf-8"), add_bos=False))
 
     def close(self):
         """

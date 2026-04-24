@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+from ..scripts.pci_compliance_checker import PCIComplianceChecker
 from .evaluation_metrics import EvaluationMetrics
 from .synonym_set import SynonymSet
 from .test_case import TestCase
@@ -245,7 +246,9 @@ class AnalysisQualityEvaluator:
             else generated_analysis,
         }
 
-    def evaluate_all(self, checker, verbose: bool = True) -> EvaluationMetrics:
+    def evaluate_all(
+        self, checker: PCIComplianceChecker, verbose: bool = True
+    ) -> EvaluationMetrics:
         """
         Evaluate analysis quality across all test cases.
 
@@ -271,7 +274,7 @@ class AnalysisQualityEvaluator:
                 print(f"Violation: {test_case.ground_truth.violation_description}")
 
             # Generate analysis using the checker
-            generated_analysis = checker.analyze_failed_assertion(
+            generated_analysis = checker.analyze_failed_assertion_stdout(
                 test_case.failed_assertion, test_case.failure_result
             )
 

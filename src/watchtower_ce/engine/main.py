@@ -115,7 +115,7 @@ for i, (assertion, result) in enumerate(failed_assertions.items(), 1):
     print("REMEDIATION ANALYSIS:")
     print(f"{'=' * 80}\n")
 
-    analysis = checker.analyze_failed_assertion(assertion, result)
+    analysis = checker.analyze_failed_assertion_stdout(assertion, result)
 
     print("\n" + "=" * 80)
 

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import click
 
-from ..engine.scripts.pdf_to_chroma import PDFToChroma
+from ..engine.utils.pdf_to_chroma import PDFToChroma
 
 
 @click.command(

@@ -1,4 +1,4 @@
-from django.urls import URLPattern, URLResolver
+from django.urls import URLPattern, URLResolver, path
 from rest_framework import routers
 
 from . import views
@@ -10,4 +10,12 @@ router.register("clientdbschema", views.ClientDBSchemaViewSet)
 router.register("assertions", views.ComplianceAssertionViewSet)
 router.register("checks", views.ComplianceCheckViewSet)
 
-urlpatterns: list[URLPattern | URLResolver] = router.urls
+urlpatterns: list[URLPattern | URLResolver] = [
+    *router.urls,
+    path(
+        "checks/<int:check_id>/stream/",
+        views.stream_check_updates,
+        name="stream-check-updates",
+    ),
+    path("model/init/stream/", views.stream_model_init, name="stream-model-init"),
+]
