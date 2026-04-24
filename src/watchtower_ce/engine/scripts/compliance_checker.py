@@ -2,7 +2,10 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Iterator
 from warnings import deprecated
+
+from llama_cpp import CreateCompletionStreamResponse
 
 from .context_retriever import ContextRetriever
 from .llm_inference import LLMInference
@@ -39,10 +42,13 @@ class ComplianceChecker(ABC):
         collection_name: str,
         embedding_model: Path | str = "sentence-transformers/all-MiniLM-L12-v2",
         retrieval_k: int = 4,
-        context_window: int = 4096,
+        context_window: int = 8192,
         n_gpu_layers: int = -1,
-        prompt_template: str = "[INST] {prompt} [/INST]",
-        stop: str | list[str] | None = ["[INST]", "[/INST]"],
+        prompt_template: str = "<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
+        stop: str | list[str] | None = ["<turn|>"],
+        top_k: int = 64,
+        fa: bool = True,
+        swa_full: bool | None = None,
     ) -> None:
         """
         Initialize the compliance checker with RAG components.
@@ -60,14 +66,22 @@ class ComplianceChecker(ABC):
             retrieval_k (int):
                 Number of similar documents to retrieve per query. Defaults to `4`.
             context_window (int):
-                Maximum context length for the LLM in tokens. Defaults to `4096`.
+                Maximum context length for the LLM in tokens. Defaults to `8192`.
             n_gpu_layers (int):
                 GPU layers to offload. `-1` for all, `0` for CPU only. Defaults to `-1`.
             prompt_template (str):
                 Template for formatting LLM prompts. Should include `{prompt}`
-                placeholder. Defaults to Mistral format: `"[INST] {prompt} [/INST]"`.
+                placeholder. Defaults to Gemma 4's format: `"<|turn>user\n{prompt}<turn|>\n<|turn>model\n"`.
             stop (str | list[str] | None):
-                Stop sequences for generation. Defaults to `["[INST]", "[/INST]"]`.
+                Stop sequences for generation. Defaults to `["<turn|>"]`.
+            top_k (int):
+                The number of highest probability tokens to keep for top-k sampling.
+                Higher values increase diversity but may reduce coherence. Defaults to `64`, Gemma 4's default.
+            fa (bool):
+                Whether to use flash attention (if supported by the model and hardware). Defaults to `True`.
+            swa_full (bool | None):
+                Whether to use SWA-Full attention (if supported by the model and hardware).
+                Defaults to `None`, and leave it like that if you don't know what it is.
         """
         self.context_retriever = ContextRetriever(
             chroma_dir=chroma_dir,
@@ -81,6 +95,9 @@ class ComplianceChecker(ABC):
             n_gpu_layers=n_gpu_layers,
             prompt_template=prompt_template,
             stop=stop,
+            top_k=top_k,
+            fa=fa,
+            swa_full=swa_full,
         )
 
     @abstractmethod
@@ -250,6 +267,7 @@ class ComplianceChecker(ABC):
         try:
             # Clean up potential markdown formatting
             cleaned_response = response.strip()
+            cleaned_response = cleaned_response.replace("\n", " ")
             if cleaned_response.startswith("```python3"):
                 cleaned_response = cleaned_response[10:]
             elif cleaned_response.startswith("```python"):
@@ -326,6 +344,13 @@ class ComplianceChecker(ABC):
         prompt = self._build_schema_questions_prompt(schema)
 
         # Use lower temperature for more consistent, focused question generation
+        # TODO: Change the temperature to what works best with Gemma 4 in all of the code base.
+        # It should be 1.0, but testing is adequate to confirm for our use case and prompt style.
+        #
+        # Refer to:
+        # - https://arxiv.org/html/2506.07295v1
+        # - https://unsloth.ai/docs/models/gemma-4
+        # - https://ollama.com/library/gemma4:latest
         response = self.llm.generate(
             prompt, max_tokens=1024, temperature=0.3, stream=False
         )
@@ -360,7 +385,7 @@ class ComplianceChecker(ABC):
 
         # Use lower temperature for more consistent, focused question generation
         response = self.llm.generate(
-            prompt, max_tokens=512, temperature=0.1, stream=False
+            prompt, max_tokens=2048, temperature=0.1, stream=False
         )
 
         return self._parse_list_response(response, 4)
@@ -441,7 +466,7 @@ class ComplianceChecker(ABC):
 
         logger.info("Generating SQL assertions")
         response = self.llm.generate(
-            prompt, max_tokens=2048, temperature=0.3, stream=False
+            prompt, max_tokens=2048, temperature=0.1, stream=False
         )
 
         assertions = self._parse_list_response(response, fallback_item_limit=10)
@@ -449,7 +474,9 @@ class ComplianceChecker(ABC):
 
         return assertions
 
-    def analyze_failed_assertion(self, assertion: str, failure_result: str) -> str:
+    def analyze_failed_assertion(
+        self, assertion: str, failure_result: str
+    ) -> Iterator[CreateCompletionStreamResponse]:
         """
         Analyze a failed assertion and provide remediation recommendations.
 
@@ -463,18 +490,17 @@ class ComplianceChecker(ABC):
                 The result returned by the failed assertion (violating rows/data).
 
         Returns:
-            str: A detailed analysis containing:
-                 - Explanation of the compliance violation
-                 - Relevant standard clauses
-                 - Specific remediation steps
-                 - SQL fixes where applicable
+            Iterator[CreateCompletionStreamResponse]: An iterator yielding chunks of the
+                generated analysis. This is used for streaming output.
 
         Example:
             >>> checker = PCIComplianceChecker(base_model_path, chroma_dir)
             >>> assertion = "SELECT * FROM customers WHERE cvv IS NOT NULL"
             >>> result = "id: 1, cvv: 123\\nid: 2, cvv: 456"
-            >>> analysis = checker.analyze_failed_assertion(assertion, result)
-            >>> print(analysis)
+            >>> stream_chunks = checker.analyze_failed_assertion(assertion, result)
+            >>> for chunk in stream_chunks:
+            ...     token = chunk["choices"][0]["text"]
+            ...     print(token, end="", flush=True)
         """
         # Generate a question to retrieve relevant context for this specific violation
         logger.info("Generating questions from failed assertion: %s", assertion)
@@ -487,43 +513,62 @@ class ComplianceChecker(ABC):
             context, assertion, failure_result
         )
 
+        stream_chunks = self.llm.stream_chunks(prompt, max_tokens=2048, temperature=0.9)
+
+        return stream_chunks
+
+    def analyze_failed_assertion_stdout(
+        self, assertion: str, failure_result: str
+    ) -> str:
+        """
+        Analyze a failed assertion and return the full analysis text.
+
+        This is a convenience method that returns the complete analysis as a string,
+        useful for non-streaming contexts (e.g., tests, batch processing).
+        It "streams" the generation to stdout as it progresses.
+
+        Args:
+            assertion (str): The SQL assertion query that failed.
+            failure_result (str): The result returned by the failed assertion.
+
+        Returns:
+            str: The complete analysis text.
+        """
+        logger.info("Generating questions from failed assertion: %s", assertion)
+        questions = self._generate_assertion_questions(assertion)
+        context = self._retrieve_context_for_questions(questions, 4)
+
+        logger.debug("Retrieved context: %s", context)
+
+        prompt = self._build_assertion_analysis_prompt(
+            context, assertion, failure_result
+        )
+
         logger.info("Analyzing failed assertion")
         response = self.llm.generate(
-            prompt, max_tokens=800, temperature=0.9, stream=True
+            prompt, max_tokens=2048, temperature=0.9, stream=True
         )
         logger.info("Successfully analyzed failed assertion")
 
         return response
 
-    def analyze_all_failed_assertions(
-        self, failed_assertions: dict[str, str]
-    ) -> dict[str, str]:
+    def count_tokens(self, text: str) -> int:
         """
-        Analyze multiple failed assertions and provide remediation for each.
+        Count the number of tokens in a string using the model's native tokenizer.
+
+        This is useful for ensuring inputs stay within a model's context_window.
+
+        Note: If using this method in a debug logging statement, it's best to add a check for whether
+        debug logging is enabled before calling this method (e.g., `if logger.isEnabledFor(logging.DEBUG):`),
+        as tokenization can be computationally expensive.
 
         Args:
-            failed_assertions (dict[str, str]):
-                Dictionary mapping assertion queries to their failure results.
+            text (str): The text to count tokens for.
 
         Returns:
-            dict[str, str]: Dictionary mapping each assertion to its analysis.
-
-        Example:
-            >>> failed = {
-            ...     "SELECT * FROM customers WHERE cvv IS NOT NULL": "id: 1, cvv: 123",
-            ...     "SELECT * FROM customers WHERE LENGTH(credit_card_number) = 16": "id: 2, cc: 1234567890123456"
-            ... }
-            >>> analyses = checker.analyze_all_failed_assertions(failed)
+            int: The token count.
         """
-        analyses = {}
-        total = len(failed_assertions)
-
-        for i, (assertion, result) in enumerate(failed_assertions.items(), 1):
-            logger.debug("Analyzing failed assertion (%s/%s)", i, total)
-            analysis = self.analyze_failed_assertion(assertion, result)
-            analyses[assertion] = analysis
-
-        return analyses
+        return self.llm.count_tokens(text)
 
     def close(self):
         """

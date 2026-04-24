@@ -1,10 +1,11 @@
 import logging
 import sqlite3
-from typing import Any, List, Sequence
+from typing import Any, Iterator, List, Sequence
 from urllib.parse import urlparse
 
 import psycopg
 from django.conf import settings
+from llama_cpp import CreateCompletionStreamResponse
 
 from ...engine.scripts.pci_compliance_checker import PCIComplianceChecker
 
@@ -17,8 +18,13 @@ def get_pci_checker_instance() -> PCIComplianceChecker:
         chroma_dir=settings.CHROMA_DIR,
         collection_name="PCI-DSS-v4.0.1",
         embedding_model=settings.EMBEDDING_MODEL_DIR,
-        context_window=8192,
-        n_gpu_layers=31,
+        context_window=131072,  # Set lower if you set `fa` to `False` or `swa_full` to `True` since both increase VRAM usage.
+        n_gpu_layers=-1,
+        prompt_template="<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
+        stop=["<turn|>"],
+        top_k=64,  # Set a little lower if facing VRAM constraints.
+        fa=True,
+        swa_full=False,
     )
 
 
@@ -85,7 +91,9 @@ def execute_sql_assertion(connection_string: str, sql_query: str) -> tuple[bool,
         return False, ""
 
 
-def analyze_failed_assertion(assertion: str, failure_result: str) -> str:
+def analyze_failed_assertion(
+    assertion: str, failure_result: str
+) -> Iterator[CreateCompletionStreamResponse] | str:
     """Analyze a failed SQL assertion and generate remediation guidance.
 
     This function represents the ML / LLM-based reasoning layer that
@@ -100,15 +108,14 @@ def analyze_failed_assertion(assertion: str, failure_result: str) -> str:
     """
 
     try:
-        recommendation = get_pci_checker_instance().analyze_failed_assertion(
+        stream_chunks = get_pci_checker_instance().analyze_failed_assertion(
             assertion, failure_result
         )
 
-        return recommendation
+        return stream_chunks
 
     except Exception as e:
-        logger.exception("ML Engine Failure (analyze_failed_assertion): %s", e)
-        return "Analysis unavailable. Please review the SQL violation manually."
+        raise ValueError("ML Engine Failure (analyze_failed_assertion): %s", e)
 
 
 def _execute_psql(conn_str: str, sql_query: str) -> tuple[bool, str]:
