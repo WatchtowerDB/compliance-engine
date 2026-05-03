@@ -88,6 +88,8 @@ SIMPLE_JWT: dict[str, Any] = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
 }
 
+CORS_ALLOW_CREDENTIALS: bool = True
+
 REST_FRAMEWORK: dict[str, int | Iterable] = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
