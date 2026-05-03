@@ -7,7 +7,7 @@ import psycopg
 from django.conf import settings
 from llama_cpp import CreateCompletionStreamResponse
 
-from ...engine.scripts.pci_compliance_checker import PCIComplianceChecker
+from ...engine.standards.pci_compliance_checker import PCIComplianceChecker
 
 logger = logging.getLogger(__name__)
 

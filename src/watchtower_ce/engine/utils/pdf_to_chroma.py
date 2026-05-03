@@ -72,6 +72,9 @@ class PDFToChroma:
             separators (list[str], optional):
                 If set, `PDFToChroma` will split the chunks based on these separators.
                 If not, it will use `chunk_size` and `chunk_overlap`.
+
+                Pro-tip: use "\f" (form feed) to split by PDF page.
+                Not guaranteed to work with all PDFs, but can be a good option for well-structured documents.
             chunk_size (int, optional):
                 Maximum number of characters per text chunk before embedding. Defaults to `800`.
             chunk_overlap (int, optional):

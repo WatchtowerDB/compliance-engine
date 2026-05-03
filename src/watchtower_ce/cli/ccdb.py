@@ -48,7 +48,8 @@ from ..engine.utils.pdf_to_chroma import PDFToChroma
     "-s",
     "--seperators",
     type=str,
-    help="If set, the chunks will be split based on these separators. If not, chunk_size and chunk_overlap will be used.",
+    help="If set, the chunks will be split based on these separators. If not, chunk_size and chunk_overlap will be used.\n\n"
+    'Pro-tip: use "\\f" (form feed) to split by PDF page. Not guaranteed to work with all PDFs, but can be a good option for well-structured documents.',
     default=[],
     multiple=True,
 )

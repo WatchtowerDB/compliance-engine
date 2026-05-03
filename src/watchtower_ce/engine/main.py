@@ -5,7 +5,7 @@ import sys
 
 from django.conf import settings
 
-from .scripts.pci_compliance_checker import PCIComplianceChecker
+from .standards.pci_compliance_checker import PCIComplianceChecker
 
 # Configure logging to output to stdout
 logging.basicConfig(
