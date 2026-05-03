@@ -19,6 +19,7 @@ INSTALLED_APPS: list[str] = [
     "drf_spectacular",
     "django_filters",
     "corsheaders",
+    "rest_framework_simplejwt.token_blacklist",
     # NOTE: API apps
     *apps.APPS,
 ]
@@ -85,7 +86,17 @@ STATIC_ROOT: Path = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD: str = "django.db.models.BigAutoField"
 
 SIMPLE_JWT: dict[str, Any] = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    # Custom settings for cookie handling
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_COOKIE_REFRESH": "refresh_token",
+    "AUTH_COOKIE_SECURE": False,  # TODO: delegate this to env.py and set to True in "prod"
+    "AUTH_COOKIE_HTTP_ONLY": True,
+    "AUTH_COOKIE_PATH": "/",
+    "AUTH_COOKIE_SAMESITE": "Lax",
 }
 
 CORS_ALLOW_CREDENTIALS: bool = True
