@@ -26,10 +26,6 @@ CORS_ALLOW_ALL_ORIGINS: bool = (
     os.getenv("DJANGO_ENVIRONMENT", "").upper() != "PROD" and not CORS_ALLOWED_ORIGINS
 )
 
-print(
-    f"[DEBUG] CORS_ALLOWED_ORIGINS: {CORS_ALLOWED_ORIGINS}, CORS_ALLOW_ALL_ORIGINS: {CORS_ALLOW_ALL_ORIGINS}"
-)
-
 SECRET_KEY: str = os.getenv(
     "DJANGO_SECRET_KEY",
     "django-dev-d6d=nm0@u_1+&f_go09c8w07-t8@z$wr*(wi(vn*$a9!bk=^o3",
