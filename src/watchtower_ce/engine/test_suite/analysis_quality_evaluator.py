@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from ..scripts.pci_compliance_checker import PCIComplianceChecker
+from ..standards.pci_compliance_checker import PCIComplianceChecker
 from .evaluation_metrics import EvaluationMetrics
 from .synonym_set import SynonymSet
 from .test_case import TestCase

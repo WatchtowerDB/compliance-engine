@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 
 from .. import settings
-from ..engine.scripts.pci_compliance_checker import PCIComplianceChecker
+from ..engine.standards.pci_compliance_checker import PCIComplianceChecker
 from ..engine.test_suite.analysis_quality_evaluator import AnalysisQualityEvaluator
 from ..engine.test_suite.evaluation_metrics import EvaluationMetrics
 from ..engine.test_suite.gold_standard import create_analysis_quality_test_dataset

@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 from warnings import deprecated
 
-from .compliance_checker import ComplianceChecker
+from ..scripts.compliance_checker import ComplianceChecker
 
 
 class PCIComplianceChecker(ComplianceChecker):
