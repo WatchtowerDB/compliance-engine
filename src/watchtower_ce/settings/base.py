@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .. import apps
+from .env import AUTH_COOKIE_SECURE
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -93,7 +94,7 @@ SIMPLE_JWT: dict[str, Any] = {
     "AUTH_HEADER_TYPES": ("Bearer",),
     # Custom settings for cookie handling
     "AUTH_COOKIE_REFRESH": "refresh_token",
-    "AUTH_COOKIE_SECURE": False,  # TODO: delegate this to env.py and set to True in "prod"
+    "AUTH_COOKIE_SECURE": AUTH_COOKIE_SECURE,
     "AUTH_COOKIE_HTTP_ONLY": True,
     "AUTH_COOKIE_PATH": "/",
     "AUTH_COOKIE_SAMESITE": "Lax",
