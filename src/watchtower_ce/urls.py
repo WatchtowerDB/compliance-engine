@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.urls import URLPattern, URLResolver, include, path
 from drf_spectacular.views import SpectacularSwaggerView
 
-from watchtower_ce.apps.users.views import (
+from .apps.users.views import (
     HybridTokenObtainPairView,
     HybridTokenRefreshView,
 )
