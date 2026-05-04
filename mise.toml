@@ -116,6 +116,10 @@ run = '''
 celery -A watchtower_ce worker -P solo -l INFO
 '''
 
+[tasks.backend]
+description = "Starts the entire backend application"
+depends = ["devserver", "celery"]
+
 [tasks.stop]
 description = "Stop all running dev containers (requires containers to have the defined prefix)"
 wait_for = ["devserver", "celery"]
