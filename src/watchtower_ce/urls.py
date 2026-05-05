@@ -9,20 +9,19 @@ from .apps.users.views import (
 )
 
 urlpatterns: list[URLPattern | URLResolver] = [
+    path("admin/", admin.site.urls),
     path("api/", include("watchtower_ce.apps.urls")),
     path("auth/", HybridTokenObtainPairView.as_view(), name="authtoken"),
     path("auth/refresh/", HybridTokenRefreshView.as_view(), name="authtoken-refresh"),
 ]
+
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 # A "dev" vs "prod" check would also work here, but DEBUG is sufficient for now
 if settings.DEBUG:
     from drf_spectacular.views import SpectacularRedocView, SpectacularSwaggerView
 
     urlpatterns += [
-        path(
-            "admin/", admin.site.urls
-        ),  # Exclude from this check if the admin site should be available in prod
-        path("docs/redoc/", SpectacularRedocView.as_view(), name="docs"),
-        path("docs/swagger/", SpectacularSwaggerView.as_view(), name="docs"),
+        path("docs/redoc/", SpectacularRedocView.as_view(), name="redoc-docs"),
+        path("docs/swagger/", SpectacularSwaggerView.as_view(), name="swagger-docs"),
     ]
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
