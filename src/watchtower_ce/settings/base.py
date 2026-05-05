@@ -117,6 +117,10 @@ REST_FRAMEWORK: dict[str, int | Iterable] = {
 
 SPECTACULAR_SETTINGS: dict[str, str | bool] = {
     "TITLE": "Watchtower Compliance Engine API",
+    "DESCRIPTION": "API documentation for the Watchtower Compliance Engine, a system designed to ensure regulatory compliance through AI-driven monitoring and analysis.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SCHEMA_PATH_PREFIX": "/api(/compliance)?",
 }
 
 CELERY_ACCEPT_CONTENT = ["json"]
