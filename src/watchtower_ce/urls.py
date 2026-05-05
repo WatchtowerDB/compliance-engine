@@ -3,7 +3,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import URLPattern, URLResolver, include, path
 
-from .apps.users.views import (
+from watchtower_ce.apps.users.views import (
     HybridTokenObtainPairView,
     HybridTokenRefreshView,
 )
