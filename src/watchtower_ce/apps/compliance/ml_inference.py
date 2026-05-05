@@ -8,46 +8,96 @@ from django.conf import settings
 from llama_cpp import CreateCompletionStreamResponse
 
 from ...engine.standards.pci_compliance_checker import PCIComplianceChecker
+from ...engine.standards.gdpr_compliance_checker import GDPRComplianceChecker
+from ...engine.core.compliance_checker import ComplianceChecker
 
 logger = logging.getLogger(__name__)
 
+_FRAMEWORK_REGISTRY: dict[str, dict] = {
+    "PCI-DSS": {
+        "checker_class": PCIComplianceChecker,
+        "collection_name": "PCI-DSS-v4.0.1",
+    },
+    "GDPR": {
+        "checker_class": GDPRComplianceChecker,
+        "collection_name": "GDPR",
+    },
+}
+_CHECKER_KWARGS = {
+    "base_model_path": settings.BASE_MODEL_PATH,
+    "chroma_dir": settings.CHROMA_DIR,
+    "embedding_model": settings.EMBEDDING_MODEL_DIR,
+    "context_window": 131072,  # Set lower if you set `fa` to `False` or `swa_full` to `True` since both increase VRAM usage.
+    "n_gpu_layers": -1,
+    "prompt_template": "<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
+    "stop": ["<turn|>"],
+    "top_k": 64,  #  lower slightly if facing VRAM constraints.
+    "fa": True,
+    "swa_full": False,
+}
 
-def get_pci_checker_instance() -> PCIComplianceChecker:
-    return PCIComplianceChecker(
-        base_model_path=settings.BASE_MODEL_PATH,
-        chroma_dir=settings.CHROMA_DIR,
-        collection_name="PCI-DSS-v4.0.1",
-        embedding_model=settings.EMBEDDING_MODEL_DIR,
-        context_window=131072,  # Set lower if you set `fa` to `False` or `swa_full` to `True` since both increase VRAM usage.
-        n_gpu_layers=-1,
-        prompt_template="<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
-        stop=["<turn|>"],
-        top_k=64,  # Set a little lower if facing VRAM constraints.
-        fa=True,
-        swa_full=False,
+
+def get_checker_instance(framework_name: str) -> ComplianceChecker:
+    """Return the appropriate compliance checker for the given framework name.
+
+    Resolves the checker class and Chroma collection from the framework registry,
+    then instantiates and returns a checker using the shared model configuration.
+
+    Args:
+        framework_name (str): The compliance framework identifier, e.g. ``"PCI-DSS"``
+            or ``"GDPR"``. Must match a key in ``_FRAMEWORK_REGISTRY`` and corresponds
+            to ``ComplianceFramework.name`` in the Django model.
+
+    Returns:
+        ComplianceChecker: An instance of the framework-specific checker.
+
+    Raises:
+        ValueError: If ``framework_name`` is not found in the registry.
+    """
+    entry = _FRAMEWORK_REGISTRY.get(framework_name)
+    if not entry:
+        supported = list(_FRAMEWORK_REGISTRY.keys())
+        raise ValueError(
+            f"Unsupported compliance framework: '{framework_name}'. "
+            f"Supported frameworks: {supported}"
+        )
+
+    checker_class: type[ComplianceChecker] = entry["checker_class"]
+    collection_name: str = entry["collection_name"]
+
+    logger.debug(
+        "Instantiating %s for framework '%s' (collection: %s)",
+        checker_class.__name__,
+        framework_name,
+        collection_name,
     )
 
+    return checker_class(collection_name=collection_name, **_CHECKER_KWARGS)
 
-def generate_assertions(schema: str) -> List[str]:
+
+def generate_assertions(schema: str, framework_name: str) -> List[str]:
     """Generate SQL compliance assertions from schema metadata.
 
     This function represents the ML / rules-based inference layer.
-    It analyzes a serialized database schema and produces SQL
-    assertion queries that can be executed independently.
+    It analyzes a serialized database schema and produces SQL assertion
+    queries that can be executed independently against the client database.
 
     Args:
         schema (str): Serialized database schema (e.g., SQL DDL, JSON).
+        framework_name (str): The compliance framework to generate assertions for,
+            e.g. ``"PCI-DSS"`` or ``"GDPR"``.
 
     Returns:
         List[str]: A list of SQL assertion queries.
     """
-
     try:
         schema_str = schema if isinstance(schema, str) else str(schema)
         if not schema_str.strip():
             return []
 
-        assertions = get_pci_checker_instance().generate_assertions(schema_str)
+        assertions = get_checker_instance(framework_name).generate_assertions(
+            schema_str
+        )
 
         return assertions
 
@@ -92,23 +142,30 @@ def execute_sql_assertion(connection_string: str, sql_query: str) -> tuple[bool,
 
 
 def analyze_failed_assertion(
-    assertion: str, failure_result: str
+    assertion: str,
+    failure_result: str,
+    framework_name: str,
 ) -> Iterator[CreateCompletionStreamResponse] | str:
     """Analyze a failed SQL assertion and generate remediation guidance.
 
-    This function represents the ML / LLM-based reasoning layer that
-    explains why an assertion failed and how to fix it.
+    This function represents the ML / LLM-based reasoning layer that explains
+    why an assertion failed and how to remediate the compliance violation.
 
     Args:
         assertion (str): The SQL assertion that failed.
         failure_result (str): Execution error or failure output.
+        framework_name (str): The compliance framework to use when generating
+            remediation guidance, e.g. ``"PCI-DSS"`` or ``"GDPR"``.
 
     Returns:
-        str: Human-readable compliance recommendation.
-    """
+        Iterator[CreateCompletionStreamResponse] | str: A streaming iterator of
+            LLM response chunks, or a plain string on non-streaming paths.
 
+    Raises:
+        ValueError: If the ML engine raises an unexpected error.
+    """
     try:
-        stream_chunks = get_pci_checker_instance().analyze_failed_assertion(
+        stream_chunks = get_checker_instance(framework_name).analyze_failed_assertion(
             assertion, failure_result
         )
 
