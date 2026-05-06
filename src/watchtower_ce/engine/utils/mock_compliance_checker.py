@@ -167,9 +167,19 @@ class MockComplianceChecker:
             list[str]: List of extracted table names.
         """
         return re.findall(
-            r"CREATE TABLE\s+[`\"]?(?P<name>[A-Za-z0-9_]+)[`\"]?",
+            textwrap.dedent(
+                r"""
+                CREATE\s+TABLE\s+
+                (?P<name>
+                    (?:
+                        ["`]?[A-Za-z0-9_]+["`]?\.
+                    )?
+                        ["`]?[A-Za-z0-9_]+["`]?
+                )
+                """
+            ),
             schema,
-            flags=re.IGNORECASE,
+            flags=re.IGNORECASE | re.VERBOSE,
         )
 
     def _mock_assertions_from_schema(self, schema: str) -> list[str]:
@@ -204,20 +214,45 @@ class MockComplianceChecker:
 
         Args:
             assertion (str): The failed SQL assertion.
-            failure_result (str): The result of the failed assertion.
+            failure_result (str): Unused parameter for compatibility.
+                                  The result of the failed assertion.
 
         Returns:
             str: Mock analysis text describing the failure.
         """
         return textwrap.dedent(
             f"""
+            ## VIOLATION SUMMARY
             MOCK v1.0.0 analysis for failed assertion.
             This is a simulated remediation summary, not a real standard.
 
             Failed assertion: {assertion}
-            Violation details: {failure_result}
 
-            Mock remediation: Review the mock assertion and implement the real policy.
+            ## STANDARD REFERENCE
+            This violates Mock v1.0.0 control 1.1: "Mock controls are not real controls." 
+
+            ## SECURITY IMPACT
+            Non-compliance with Mock v1.0.0 may lead to undetected mock violations and a false sense of security during development.
+
+            ## REMEDIATION STEPS
+            1. Recognize that this is a mock violation and does not reflect real compliance status.
+            2. Use this mock output to test the application's handling of compliance failures.
+            3. Turn off mock compliance checker in production.
+
+            The rest of the text here is to generate more tokens for testing streaming behaviour. Lorem ipsum dolor sit amet,
+            consectetur adipiscing elit. Sed sed sagittis tortor. Nunc lobortis tincidunt cursus. Nulla maximus aliquet mi,
+            eget vestibulum neque. Phasellus feugiat purus ac est posuere euismod. Nunc maximus gravida neque, ut accumsan
+            mi congue mattis. Morbi consequat fringilla tempor. Vivamus varius placerat sapien, vitae vulputate eros pellentesque
+            non. Cras fringilla est eu arcu tempus, quis elementum ipsum semper. Pellentesque efficitur mauris sed nulla
+            ornaresagittis. Vestibulum suscipit turpis sit amet malesuada pharetra. Proin ac dolor ac orci egestas interdum
+            nec vel ipsum. Curabitur id mi velit. Vestibulum a metus in neque placerat pellentesque id sit amet magna.
+            
+            Fusce faucibus consectetur semper. Aenean aliquet semper lorem, vitae luctus ipsum. Phasellus semper, ipsum nec
+            hendrerit cursus, augue nulla ultricies ipsum, eu faucibus quam odio eu diam. Maecenas mattis elementum massa imperdiet
+            pulvinar. Etiam quis tortor auctor, ullamcorper risus eu, consectetur sapien. Aenean ex turpis, pharetra vitae iaculis
+            et, gravida id urna. Cras vehicula massa odio, ac ullamcorper diam lacinia quis. Pellentesque condimentum, tortor
+            varius vestibulum mattis, dolor lectus elementum lacus, ac luctus libero sem et odio. Nulla sollicitudin eros nunc,
+            molestie congue nulla semper feugiat.
             """
         ).strip()
 
