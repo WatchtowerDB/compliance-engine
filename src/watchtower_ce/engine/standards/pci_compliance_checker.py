@@ -32,8 +32,19 @@ class PCIComplianceChecker(ComplianceChecker):
 
     def __new__(cls, *args, **kwargs):
         """
-        Ensure only one instance exists (Singleton Pattern).
-        Uses double-checked locking for thread safety.
+        Create a new instance of PCIComplianceChecker, ensuring singleton behavior.
+
+        This method implements the Singleton design pattern using double-checked locking
+        to ensure thread safety. Only one instance of the class will exist throughout the
+        application's lifetime.
+
+        Args:
+            cls: The class being instantiated.
+            *args: Variable length argument list passed to the constructor.
+            **kwargs: Arbitrary keyword arguments passed to the constructor.
+
+        Returns:
+            PCIComplianceChecker: The singleton instance of the class.
         """
         if not cls._instance:
             with cls._lock:
