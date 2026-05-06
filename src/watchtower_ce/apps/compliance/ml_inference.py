@@ -5,9 +5,17 @@ from urllib.parse import urlparse
 
 import psycopg
 from django.conf import settings
-from llama_cpp import CreateCompletionStreamResponse
 
-from ...engine.standards.pci_compliance_checker import PCIComplianceChecker
+if settings.USE_MOCK_COMPLIANCE_CHECKER:
+    from ...engine.utils.mock_compliance_checker import (
+        MockComplianceChecker as PCIComplianceChecker,
+    )
+
+    PCIComplianceChecker.suppress_mock_warning = (
+        settings.SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING
+    )
+else:
+    from ...engine.standards.pci_compliance_checker import PCIComplianceChecker
 
 logger = logging.getLogger(__name__)
 
@@ -91,9 +99,7 @@ def execute_sql_assertion(connection_string: str, sql_query: str) -> tuple[bool,
         return False, ""
 
 
-def analyze_failed_assertion(
-    assertion: str, failure_result: str
-) -> Iterator[CreateCompletionStreamResponse] | str:
+def analyze_failed_assertion(assertion: str, failure_result: str) -> Iterator | str:
     """Analyze a failed SQL assertion and generate remediation guidance.
 
     This function represents the ML / LLM-based reasoning layer that
