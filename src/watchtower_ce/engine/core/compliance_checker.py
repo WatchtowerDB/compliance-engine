@@ -3,7 +3,6 @@ import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Iterator
-from warnings import deprecated
 
 from llama_cpp import CreateCompletionStreamResponse
 
@@ -200,52 +199,6 @@ class ComplianceChecker(ABC):
             - Reference specific clauses from the standard
             - Provide concrete SQL statements to fix the issue
             - Explain the security implications
-        """
-        pass
-
-    # TODO: Remove deprecated method after the new methods work
-    @deprecated(
-        "Use _build_assertions_prompt() and _build_assertion_analysis_prompt() instead."
-    )
-    @abstractmethod
-    def _build_prompt(self, context: str, schema: str) -> str:
-        """
-        [DEPRECATED] Construct the main compliance analysis prompt.
-
-        This method is being deprecated in favor of the assertion-based approach.
-        It remains for backward compatibility but should not be used in new code.
-
-        Args:
-            context (str):
-                Retrieved compliance documentation relevant to the artifact.
-            schema (str):
-                The artifact to analyze (SQL schema, config file, etc.).
-
-        Returns:
-            str: A complete prompt for compliance analysis.
-        """
-        pass
-
-    # TODO: Remove deprecated method after the new methods work
-    @deprecated("Use generate_assertions() and analyze_failed_assertion() instead.")
-    @abstractmethod
-    def analyze(self, schema: str) -> str:
-        """
-        Perform compliance analysis on the given artifact.
-
-        This is the main entry point for compliance checking. Subclasses should
-        implement the full analysis workflow:
-        1. Generate compliance questions
-        2. Retrieve relevant documentation
-        3. Generate SQL assertions
-        4. Return assertions for external execution
-
-        Args:
-            schema (str):
-                The artifact to analyze (SQL schema, config, policy, etc.).
-
-        Returns:
-            str: The generated SQL assertions as a formatted string or JSON.
         """
         pass
 

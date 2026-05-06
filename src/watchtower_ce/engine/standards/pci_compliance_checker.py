@@ -2,7 +2,6 @@ import textwrap
 import threading
 from pathlib import Path
 from typing import Optional
-from warnings import deprecated
 
 from ..core.compliance_checker import ComplianceChecker
 
@@ -334,73 +333,3 @@ class PCIComplianceChecker(ComplianceChecker):
               If data should be deleted, explain why and provide the SQL to do so safely. And so on.
             """
         ).strip()
-
-    # TODO: Remove deprecated method after the new methods work
-    @deprecated(
-        "Use _build_assertions_prompt() and _build_assertion_analysis_prompt() instead."
-    )
-    def _build_prompt(self, context: str, schema: str) -> str:
-        """
-        [DEPRECATED] Build the main PCI-DSS compliance analysis prompt.
-
-        This method is deprecated in favor of the assertion-based approach.
-        Kept for backward compatibility only.
-
-        Args:
-            context (str):
-                Retrieved PCI-DSS documentation.
-            schema (str):
-                The SQL schema to analyze.
-
-        Returns:
-            str: A formatted compliance analysis prompt.
-        """
-        return textwrap.dedent(
-            f"""
-            You are an expert PCI-DSS compliance auditor and database security analyst.
-
-            Context (from {self.standard} standard):
-            {context}
-
-            Task:
-            Analyze the following SQL database schema for {self.standard} compliance.
-            Identify violations and recommend concrete improvements.
-            If applicable, supplement your improvements with SQL queries that would help remedy the violations.
-
-            SQL Schema:
-            {schema}
-
-            Respond with:
-            1. Compliance summary (Compliant / Non-compliant)
-            2. Violations and their corresponding PCI-DSS clauses
-            3. Recommended remediations
-            """
-        ).strip()
-
-    # TODO: Remove deprecated method after the new methods work
-    @deprecated("Use generate_assertions() and analyze_failed_assertion() instead.")
-    def analyze(self, schema: str) -> str:
-        """
-        [DEPRECATED] Perform PCI-DSS compliance analysis using old method.
-
-        This method is deprecated. Use `generate_assertions()` followed by external
-        execution and `analyze_failed_assertion()` for each failure instead.
-
-        Args:
-            schema (str):
-                The SQL database schema to analyze.
-
-        Returns:
-            str: A compliance report (deprecated format).
-        """
-        questions = self._generate_schema_questions(schema)
-        context = self._retrieve_context_for_questions(questions)
-
-        # Build final analysis prompt with retrieved context
-        prompt = self._build_prompt(context, schema)
-
-        print("[INFO] Running model inference for compliance analysis...")
-        response = self.llm.generate(prompt)
-        print("[INFO] Analysis complete.")
-
-        return response
