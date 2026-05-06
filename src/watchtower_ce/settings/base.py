@@ -5,7 +5,7 @@ from typing import Any, Iterable
 from .. import apps
 from .env import AUTH_COOKIE_SECURE
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parents[1]
 
 INSTALLED_APPS: list[str] = [
     # NOTE: django apps
