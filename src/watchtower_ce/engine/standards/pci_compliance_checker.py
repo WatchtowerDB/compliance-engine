@@ -29,6 +29,7 @@ class PCIComplianceChecker(ComplianceChecker):
 
     _instance: Optional["PCIComplianceChecker"] = None
     _lock: threading.Lock = threading.Lock()
+    standard: str = "PCI-DSS v4.0.1"
 
     def __new__(cls, *args, **kwargs):
         """
@@ -119,7 +120,6 @@ class PCIComplianceChecker(ComplianceChecker):
             fa=fa,
             swa_full=swa_full,
         )
-        self.standard = "PCI-DSS v4.0.1"
         self._initialized: bool = True
 
     def _build_schema_questions_prompt(self, schema: str) -> str:

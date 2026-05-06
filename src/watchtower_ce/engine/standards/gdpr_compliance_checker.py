@@ -32,6 +32,7 @@ class GDPRComplianceChecker(ComplianceChecker):
 
     _instance: Optional["GDPRComplianceChecker"] = None
     _lock: threading.Lock = threading.Lock()
+    standard: str = "GDPR"
 
     def __new__(cls, *args, **kwargs):
         """
@@ -111,7 +112,6 @@ class GDPRComplianceChecker(ComplianceChecker):
             fa=fa,
             swa_full=swa_full,
         )
-        self.standard = "GDPR"
         self._initialized: bool = True
 
     def _build_schema_questions_prompt(self, schema: str) -> str:
