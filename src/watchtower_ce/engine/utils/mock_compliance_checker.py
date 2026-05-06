@@ -33,7 +33,8 @@ class MockComplianceChecker:
     _instance: Optional["MockComplianceChecker"] = None
     _lock: threading.Lock = threading.Lock()
     standard: str = "Mock v1.0.0"
-    artificial_processing_delay: float = 0.1  # in seconds
+    artificial_streaming_delay: float = 0.1  # in seconds
+    artificial_processing_delay: float = 7  # in seconds
     suppress_mock_warning: bool = False
 
     def __new__(cls, *args, **kwargs):
@@ -260,6 +261,7 @@ class MockComplianceChecker:
             "Mock generate_assertions called with schema length %s",
             len(schema),
         )
+        sleep(self.artificial_processing_delay)  # Simulate processing delay
         return self._mock_assertions_from_schema(schema)
 
     def analyze_failed_assertion(
@@ -281,9 +283,13 @@ class MockComplianceChecker:
             "Mock analyze_failed_assertion called for assertion: %s",
             assertion,
         )
+        sleep(
+            self.artificial_processing_delay
+        )  # Simulate processing delay for generating the assertion questions
         analysis_text = self._mock_analysis_text(assertion, failure_result)
+
         for chunk in self._stream_tokens(analysis_text):
-            sleep(self.artificial_processing_delay)  # Simulate processing delay
+            sleep(self.artificial_streaming_delay)  # Simulate streaming delay
             yield {"choices": [{"text": chunk}]}
 
     def analyze_failed_assertion_stdout(
@@ -292,7 +298,8 @@ class MockComplianceChecker:
         failure_result: str,
     ) -> str:
         """
-        Analyze a failed assertion and return mock analysis as a string.
+        Analyze a failed assertion, stream the analysis to stdout,
+        and return mock analysis as a string.
 
         Args:
             assertion (str): The failed SQL assertion.
@@ -301,7 +308,18 @@ class MockComplianceChecker:
         Returns:
             str: Mock analysis text.
         """
-        logger.info("Mock analyze_failed_assertion_stdout called")
+        logger.info(
+            "Mock analyze_failed_assertion_stdout called for assertion: %s", assertion
+        )
+        sleep(
+            self.artificial_processing_delay
+        )  # Simulate processing delay for generating the assertion questions
+        analysis_text = self._mock_analysis_text(assertion, failure_result)
+
+        for chunk in self._stream_tokens(analysis_text):
+            sleep(self.artificial_streaming_delay)  # Simulate streaming delay
+            print(chunk, end="", flush=True)
+
         return self._mock_analysis_text(assertion, failure_result)
 
     def count_tokens(self, text: str) -> int:
