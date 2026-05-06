@@ -4,6 +4,7 @@ import re
 import textwrap
 import threading
 from pathlib import Path
+from time import sleep
 from typing import Iterator, Optional
 
 logger = logging.getLogger(__name__)
@@ -23,15 +24,16 @@ class MockComplianceChecker:
     from django.conf import settings
 
     if settings.USE_MOCK_COMPLIANCE_CHECKER:
-        from engine.utils.mock_compliance_checker import MockComplianceChecker as PCIComplianceChecker
+        from watchtower_ce.engine.utils.mock_compliance_checker import MockComplianceChecker as PCIComplianceChecker
     else:
-        from engine.standards.pci_compliance_checker import PCIComplianceChecker
+        from watchtower_ce.engine.standards.pci_compliance_checker import PCIComplianceChecker
     ```
     """
 
     _instance: Optional["MockComplianceChecker"] = None
     _lock: threading.Lock = threading.Lock()
     standard: str = "Mock v1.0.0"
+    artificial_processing_delay: float = 0.1  # in seconds
     suppress_mock_warning: bool = False
 
     def __new__(cls, *args, **kwargs):
@@ -218,13 +220,13 @@ class MockComplianceChecker:
             """
         ).strip()
 
-    def _stream_tokens(self, text: str, chunk_size: int = 120) -> Iterator[str]:
+    def _stream_tokens(self, text: str, chunk_size: int = 6) -> Iterator[str]:
         """
         Stream text in chunks for mock token generation.
 
         Args:
             text (str): The text to stream.
-            chunk_size (int): Maximum characters per chunk. Defaults to 120.
+            chunk_size (int): Maximum characters per chunk. Defaults to 6.
 
         Yields:
             str: Chunks of the text.
@@ -281,6 +283,7 @@ class MockComplianceChecker:
         )
         analysis_text = self._mock_analysis_text(assertion, failure_result)
         for chunk in self._stream_tokens(analysis_text):
+            sleep(self.artificial_processing_delay)  # Simulate processing delay
             yield {"choices": [{"text": chunk}]}
 
     def analyze_failed_assertion_stdout(
