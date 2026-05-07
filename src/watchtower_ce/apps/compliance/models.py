@@ -17,6 +17,9 @@ class ComplianceFramework(models.Model):
 class ClientDB(models.Model):
     name: models.CharField = models.CharField(max_length=200)
     connection_string: models.TextField = models.TextField()
+    frameworks = models.ManyToManyField(
+        "ComplianceFramework", related_name="client_dbs", blank=True
+    )
 
     def __str__(self) -> str:
         return self.name

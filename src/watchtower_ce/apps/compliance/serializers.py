@@ -22,6 +22,14 @@ class ClientDBSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class ClientDBWithFrameworksSerializer(serializers.ModelSerializer):
+    frameworks = ComplianceFrameworkSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ClientDB
+        fields = ["id", "name", "connection_string", "frameworks"]
+
+
 class ClientDBSchemaSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClientDBSchema
