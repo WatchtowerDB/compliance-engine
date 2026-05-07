@@ -5,7 +5,7 @@ import textwrap
 import threading
 from pathlib import Path
 from time import sleep
-from typing import Iterator, Optional
+from typing import Iterator
 
 logger = logging.getLogger(__name__)
 
@@ -31,34 +31,36 @@ class MockComplianceChecker:
     ```
     """
 
-    _instance: Optional["MockComplianceChecker"] = None
+    _instances: dict[str, "MockComplianceChecker"] = {}
     _lock: threading.Lock = threading.Lock()
-    standard: str = "Mock v1.0.0"
     artificial_streaming_delay: float = 0.1  # in seconds
     artificial_processing_delay: float = 7  # in seconds
     suppress_mock_warning: bool = False
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, collection_name: str = "Mock-v1.0.0", **kwargs):
         """
-        Create a new instance of MockComplianceChecker, ensuring singleton behavior.
+        Create a new instance of MockComplianceChecker, using a registry pattern.
 
-        This method implements the Singleton design pattern using double-checked locking
-        to ensure thread safety. Only one instance of the class will exist throughout the
-        application's lifetime.
+        This method implements a registry pattern with thread-safe per-collection-name instances.
+        One instance is created and reused per unique collection_name, ensuring efficiency
+        while allowing framework-specific differentiation.
 
         Args:
             cls: The class being instantiated.
+            collection_name (str): The collection/framework name to retrieve or create an instance for.
+                Defaults to "Mock-v1.0.0".
             *args: Variable length argument list passed to the constructor.
             **kwargs: Arbitrary keyword arguments passed to the constructor.
 
         Returns:
-            MockComplianceChecker: The singleton instance of the class.
+            MockComplianceChecker: The registered instance for the given collection_name.
         """
-        if not cls._instance:
+        if collection_name not in cls._instances:
             with cls._lock:
-                if not cls._instance:
-                    cls._instance = super(MockComplianceChecker, cls).__new__(cls)
-        return cls._instance
+                if collection_name not in cls._instances:
+                    instance = super(MockComplianceChecker, cls).__new__(cls)
+                    cls._instances[collection_name] = instance
+        return cls._instances[collection_name]
 
     def __init__(
         self,
@@ -88,7 +90,7 @@ class MockComplianceChecker:
             chroma_dir (Path | str):
                 Mock parameter - not used in mock implementation.
             collection_name (str):
-                Name of the mock collection. Defaults to `"Mock-v1.0.0"`.
+                Name of the mock collection. Will be used as the key for the instance registry. Defaults to `"Mock-v1.0.0"`.
             embedding_model (Path | str):
                 Mock parameter - not used in mock implementation.
                 Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`.
@@ -121,12 +123,15 @@ class MockComplianceChecker:
             return
 
         self._initialized: bool = True
+        self.collection_name: str = collection_name
+        self.standard: str = f"Mock {collection_name}"
 
         if not self.suppress_mock_warning:
             logger.warning(
-                "Using MockComplianceChecker instead of a real compliance checker. "
+                "Using MockComplianceChecker for '%s' instead of a real compliance checker. "
                 "Set USE_MOCK_COMPLIANCE_CHECKER=false in settings to disable the mock, "
-                "or set MockComplianceChecker.suppress_mock_warning=True to silence this warning."
+                "or set MockComplianceChecker.suppress_mock_warning=True to silence this warning.",
+                collection_name,
             )
 
     def _parse_list_response(
@@ -224,16 +229,16 @@ class MockComplianceChecker:
         return textwrap.dedent(
             f"""
             ## VIOLATION SUMMARY
-            Mock v1.0.0 analysis for failed assertion.
+            {self.standard} analysis for failed assertion.
             This is a simulated remediation summary, not a real standard.
 
             Failed assertion: {assertion}
 
             ## STANDARD REFERENCE
-            This violates Mock v1.0.0 control 1.1: "Mock controls are not real controls." 
+            This violates {self.standard} control 1.1: "Mock controls are not real controls." 
 
             ## SECURITY IMPACT
-            Non-compliance with Mock v1.0.0 may lead to undetected mock violations and a false sense of security during development.
+            Non-compliance with {self.standard} may lead to undetected mock violations and a false sense of security during development.
 
             ## REMEDIATION STEPS
             1. Recognize that this is a mock violation and does not reflect real compliance status.
