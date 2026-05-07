@@ -10,7 +10,7 @@ def seed_frameworks(apps, schema_editor):
         {
             "name": "PCI-DSS",
             "description": "Payment Card Industry Data Security Standard framework for securing cardholder data.",
-            "version": "v4.0.1",
+            "version": "4.0",
         },
         {
             "name": "GDPR",
