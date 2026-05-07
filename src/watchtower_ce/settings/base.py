@@ -5,7 +5,7 @@ from typing import Any, Iterable
 from .. import apps
 from .env import AUTH_COOKIE_SECURE
 
-BASE_DIR = Path(__file__).resolve().parents[1]
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 INSTALLED_APPS: list[str] = [
     # NOTE: django apps
@@ -117,10 +117,6 @@ REST_FRAMEWORK: dict[str, int | Iterable] = {
 
 SPECTACULAR_SETTINGS: dict[str, str | bool] = {
     "TITLE": "Watchtower Compliance Engine API",
-    "DESCRIPTION": "API documentation for the Watchtower Compliance Engine, a system designed to ensure regulatory compliance through AI-driven monitoring and analysis.",
-    "VERSION": "1.0.0",
-    "SERVE_INCLUDE_SCHEMA": False,
-    "SCHEMA_PATH_PREFIX": "/api(/compliance)?",
 }
 
 CELERY_ACCEPT_CONTENT = ["json"]
