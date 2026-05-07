@@ -54,8 +54,11 @@ def publish_event(
 @shared_task
 def initialize_model_task():
     """
-    Initializes the PCI Compliance Checker model.
-    This runs in the Celery worker process.
+    Initializes all registered compliance checker models.
+
+    Iterates over every framework in ``ml._FRAMEWORK_REGISTRY`` and eagerly
+    instantiates its checker so model weights are loaded into VRAM once at
+    worker startup rather than on the first request.
 
     Configuration:
     - Uses value 0 as the default channel number for initialization events.
@@ -66,28 +69,54 @@ def initialize_model_task():
         {
             "step": "model_initialization",
             "status": "started",
-            "message": "Initializing PCI Compliance Model...",
+            "message": "Initializing compliance models...",
         },
     )
 
-    try:
-        ml.get_pci_checker_instance()
+    failed_frameworks = []
+
+    for framework_name in ml._FRAMEWORK_REGISTRY:
+        try:
+            logger.info("Initializing checker for framework: %s", framework_name)
+            ml.get_checker_instance(framework_name)
+            logger.info("Successfully initialized checker for: %s", framework_name)
+        except Exception as e:
+            logger.exception(
+                "Failed to initialize checker for framework '%s'", framework_name
+            )
+            failed_frameworks.append(framework_name)
+            publish_event(
+                0,
+                "pipeline.error",
+                {
+                    "step": "model_initialization",
+                    "framework": framework_name,
+                    "error": str(e),
+                },
+            )
+
+    if failed_frameworks:
+        publish_event(
+            0,
+            "phase.update",
+            {
+                "step": "model_initialization",
+                "status": "partial",
+                "message": (
+                    f"Initialization completed with errors. "
+                    f"Failed frameworks: {failed_frameworks}"
+                ),
+            },
+        )
+    else:
         publish_event(
             0,
             "phase.update",
             {
                 "step": "model_initialization",
                 "status": "completed",
-                "message": "Model initialized successfully.",
+                "message": "All compliance models initialized successfully.",
             },
-        )
-
-    except Exception as e:
-        logger.exception("Model initialization failed")
-        publish_event(
-            0,
-            "pipeline.error",
-            {"step": "model_initialization", "error": str(e)},
         )
 
 
@@ -136,7 +165,7 @@ def infer_sql_assertions_task(
         return []
 
     try:
-        sql_assertions = ml.generate_assertions(schema.sql_definition)
+        sql_assertions = ml.generate_assertions(schema.sql_definition, framework.name)
 
         assertion_ids = [
             models.ComplianceAssertion.objects.create(
@@ -222,8 +251,9 @@ def generate_compliance_recommendation_task(
     Logic:
     1. Filter: Skips processing if the assertion passed (analyzes failures only).
     2. Protocol (Start): Publishes a 'recommendation.stream' start event.
-    3. Streaming: Iterates over the ML generator.
-       - Note: Assumes chunks are structured objects (stream=True).
+    3. Streaming: Iterates over the ML generator using the framework name retrieved
+       from ``assertion.compliance_framework.name``, so recommendations are always
+       grounded in the correct compliance standard.
        - Publishes 'recommendation.stream' token events for each chunk.
     4. Error Handling: Catches exceptions and publishes 'recommendation.stream' error events.
     5. Persistence: Saves the aggregated recommendation text to the assertion.
@@ -249,9 +279,12 @@ def generate_compliance_recommendation_task(
     )
 
     full_recommendation = ""
+    framework_name = assertion.compliance_framework.name
 
     try:
-        for chunk in ml.analyze_failed_assertion(assertion.sql_query, query_output):
+        for chunk in ml.analyze_failed_assertion(
+            assertion.sql_query, query_output, framework_name
+        ):
             token = chunk["choices"][0]["text"]  # type: ignore (chunk can be str or something else if stream is False, but it isn't)
             full_recommendation += token
 
