@@ -11,7 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class MockComplianceChecker:
-    """A lightweight mock compliance checker for development workflows.
+    """
+    A lightweight mock compliance checker for development workflows.
 
     This class mirrors the public interface of the real `ComplianceChecker`s
     while avoiding any heavy AI or vector retrieval imports at runtime.
@@ -223,7 +224,7 @@ class MockComplianceChecker:
         return textwrap.dedent(
             f"""
             ## VIOLATION SUMMARY
-            MOCK v1.0.0 analysis for failed assertion.
+            Mock v1.0.0 analysis for failed assertion.
             This is a simulated remediation summary, not a real standard.
 
             Failed assertion: {assertion}
