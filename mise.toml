@@ -172,8 +172,12 @@ if [ -n "${_CONTAINER_IDS}" ]; then
     gum log -l warn "Removing container: ${id}"
     docker container rm -f "${id}"
 
-    gum log -l warn "Removing attached volumes: ${_ATTACHED_VOLUMES//$'\n'/ }"
-    docker volume rm ${_ATTACHED_VOLUMES}
+    if [ -n "${_ATTACHED_VOLUMES}" ]; then
+      gum log -l warn "Removing attached volumes: ${_ATTACHED_VOLUMES//$'\n'/ }"
+      docker volume rm ${_ATTACHED_VOLUMES}
+    else
+      gum log -l info "No volumes attached to container: ${id}"
+    fi
   done
 else
   gum log -l info "No containers found with prefix: ${usage_prefix}"
