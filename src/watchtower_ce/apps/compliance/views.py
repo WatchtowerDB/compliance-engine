@@ -1,5 +1,6 @@
 import datetime
 import json
+from typing import Any
 
 import redis
 from django.conf import settings
@@ -9,6 +10,7 @@ from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.request import Request
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -67,6 +69,23 @@ class ClientDBViewSet(viewsets.ModelViewSet):
 
     queryset: QuerySet = models.ClientDB.objects.all()
     serializer_class = serializers.ClientDBSerializer
+
+    @extend_schema(
+        summary="List frameworks per client database",
+        description=(
+            "Return a dictionary keyed by ClientDB ID, each containing "
+            "the list of compliance frameworks it has been checked against."
+        ),
+        responses={
+            200: OpenApiResponse(description="Dict of ClientDB ID → frameworks."),
+        },
+    )
+    @action(detail=False, methods=["get"], url_path="frameworks")
+    def frameworks(self, request: Request) -> Response:
+        qs: QuerySet[models.ClientDB] = self.get_queryset()
+        serializer = serializers.ClientDBWithFrameworksSerializer(qs, many=True)
+        result: dict[str, Any] = {str(item["id"]): item for item in serializer.data}
+        return Response(result)
 
 
 class ClientDBSchemaViewSet(viewsets.ModelViewSet):

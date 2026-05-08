@@ -20,9 +20,6 @@ if settings.USE_MOCK_COMPLIANCE_CHECKER:
     PCIComplianceChecker.suppress_mock_warning = (
         settings.SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING
     )
-    PCIComplianceChecker.artificial_processing_delay = (
-        settings.MOCK_COMPLIANCE_CHECKER_DELAY
-    )
 else:
     from ...engine.core.compliance_checker import ComplianceChecker
     from ...engine.standards.gdpr_compliance_checker import GDPRComplianceChecker
