@@ -111,6 +111,22 @@ django-admin makemigrations
 django-admin migrate
 '''
 
+[tasks.superuser]
+description = "Create a superuser"
+depends = ["migrate"]
+alias = "su"
+usage = '''
+flag "-u --username <username>" help="superuser username" default="admin"
+flag "-e --email <email>" help="superuser email" default="admin@example.com"
+flag "-p --password <password>" help="superuser password" default="admin"
+'''
+run = '''
+DJANGO_SUPERUSER_PASSWORD=${usage_password} django-admin createsuperuser \
+--username ${usage_username} \
+--email ${usage_email} \
+--noinput
+'''
+
 [tasks.devserver]
 description = "Run development server"
 depends = ["migrate"]
