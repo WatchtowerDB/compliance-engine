@@ -64,9 +64,17 @@ else
   -e "POSTGRES_PASSWORD=${usage_password}" \
   -e "POSTGRES_DB=${usage_database}" \
   -p "${usage_port}:5432" \
-  -v "${usage_container_name}-data:/var/lib/postgresql/data" \
+  -v "${usage_container_name}-data:/var/lib/postgresql" \
   "${usage_container_image}"
 fi
+
+
+gum spin --title "Waiting for postgres to be ready" -- \
+  timeout 90s bash -c \
+  "until docker exec ${usage_container_name} pg_isready -U ${usage_username} -d ${usage_database} -q; \
+  do sleep 1; done"
+
+gum log -l info "Postgres is ready"
 '''
 
 [tasks.redis]
