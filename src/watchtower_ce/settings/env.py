@@ -46,6 +46,14 @@ DATABASES: dict[str, dj_database_url.DBConfig] = {
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 
+USE_MOCK_COMPLIANCE_CHECKER: bool = (
+    os.getenv("USE_MOCK_COMPLIANCE_CHECKER", "false").lower() == "true"
+)
+
+SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING: bool = (
+    os.getenv("SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING", "false").lower() == "true"
+)
+
 BASE_MODEL_PATH: t.Optional[Path] = (
     Path(os.environ["WTCE_BASE_MODEL_PATH"])
     if os.getenv("WTCE_BASE_MODEL_PATH")

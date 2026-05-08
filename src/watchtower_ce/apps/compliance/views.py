@@ -1,7 +1,5 @@
 import datetime
 import json
-from typing import Any
-from urllib.request import Request
 
 import redis
 from django.conf import settings
@@ -62,49 +60,15 @@ class ComplianceFrameworkViewSet(viewsets.ReadOnlyModelViewSet):
     ),
 )
 class ClientDBViewSet(viewsets.ModelViewSet):
-    queryset: QuerySet[models.ClientDB] = models.ClientDB.objects.prefetch_related(
-        "frameworks"
-    ).all()
+    """
+    This viewset allows full CRUD (Create, Retrieve, Update, Delete) operations
+    on client database entries.
+    """
+
+    queryset: QuerySet = models.ClientDB.objects.all()
     serializer_class = serializers.ClientDBSerializer
 
-    @extend_schema(
-        summary="List frameworks per client database",
-        description=(
-            "Return a dictionary keyed by ClientDB ID, each containing "
-            "the list of compliance frameworks it has been checked against."
-        ),
-        responses={
-            200: OpenApiResponse(description="Dict of ClientDB ID → frameworks."),
-        },
-    )
-    @action(detail=False, methods=["get"], url_path="frameworks")
-    def frameworks(self, request: Request) -> Response:
-        qs: QuerySet[models.ClientDB] = self.get_queryset()
-        serializer = serializers.ClientDBWithFrameworksSerializer(qs, many=True)
-        result: dict[str, Any] = {str(item["id"]): item for item in serializer.data}
-        return Response(result)
 
-
-@extend_schema_view(
-    list=extend_schema(
-        summary="List database schemas",
-        description="Return a list of all client database schemas.",
-    ),
-    retrieve=extend_schema(
-        summary="Retrieve a database schema",
-        description="Return the details of a specific database schema by ID.",
-    ),
-    create=extend_schema(
-        summary="Create a database schema",
-        description=(
-            "Create a new database schema entry directly via JSON. "
-            "To upload a `.sql` file instead, use the `upload-schema` action."
-        ),
-    ),
-    update=extend_schema(exclude=True),
-    partial_update=extend_schema(exclude=True),
-    destroy=extend_schema(exclude=True),
-)
 class ClientDBSchemaViewSet(viewsets.ModelViewSet):
     queryset: QuerySet = models.ClientDBSchema.objects.all()
     serializer_class = serializers.ClientDBSchemaSerializer
