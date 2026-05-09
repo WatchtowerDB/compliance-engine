@@ -1,3 +1,5 @@
+#:schema https://mise.en.dev/schema/mise.json
+
 [settings]
 python.compile = false
 lockfile = true
@@ -62,9 +64,17 @@ else
   -e "POSTGRES_PASSWORD=${usage_password}" \
   -e "POSTGRES_DB=${usage_database}" \
   -p "${usage_port}:5432" \
-  -v "${usage_container_name}-data:/var/lib/postgresql/data" \
+  -v "${usage_container_name}-data:/var/lib/postgresql" \
   "${usage_container_image}"
 fi
+
+
+gum spin --title "Waiting for postgres to be ready" -- \
+  timeout 90s bash -c \
+  "until docker exec ${usage_container_name} pg_isready -U ${usage_username} -d ${usage_database} -q; \
+  do sleep 1; done"
+
+gum log -l info "Postgres is ready"
 '''
 
 [tasks.redis]
@@ -99,6 +109,22 @@ alias = "m"
 run = '''
 django-admin makemigrations
 django-admin migrate
+'''
+
+[tasks.superuser]
+description = "Create a superuser"
+depends = ["migrate"]
+alias = "su"
+usage = '''
+flag "-u --username <username>" help="superuser username" default="admin"
+flag "-e --email <email>" help="superuser email" default="admin@example.com"
+flag "-p --password <password>" help="superuser password" default="admin"
+'''
+run = '''
+DJANGO_SUPERUSER_PASSWORD=${usage_password} django-admin createsuperuser \
+--username ${usage_username} \
+--email ${usage_email} \
+--noinput
 '''
 
 [tasks.devserver]
@@ -162,8 +188,12 @@ if [ -n "${_CONTAINER_IDS}" ]; then
     gum log -l warn "Removing container: ${id}"
     docker container rm -f "${id}"
 
-    gum log -l warn "Removing attached volumes: ${_ATTACHED_VOLUMES//$'\n'/ }"
-    docker volume rm ${_ATTACHED_VOLUMES}
+    if [ -n "${_ATTACHED_VOLUMES}" ]; then
+      gum log -l warn "Removing attached volumes: ${_ATTACHED_VOLUMES//$'\n'/ }"
+      docker volume rm ${_ATTACHED_VOLUMES}
+    else
+      gum log -l info "No volumes attached to container: ${id}"
+    fi
   done
 else
   gum log -l info "No containers found with prefix: ${usage_prefix}"
