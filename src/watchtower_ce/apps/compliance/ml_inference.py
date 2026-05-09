@@ -1,10 +1,14 @@
 import logging
-import sqlite3
-from typing import Any, Iterator, List, Sequence
-from urllib.parse import urlparse
+from typing import Iterator, List
 
-import psycopg
 from django.conf import settings
+
+from .sql_execution import (
+    _detect_scheme,
+    _execute_mysql,
+    _execute_psql,
+    _execute_sqlite,
+)
 
 if settings.USE_MOCK_COMPLIANCE_CHECKER:
     from ...engine.utils.mock_compliance_checker import (
@@ -49,6 +53,12 @@ _CHECKER_KWARGS = {
     "top_k": 64,  #  lower slightly if facing VRAM constraints.
     "fa": True,
     "swa_full": False,
+}
+_EXECUTION_STRATEGIES = {
+    "postgres": _execute_psql,
+    "postgresql": _execute_psql,
+    "sqlite": _execute_sqlite,
+    "mysql": _execute_mysql,
 }
 
 
@@ -143,10 +153,10 @@ def execute_sql_assertion(connection_string: str, sql_query: str) -> tuple[bool,
     try:
         db_scheme = _detect_scheme(connection_string)
 
-        if db_scheme in ("postgres", "postgresql"):
-            return _execute_psql(connection_string, sql_query)
-        elif db_scheme == "sqlite":
-            return _execute_sqlite(connection_string, sql_query)
+        executor_func = _EXECUTION_STRATEGIES.get(db_scheme)
+
+        if executor_func:
+            return executor_func(connection_string, sql_query)
         else:
             logger.error("Unsupported database scheme: %s", db_scheme)
             return False, ""
@@ -186,107 +196,3 @@ def analyze_failed_assertion(
 
     except Exception as e:
         raise ValueError("ML Engine Failure (analyze_failed_assertion): %s", e)
-
-
-def _execute_psql(conn_str: str, sql_query: str) -> tuple[bool, str]:
-    """
-    Executes a query against a PostgreSQL database.
-
-    Workflow:
-    - Connect -> Cursor -> Execute -> Fetch -> Close (handled by context managers).
-    - If query returns rows, check if they indicate a pass/fail.
-    - No rows returned usually means passed for assertions.
-    """
-    try:
-        with psycopg.connect(conn_str) as conn:
-            with conn.cursor() as cur:
-                cur.execute(sql_query)
-                passed = True
-                rows = []
-                if cur.description:
-                    rows = cur.fetchmany(3)
-                    passed = _passes(rows)
-                return passed, str(rows)
-    except psycopg.Error as e:
-        logger.error("PostgreSQL Operational Error: %s", e)
-        return False, ""
-
-
-def _execute_sqlite(conn_str: str, sql_query: str) -> tuple[bool, str]:
-    """
-    Executes a query against a SQLite database.
-
-    Implementation Details:
-    - Handles 'sqlite:///path' vs 'path' formats by stripping the prefix.
-    - SQLite needs strict read-only mode if possible, but standard connect is
-      acceptable provided we enforce SELECT-only in the calling function.
-    """
-    db_path = conn_str.removeprefix("sqlite:///")
-
-    try:
-        with sqlite3.connect(db_path) as conn:
-            with conn.cursor() as cur:
-                cur.execute(sql_query)
-                rows = cur.fetchmany(3)
-                passed = _passes(rows)
-                return passed, str(rows)
-    except sqlite3.Error as e:
-        logger.error("SQLite Operational Error: %s", e)
-        return False, ""
-
-
-def _detect_scheme(conn_str: str) -> str:
-    """
-    Detect database type from connection string.
-
-    Logic:
-    - Prefer explicit URL schemes via urlparse.
-    - Only use SQLite file extension heuristics when no scheme is present and the
-      string does not look like a URL.
-    - Includes fallback logic for Psycopg DSNs (e.g., 'host=localhost user=admin').
-    """
-    normalized = conn_str.strip()
-    lower = normalized.lower()
-    parsed = urlparse(normalized)
-    if parsed.scheme:
-        if parsed.scheme in ("sqlite", "sqlite3"):
-            return "sqlite"
-        return parsed.scheme
-
-    if "://" not in normalized and lower.endswith((".db", ".sqlite", ".sqlite3")):
-        return "sqlite"
-
-    if any(k in conn_str for k in ("host=", "dbname=", "user=")):
-        return "postgresql"
-
-
-def _passes(rows: Sequence[Sequence[Any]]) -> bool:
-    """
-    Evaluate assertion result.
-
-    Convention:
-    - Empty result set = PASS (No violations found).
-    - Rows returned = FAIL (Violations found).
-    - Single row with 0/False = PASS (Specifically handles 'SELECT COUNT(*)' cases).
-    - Default: Any other returned violation rows mean failure.
-    """
-    if not rows:
-        return True
-
-    if len(rows) > 1:
-        return False
-
-    first_row = rows[0]
-
-    if len(first_row) != 1:
-        return False
-
-    val = first_row[0]
-
-    if isinstance(val, bool):
-        return val is False
-
-    if isinstance(val, (int, float)):
-        return val == 0
-
-    return False
