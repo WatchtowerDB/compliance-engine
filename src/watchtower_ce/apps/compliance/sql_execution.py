@@ -32,11 +32,14 @@ def _execute_sqlite(conn_str: str, sql_query: str) -> tuple[bool, str]:
 
     try:
         with sqlite3.connect(db_path) as conn:
-            with conn.cursor() as cur:
-                cur.execute(sql_query)
+            cur = conn.cursor()
+            cur.execute(sql_query)
+            passed = True
+            rows = []
+            if cur.description:
                 rows = cur.fetchmany(3)
                 passed = _passes(rows)
-                return passed, str(rows)
+            return passed, str(rows)
     except sqlite3.Error as e:
         logger.error("SQLite Operational Error: %s", e)
         return False, ""
