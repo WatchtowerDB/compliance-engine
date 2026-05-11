@@ -90,6 +90,8 @@ def _detect_scheme(conn_str: str) -> str:
     if any(k in conn_str for k in ("host=", "dbname=", "user=")):
         return "postgresql"
 
+    raise ValueError(f"Unsupported database connection string: {conn_str}")
+
 
 def _passes(rows: Sequence[Sequence[Any]]) -> bool:
     """Evaluate assertion result."""
