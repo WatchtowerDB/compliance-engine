@@ -3,12 +3,7 @@ from typing import Iterator, List
 
 from django.conf import settings
 
-from .sql_execution import (
-    _detect_scheme,
-    _execute_mysql,
-    _execute_psql,
-    _execute_sqlite,
-)
+from .sql_execution import ExecutorFactory
 
 if settings.USE_MOCK_COMPLIANCE_CHECKER:
     from ...engine.utils.mock_compliance_checker import (
@@ -53,12 +48,6 @@ _CHECKER_KWARGS = {
     "top_k": 64,  #  lower slightly if facing VRAM constraints.
     "fa": True,
     "swa_full": False,
-}
-_EXECUTION_STRATEGIES = {
-    "postgres": _execute_psql,
-    "postgresql": _execute_psql,
-    "sqlite": _execute_sqlite,
-    "mysql": _execute_mysql,
 }
 
 
@@ -151,18 +140,14 @@ def execute_sql_assertion(connection_string: str, sql_query: str) -> tuple[bool,
         return False, ""
 
     try:
-        db_scheme = _detect_scheme(connection_string)
+        executor = ExecutorFactory.get_executor(connection_string)
+        return executor.execute(sql_query)
 
-        executor_func = _EXECUTION_STRATEGIES.get(db_scheme)
-
-        if executor_func:
-            return executor_func(connection_string, sql_query)
-        else:
-            logger.error("Unsupported database scheme: %s", db_scheme)
-            return False, ""
-
+    except ValueError as val_err:
+        logger.error(str(val_err))
+        return False, ""
     except Exception as exc:
-        logger.exception("Execution Error [%s]: %s", db_scheme, exc)
+        logger.exception("Execution Error: %s", exc)
         return False, ""
 
 
