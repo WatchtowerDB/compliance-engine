@@ -14,14 +14,19 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from . import models, serializers
-from .filters import ClientDBSchemaFilter, ComplianceAssertionFilter
+from .filters import (
+    ClientDBSchemaFilter,
+    ComplianceAssertionFilter,
+    ClientDBFilter,
+    ComplianceFrameworkFilter,
+)
 from .tasks import initialize_model_task, schedule_sql_assertion_pipeline
 
 
 @extend_schema_view(
     list=extend_schema(
         summary="List compliance frameworks",
-        description="Return a list of all available compliance frameworks.",
+        description="Return a list of all available compliance frameworks. Supports filtering by name and description.",
     ),
     retrieve=extend_schema(
         summary="Retrieve a compliance framework",
@@ -31,12 +36,13 @@ from .tasks import initialize_model_task, schedule_sql_assertion_pipeline
 class ComplianceFrameworkViewSet(viewsets.ReadOnlyModelViewSet):
     queryset: QuerySet = models.ComplianceFramework.objects.all()
     serializer_class = serializers.ComplianceFrameworkSerializer
+    filterset_class = ComplianceFrameworkFilter
 
 
 @extend_schema_view(
     list=extend_schema(
         summary="List client databases",
-        description="Return a list of all registered client databases.",
+        description="Return a list of all registered client databases. Supports filtering by name.",
     ),
     retrieve=extend_schema(
         summary="Retrieve a client database",
@@ -62,6 +68,7 @@ class ComplianceFrameworkViewSet(viewsets.ReadOnlyModelViewSet):
 class ClientDBViewSet(viewsets.ModelViewSet):
     queryset: QuerySet = models.ClientDB.objects.all()
     serializer_class = serializers.ClientDBSerializer
+    filterset_class = ClientDBFilter
 
 
 @extend_schema_view(

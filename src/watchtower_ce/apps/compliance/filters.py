@@ -1,5 +1,5 @@
 from django_filters import rest_framework as filters
-from .models import ComplianceAssertion, ClientDBSchema
+from .models import ComplianceAssertion, ClientDBSchema, ClientDB, ComplianceFramework
 
 
 class ComplianceAssertionFilter(filters.FilterSet):
@@ -20,3 +20,20 @@ class ClientDBSchemaFilter(filters.FilterSet):
     class Meta:
         model = ClientDBSchema
         fields = ["client_db"]
+
+
+class ClientDBFilter(filters.FilterSet):
+    name = filters.CharFilter(field_name="name", lookup_expr="icontains")
+
+    class Meta:
+        model = ClientDB
+        fields = ["name"]
+
+
+class ComplianceFrameworkFilter(filters.FilterSet):
+    name = filters.CharFilter(field_name="name", lookup_expr="icontains")
+    description = filters.CharFilter(field_name="description", lookup_expr="icontains")
+
+    class Meta:
+        model = ComplianceFramework
+        fields = ["name", "description"]
