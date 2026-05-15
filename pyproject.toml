@@ -1,7 +1,3 @@
-[build-system]
-requires = ["setuptools>=80", "setuptools-scm>=8"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "watchtower-ce"
 description = "Watchtower Compliance Engine API"
@@ -25,12 +21,20 @@ dependencies = [
   "djangorestframework-simplejwt~=5.5",
   "djangorestframework-stubs~=3.16",
   "drf-spectacular~=0.28",
-  "mysqlclient~=2.2",
   "psycopg[binary,pool]~=3.0",
+  "pymysql~=1.1",
   "python-dotenv~=1.1",
   "uvicorn~=0.38",
 ]
 dynamic = ["version"]
+
+[project.scripts]
+wtce = "watchtower_ce.cli.main:main"
+
+[project.optional-dependencies]
+dev = ["pypdf~=6.4"]
+models = ["hf_xet~=1.2.0", "huggingface-hub~=0.35.3", "yaspin~=3.3.0"]
+tests = ["pytest~=9.0", "pytest-django~=4.11"]
 
 [dependency-groups]
 ai = [
@@ -45,27 +49,23 @@ ai = [
   "torchvision~=0.24.0",
 ]
 
-[project.optional-dependencies]
-dev = ["pypdf~=6.4"]
-models = ["hf_xet~=1.2.0", "huggingface-hub~=0.35.3", "yaspin~=3.3.0"]
-tests = ["pytest~=9.0", "pytest-django~=4.11"]
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
 
-[project.scripts]
-wtce = "watchtower_ce.cli.main:main"
+[tool.pytest.ini_options]
+python_files = ["test_*.py"]
+pythonpath = ["src"]
+testpaths = ["tests"]
+DJANGO_SETTINGS_MODULE = "watchtower_ce.settings"
+
+[tool.ruff.lint]
+ignore = ["F403"]
 
 [tool.setuptools]
 include-package-data = true
 
 [tool.setuptools_scm]
-
-[tool.ruff.lint]
-ignore = ["F403"]
-
-[tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "watchtower_ce.settings"
-pythonpath = ["src"]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
 
 [tool.uv.sources]
 torch = [

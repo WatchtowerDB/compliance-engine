@@ -5,7 +5,7 @@ from typing import Any, Sequence
 from urllib.parse import urlparse
 
 import psycopg
-import MySQLdb
+import pymysql
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ class MySQLExecutor(DatabaseExecutor):
             "port": parsed.port or 3306,
         }
         try:
-            with MySQLdb.connect(**conn_kwargs) as conn:
+            with pymysql.connect(**conn_kwargs) as conn:
                 with conn.cursor() as cur:
                     cur.execute(sql_query)
                     passed = True
@@ -94,7 +94,7 @@ class MySQLExecutor(DatabaseExecutor):
                         rows = cur.fetchmany(3)
                         passed = _passes(rows)
                     return passed, str(rows)
-        except MySQLdb.Error as e:
+        except pymysql.Error as e:
             logger.error("MySQL Operational Error: %s", e)
             return False, ""
 
