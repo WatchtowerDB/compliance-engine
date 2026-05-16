@@ -158,7 +158,7 @@ run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 
-_CONTAINER_IDS="$(docker container ls -aqf name=wtce-)"
+_CONTAINER_IDS="$(docker container ls -aqf name=${usage_prefix}.*-dev)"
 _CONTAINER_IDS="${_CONTAINER_IDS//$'\n'/ }"
 
 if [ -n "${_CONTAINER_IDS}" ]; then
@@ -181,7 +181,7 @@ run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 
-_CONTAINER_IDS="$(docker container ls -aqf name="${usage_prefix}")"
+_CONTAINER_IDS="$(docker container ls -aqf name="${usage_prefix}.*-dev")"
 _CONTAINER_IDS="${_CONTAINER_IDS//$'\n'/ }"
 if [ -n "${_CONTAINER_IDS}" ]; then
   for id in ${_CONTAINER_IDS}; do
