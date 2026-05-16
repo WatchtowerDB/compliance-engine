@@ -21,12 +21,13 @@ repos:
     rev: v0.9.17
     hooks:
       - id: tombi-format
-      - id: tombi-lint
         # Skipping mise.toml due to known issues with schema validation.
         # See: https://github.com/jdx/mise/discussions/8254
         # It has been resolved as seen in the issue, but the fix does not
         # seem to be working, potentially because of a version mismatch.
         # Remove this exclusion once the issue is resolved and the fix is verified to be working.
+        exclude: ^mise\.toml$
+      - id: tombi-lint
         exclude: ^mise\.toml$
   # NOTE: Local CLIs
   - repo: local
