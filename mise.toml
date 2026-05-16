@@ -212,7 +212,7 @@ flag "-P --port <port>" help="Port to listen on for postgresql connections" defa
 flag "-u --username <username>" help="superuser username" default="testuser"
 flag "-p --password <password>" help="superuser password" default="testpassword"
 flag "-d --database <database>" help="initial database name" default="testdb"
-flag "-s --schema <schema>" help="Path to schema SQL file" default="./test_dbs/pci_dss_postgres.sql"
+flag "-s --schema <schema>" help="Path to schema SQL file" default="./test_dbs/pci_dss/pg_schema.sql"
 '''
 run = '''
 #!/usr/bin/env bash
@@ -258,7 +258,7 @@ flag "-P --port <port>" help="Port to listen on for mysql connections" default="
 flag "-u --username <username>" help="superuser username" default="testuser"
 flag "-p --password <password>" help="superuser password" default="testpassword"
 flag "-d --database <database>" help="initial database name" default="testdb"
-flag "-s --schema <schema>" help="Path to schema SQL file" default="./test_dbs/pci_dss_mysql.sql"
+flag "-s --schema <schema>" help="Path to schema SQL file" default="./test_dbs/pci_dss/mysql_schema.sql"
 '''
 run = '''
 #!/usr/bin/env bash
