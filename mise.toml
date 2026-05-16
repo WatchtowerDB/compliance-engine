@@ -146,8 +146,9 @@ celery -A watchtower_ce worker -P solo -l INFO
 description = "Starts the entire backend application"
 depends = ["devserver", "celery"]
 
-[tasks.stop]
+[tasks.stop-dev]
 description = "Stop all running dev containers (requires containers to have the defined prefix)"
+alias="stop"
 wait_for = ["devserver", "celery"]
 tools = { docker-cli = "29" }
 usage = '''
@@ -168,9 +169,10 @@ else
 fi
 '''
 
-[tasks.clean]
+[tasks.clean-dev]
 description = "Remove all development containers and volumes (requires containers to have the defined prefix)"
-depends = ["stop"]
+depends = ["stop-dev"]
+alias="clean"
 tools = { docker-cli = "29" }
 usage = '''
 flag "-p --prefix <prefix>" help="Prefix used for all project containers" default="wtce-"
@@ -210,7 +212,7 @@ flag "-P --port <port>" help="Port to listen on for postgresql connections" defa
 flag "-u --username <username>" help="superuser username" default="testuser"
 flag "-p --password <password>" help="superuser password" default="testpassword"
 flag "-d --database <database>" help="initial database name" default="testdb"
-flag "-s --schema <schema>" help="Path to schema SQL file" default="./test_dbs/pci_dss_demo_schema.sql"
+flag "-s --schema <schema>" help="Path to schema SQL file" default="./test_dbs/pci_dss_postgres.sql"
 '''
 run = '''
 #!/usr/bin/env bash
@@ -246,3 +248,103 @@ gum log -l info "Postgres clientdb is ready at localhost:${usage_port}"
 gum log -l info "Connection string: postgresql://${usage_username}:${usage_password}@localhost:${usage_port}/${usage_database}"
 '''
 
+[tasks.mysql-clientdb]
+description = "Start a MySQL client database with schema"
+tools = { docker-cli = "29" }
+usage = '''
+flag "-n --container-name <container-name>" help="Name for the mysql clientdb container" default="wtce-mysql-clientdb"
+flag "-i --container-image <container-image>" help="Image to use for creating the mysql container" default="mysql:oraclelinux9"
+flag "-P --port <port>" help="Port to listen on for mysql connections" default="3306"
+flag "-u --username <username>" help="superuser username" default="testuser"
+flag "-p --password <password>" help="superuser password" default="testpassword"
+flag "-d --database <database>" help="initial database name" default="testdb"
+flag "-s --schema <schema>" help="Path to schema SQL file" default="./test_dbs/pci_dss_mysql.sql"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ -n "$(docker container ls -qaf "name=${usage_container_name}")" ]; then
+  gum log -l info "Starting mysql clientdb container: ${usage_container_name}"
+  docker container start "${usage_container_name}"
+else
+  if [ ! -f "${usage_schema}" ]; then
+    gum log -l error "Schema file not found: ${usage_schema}"
+    exit 1
+  fi
+
+  gum spin --title "Creating mysql clientdb container" -- \
+  docker container run -d \
+  --name "${usage_container_name}" \
+  -e "MYSQL_USER=${usage_username}" \
+  -e "MYSQL_PASSWORD=${usage_password}" \
+  -e "MYSQL_DATABASE=${usage_database}" \
+  -e "MYSQL_ROOT_PASSWORD=${usage_password}" \
+  -p "${usage_port}:3306" \
+  -v "${usage_container_name}-data:/var/lib/mysql" \
+  -v "$(realpath "${usage_schema}"):/docker-entrypoint-initdb.d/schema.sql:ro" \
+  "${usage_container_image}"
+fi
+
+gum spin --title "Waiting for mysql clientdb to be ready" -- \
+  timeout 90s bash -c \
+  "until docker exec ${usage_container_name} mysqladmin ping -u${usage_username} -p${usage_password} --silent 2>/dev/null; \
+  do sleep 1; done"
+
+gum log -l info "Mysql clientdb is ready at localhost:${usage_port}"
+gum log -l info "Connection string: mysql://${usage_username}:${usage_password}@localhost:${usage_port}/${usage_database}"
+'''
+
+[tasks.stop-clientdbs]
+description = "Stop all running clientdb containers (requires containers to have the defined prefix)"
+tools = { docker-cli = "29" }
+usage = '''
+flag "-p --prefix <prefix>" help="Prefix used for all project containers" default="wtce-"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+_CONTAINER_IDS="$(docker container ls -aqf name="${usage_prefix}.*-clientdb")"
+_CONTAINER_IDS="${_CONTAINER_IDS//$'\n'/ }"
+
+if [ -n "${_CONTAINER_IDS}" ]; then
+  gum log -l warn "Stopping clientdb containers: ${_CONTAINER_IDS}"
+  docker container stop ${_CONTAINER_IDS} >/dev/null
+else
+  gum log -l info "No clientdb containers are running"
+fi
+'''
+
+[tasks.clean-clientdbs]
+description = "Remove all clientdb containers and volumes (requires containers to have the defined prefix)"
+depends = ["stop-clientdbs"]
+tools = { docker-cli = "29" }
+usage = '''
+flag "-p --prefix <prefix>" help="Prefix used for all project containers" default="wtce-"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+_CONTAINER_IDS="$(docker container ls -aqf name="${usage_prefix}.*-clientdb")"
+_CONTAINER_IDS="${_CONTAINER_IDS//$'\n'/ }"
+
+if [ -n "${_CONTAINER_IDS}" ]; then
+  for id in ${_CONTAINER_IDS}; do
+    _ATTACHED_VOLUMES="$(docker container inspect --format '{% raw %}{{ range .Mounts }}{{ if eq .Type "volume" }}{{ .Name }}{{ "\n" }}{{ end }}{{ end }}{% endraw %}' "${id}")"
+
+    gum log -l warn "Removing container: ${id}"
+    docker container rm -f "${id}"
+
+    if [ -n "${_ATTACHED_VOLUMES}" ]; then
+      gum log -l warn "Removing attached volumes: ${_ATTACHED_VOLUMES//$'\n'/ }"
+      docker volume rm ${_ATTACHED_VOLUMES}
+    else
+      gum log -l info "No volumes attached to container: ${id}"
+    fi
+  done
+else
+  gum log -l info "No clientdb containers found with prefix: ${usage_prefix}"
+fi
+'''
