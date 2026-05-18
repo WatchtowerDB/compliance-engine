@@ -8,13 +8,19 @@ from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import (
+    action,
+    api_view,
+    permission_classes,
+    renderer_classes,
+)
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from . import models, serializers
 from .filters import ClientDBSchemaFilter, ComplianceAssertionFilter
+from .renderers import SSERenderer
 from .tasks import initialize_model_task, schedule_sql_assertion_pipeline
 
 
@@ -231,6 +237,7 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
 )
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@renderer_classes([SSERenderer])
 def stream_check_updates(request, check_id):
     get_object_or_404(models.ComplianceCheck, pk=check_id)
 
@@ -305,6 +312,7 @@ def stream_check_updates(request, check_id):
 )
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@renderer_classes([SSERenderer])
 def stream_model_init(request):
     def event_stream():
         r = redis.from_url(settings.CELERY_BROKER_URL)
