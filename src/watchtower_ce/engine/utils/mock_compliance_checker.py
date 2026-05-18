@@ -233,7 +233,7 @@ class MockComplianceChecker:
             {self.standard} analysis for failed assertion.
             This is a simulated remediation summary, not a real standard.
 
-            Failed assertion: {assertion}
+            Failed assertion: `{assertion}`
 
             ## STANDARD REFERENCE
             This violates {self.standard} control 1.1: "Mock controls are not real controls." 
@@ -244,7 +244,19 @@ class MockComplianceChecker:
             ## REMEDIATION STEPS
             1. Recognize that this is a mock violation and does not reflect real compliance status.
             2. Use this mock output to test the application's handling of compliance failures.
-            3. Turn off mock compliance checker in production.
+            3. Use this code block to test markdown formatting for it:
+
+            ```sql
+            DELETE FROM mock_table WHERE id = 1;
+
+            SELECT mock_column1
+            FROM mock_table
+            WHERE mock_column2 > (
+                SELECT AVG(mock_column2) FROM mock_table
+            );
+            ```
+            
+            4. Turn off mock compliance checker in production.
 
             The rest of the text here is to generate more tokens for testing streaming behaviour. Lorem ipsum dolor sit amet,
             consectetur adipiscing elit. Sed sed sagittis tortor. Nunc lobortis tincidunt cursus. Nulla maximus aliquet mi,
