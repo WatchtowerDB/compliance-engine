@@ -1,5 +1,6 @@
 import json
 import logging
+import random
 import re
 import textwrap
 import threading
@@ -262,31 +263,25 @@ class MockComplianceChecker:
             """
         ).strip()
 
-    def _stream_tokens(self, text: str, chunk_size: int = 6) -> Iterator[str]:
+    def _stream_tokens(
+        self, text: str, chunk_size_range: tuple[int, int] = (2, 10)
+    ) -> Iterator[str]:
         """
-        Stream text in chunks for mock token generation.
+        Stream text in randomized chunks for realistic mock token generation.
 
         Args:
             text (str): The text to stream.
-            chunk_size (int): Maximum characters per chunk. Defaults to 6.
+            chunk_size_range (tuple[int, int]): Min and max characters per chunk.
+                                              Defaults to (2, 10).
 
         Yields:
-            str: Chunks of the text.
+            str: Randomized chunks of the text.
         """
-        words = text.split()
-        chunk: list[str] = []
-        current_length = 0
-
-        for word in words:
-            chunk.append(word)
-            current_length += len(word) + 1
-            if current_length >= chunk_size:
-                yield " ".join(chunk) + " "
-                chunk = []
-                current_length = 0
-
-        if chunk:
-            yield " ".join(chunk)
+        pos = 0
+        while pos < len(text):
+            chunk_size = random.randint(*chunk_size_range)
+            yield text[pos : pos + chunk_size]
+            pos += chunk_size
 
     def generate_assertions(self, schema: str) -> list[str]:
         """
