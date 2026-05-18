@@ -252,16 +252,18 @@ def stream_check_updates(request, check_id):
         ):
             completion_event = {
                 "specversion": "1.0",
-                "type": "com.watchtower.system.status",
                 "source": "/system/sse",
-                "id": "init-complete",
                 "time": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 "data": {
                     "status": "completed",
                     "message": "Analysis previously finished.",
                 },
             }
-            yield f"data: {json.dumps(completion_event)}\n\n"
+            yield (
+                "event: com.watchtower.system.status\n"
+                "id: init-complete\n"
+                f"data: {json.dumps(completion_event)}\n\n"
+            )
             return
 
         r = redis.from_url(settings.CELERY_BROKER_URL)
@@ -273,13 +275,15 @@ def stream_check_updates(request, check_id):
         try:
             initial_event = {
                 "specversion": "1.0",
-                "type": "com.watchtower.system.connection",
                 "source": "/system/sse",
-                "id": "init-1",
                 "time": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 "data": {"status": "connected"},
             }
-            yield f"data: {json.dumps(initial_event)}\n\n"
+            yield (
+                "event: com.watchtower.system.connection\n"
+                "id: init-1\n"
+                f"data: {json.dumps(initial_event)}\n\n"
+            )
 
             for message in pubsub.listen():
                 if message["type"] == "message":
@@ -323,13 +327,15 @@ def stream_model_init(request):
         try:
             initial_event = {
                 "specversion": "1.0",
-                "type": "com.watchtower.system.connection",
                 "source": "/system/sse",
-                "id": "init-model",
                 "time": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 "data": {"status": "connected"},
             }
-            yield f"data: {json.dumps(initial_event)}\n\n"
+            yield (
+                "event: com.watchtower.system.connection\n"
+                "id: init-model\n"
+                f"data: {json.dumps(initial_event)}\n\n"
+            )
 
             initialize_model_task.delay()
 
