@@ -289,6 +289,22 @@ def stream_check_updates(request, check_id):
                 if message["type"] == "message":
                     data = message["data"].decode("utf-8")
                     yield f"data: {data}\n\n"
+
+                    try:
+                        payload = json.loads(data)
+                        # Check if this is the final phase completion event
+                        if (
+                            payload.get("type")
+                            == "com.watchtower.compliance.phase.update"
+                        ):
+                            event_data = payload.get("data", {})
+                            if (
+                                event_data.get("step") == "analysis"
+                                and event_data.get("status") == "completed"
+                            ):
+                                break
+                    except json.JSONDecodeError:
+                        continue
         finally:
             pubsub.unsubscribe(channel_name)
             r.close()

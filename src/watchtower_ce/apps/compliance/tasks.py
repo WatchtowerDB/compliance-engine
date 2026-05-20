@@ -4,7 +4,7 @@ import uuid
 from typing import Optional
 
 import redis
-from celery import chain, chord, group, shared_task
+from celery import chain, chord, shared_task
 from cloudevents.conversion import to_structured
 from cloudevents.http import CloudEvent
 from django.conf import settings
@@ -319,6 +319,23 @@ def generate_compliance_recommendation_task(
 
 
 @shared_task
+def finalize_analysis_task(results, check_id: int):
+    """
+    Final callback for the analysis phase. Publishes a completion event
+    after all recommendation tasks in the group have finished.
+    """
+    publish_event(
+        check_id,
+        "phase.update",
+        {
+            "step": "analysis",
+            "status": "completed",
+            "message": "Analysis and recommendation generation finished.",
+        },
+    )
+
+
+@shared_task
 def generate_recommendations_group(
     assertion_output: list[tuple[int, str]], check_id: int
 ):
@@ -362,10 +379,18 @@ def generate_recommendations_group(
             },
         )
 
-        group(
-            generate_compliance_recommendation_task.s(aid, out, check_id)
-            for aid, out in filtered_results
+        chord(
+            header=[
+                generate_compliance_recommendation_task.s(aid, out, check_id)
+                for aid, out in filtered_results
+            ],
+            body=finalize_analysis_task.s(check_id),
         ).apply_async()
+    else:
+        # If no failures exist, the analysis phase is effectively complete immediately
+        publish_event(
+            check_id, "phase.update", {"step": "analysis", "status": "completed"}
+        )
 
 
 @shared_task
