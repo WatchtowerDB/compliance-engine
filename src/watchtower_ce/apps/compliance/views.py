@@ -214,6 +214,23 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
             status=201,
         )
 
+    @extend_schema(
+        summary="Retrieve latest compliance check",
+        description="Return the most recently created compliance check.",
+    )
+    @action(detail=False, methods=["get"], url_path="latest")
+    def latest(self, request):
+        latest_check = self.get_queryset().last()
+
+        if latest_check is None:
+            return Response(
+                {"detail": "No compliance checks found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = self.get_serializer(latest_check)
+        return Response(serializer.data)
+
 
 @extend_schema(
     responses={
