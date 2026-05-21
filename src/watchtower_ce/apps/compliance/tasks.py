@@ -3,18 +3,15 @@ import logging
 import uuid
 from typing import Optional
 
-import redis
 from celery import chain, chord, shared_task
 from cloudevents.conversion import to_structured
 from cloudevents.http import CloudEvent
-from django.conf import settings
 
 from . import ml_inference as ml
 from . import models
+from .redis_client import get_redis
 
 logger = logging.getLogger(__name__)
-
-redis_client = redis.Redis.from_url(settings.CELERY_BROKER_URL)
 
 
 def publish_event(
@@ -48,11 +45,19 @@ def publish_event(
     _, body = to_structured(event)
 
     channel = f"check_updates_{check_id}"
+
+    redis_client = get_redis()
+
+    # Pub/sub for live listeners
     redis_client.publish(channel, body)
+
+    # Stream for replay on reconnect
+    redis_client.xadd(channel, {"data": body})  # Body is already serialized JSON bytes
+    redis_client.expire(channel, 3600)  # Clean up after 1 hour
 
 
 @shared_task
-def initialize_model_task():
+def initialize_model_task() -> None:
     """
     Initializes all registered compliance checker models.
 
@@ -174,7 +179,7 @@ def infer_sql_assertions_task(
                 compliance_framework=framework,
                 sql_query=sql,
                 compliance_check_id=check_id,
-            ).id
+            ).id  # type: ignore[attr-defined]
             for sql in sql_assertions
         ]
 
@@ -319,7 +324,7 @@ def generate_compliance_recommendation_task(
 
 
 @shared_task
-def finalize_analysis_task(results, check_id: int):
+def finalize_analysis_task(results, check_id: int) -> None:
     """
     Final callback for the analysis phase. Publishes a completion event
     after all recommendation tasks in the group have finished.
@@ -338,7 +343,7 @@ def finalize_analysis_task(results, check_id: int):
 @shared_task
 def generate_recommendations_group(
     assertion_output: list[tuple[int, str]], check_id: int
-):
+) -> list | None:
     """
     Callback after all executions are done. Triggers analysis phase.
 
@@ -381,10 +386,10 @@ def generate_recommendations_group(
 
         chord(
             header=[
-                generate_compliance_recommendation_task.s(aid, out, check_id)
+                generate_compliance_recommendation_task.s(aid, out, check_id)  # type: ignore[attr-defined]
                 for aid, out in filtered_results
             ],
-            body=finalize_analysis_task.s(check_id),
+            body=finalize_analysis_task.s(check_id),  # type: ignore[attr-defined]
         ).apply_async()
     else:
         # If no failures exist, the analysis phase is effectively complete immediately
@@ -394,7 +399,9 @@ def generate_recommendations_group(
 
 
 @shared_task
-def execute_then_recommendations(assertion_ids: list[int], check_id: int):
+def execute_then_recommendations(
+    assertion_ids: list[int], check_id: int
+) -> list | None:
     """
     Orchestrator: Starts Execution Phase.
 
@@ -419,10 +426,10 @@ def execute_then_recommendations(assertion_ids: list[int], check_id: int):
 
     chord(
         header=[
-            execute_sql_assertion_task.s(assertion_id, check_id)
+            execute_sql_assertion_task.s(assertion_id, check_id)  # type: ignore[attr-defined]
             for assertion_id in assertion_ids
         ],
-        body=generate_recommendations_group.s(check_id),
+        body=generate_recommendations_group.s(check_id),  # type: ignore[attr-defined]
     ).apply_async()
 
 
@@ -432,7 +439,7 @@ def schedule_sql_assertion_pipeline(
     client_db_id: int,
     framework_id: int,
     check_id: int,
-):
+) -> None:
     """
     Full compliance pipeline:
     1. Generate assertions
@@ -440,11 +447,11 @@ def schedule_sql_assertion_pipeline(
     3. Analyze failures
     """
     chain(
-        infer_sql_assertions_task.s(
+        infer_sql_assertions_task.s(  # type: ignore[attr-defined]
             schema_id,
             client_db_id,
             framework_id,
             check_id,
         ),
-        execute_then_recommendations.s(check_id),
+        execute_then_recommendations.s(check_id),  # type: ignore[attr-defined]
     ).apply_async()
