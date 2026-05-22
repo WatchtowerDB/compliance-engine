@@ -22,7 +22,14 @@ class RedisSSEStream:
         self._redis = get_redis()
 
     def _make_sse_event(self, entry_id: str, data: str) -> str:
-        return f"id: {entry_id}\ndata: {data}\n\n"
+        # Extract the type from the JSON string so we can put it in the 'event:' header
+        try:
+            payload = json.loads(data)
+            event_type = payload.get("type", "message")
+        except json.JSONDecodeError:
+            event_type = "message"
+
+        return f"event: {event_type}\nid: {entry_id}\ndata: {data}\n\n"
 
     def _make_system_event(self, event_type: str, entry_id: str, payload: dict) -> str:
         return f"event: {event_type}\nid: {entry_id}\ndata: {json.dumps(payload)}\n\n"
@@ -73,10 +80,12 @@ class RedisSSEStream:
             },
         )
 
-        # ------------------------------ replay backlog ------------------------------ #
-        # XRANGE exclusive lower bound using the "(" prefix
-        start = f"({last_event_id}" if last_event_id else "-"
+        # Initialize cursor. "0-0" means "from the start of the stream"
+        cursor = last_event_id or "0-0"
 
+        # ------------------------------ replay backlog ------------------------------ #
+        # Note: we use "(" to make it exclusive if we have an ID
+        start = f"({cursor}" if last_event_id else "-"
         backlog = cast(
             list[tuple[bytes, dict[bytes, bytes]]],
             self._redis.xrange(self.channel, min=start, max="+"),
@@ -84,30 +93,27 @@ class RedisSSEStream:
 
         for entry_id_bytes, fields in backlog:
             entry_id = entry_id_bytes.decode()
-            data = fields[b"data"].decode()
-            yield self._make_sse_event(entry_id, data)
-            if self._is_terminal(data):
+            cursor = entry_id  # Update cursor as we go
+            yield self._make_sse_event(entry_id, fields[b"data"].decode())
+            if self._is_terminal(fields[b"data"].decode()):
                 return
 
         # --------------------------------- live tail -------------------------------- #
-        cursor: str = last_event_id or "$"
+        if cursor == "0-0":
+            cursor = "$"
 
         while True:
-            results = cast(
-                list[tuple[bytes, list[tuple[bytes, dict[bytes, bytes]]]]],
-                self._redis.xread(
-                    {self.channel: cursor}, block=self.BLOCK_MS, count=100
-                ),
+            results = self._redis.xread(
+                {self.channel: cursor}, block=self.BLOCK_MS, count=10
             )
             if not results:
                 yield "event: com.watchtower.system.keepalive\ndata: {}\n\n"
                 continue
 
-            for _stream_name, entries in results:
+            for _stream, entries in results:
                 for entry_id_bytes, fields in entries:
-                    entry_id = entry_id_bytes.decode()
-                    cursor = entry_id
+                    cursor = entry_id_bytes.decode()  # Always advance cursor
                     data = fields[b"data"].decode()
-                    yield self._make_sse_event(entry_id, data)
+                    yield self._make_sse_event(cursor, data)
                     if self._is_terminal(data):
                         return
