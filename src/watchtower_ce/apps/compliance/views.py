@@ -1,5 +1,3 @@
-import datetime
-import json
 from typing import cast
 
 from celery.app.task import Task
@@ -20,7 +18,7 @@ from rest_framework.response import Response
 from . import models, serializers
 from .filters import ClientDBSchemaFilter, ComplianceAssertionFilter
 from .renderers import SSERenderer
-from .sse import RedisSSEStream
+from .sse import RedisSSEStream, build_cloud_event, format_sse
 from .tasks import initialize_model_task, schedule_sql_assertion_pipeline
 
 
@@ -258,7 +256,6 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
 def stream_check_updates(request, check_id):
     get_object_or_404(models.ComplianceCheck, pk=check_id)
 
-    # Fast-path: already completed before the client even connected
     failed_assertions = models.ComplianceAssertion.objects.filter(
         compliance_check_id=check_id, result=False
     )
@@ -268,20 +265,15 @@ def stream_check_updates(request, check_id):
     ):
 
         def _done():
-            event = {
-                "specversion": "1.0",
-                "source": "/system/sse",
-                "time": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                "data": {
+            event = build_cloud_event(
+                event_type=RedisSSEStream.EVT_COMPLETED,
+                source=f"/compliance/checks/{check_id}",
+                data={
                     "status": "completed",
                     "message": "Analysis previously finished.",
                 },
-            }
-            yield (
-                "event: com.watchtower.system.status\n"
-                "id: init-complete\n"
-                f"data: {json.dumps(event)}\n\n"
             )
+            yield format_sse("system-completed", event)
 
         return StreamingHttpResponse(_done(), content_type="text/event-stream")
 
