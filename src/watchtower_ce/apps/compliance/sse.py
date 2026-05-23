@@ -61,6 +61,26 @@ class RedisSSEStream:
             pass
         return False
 
+    def _find_latest_phase(self, last_event_id: str) -> dict | None:
+        """
+        Scan all events up to and including last_event_id to find
+        the most recent phase.update payload, if any.
+        """
+        entries = cast(
+            list[tuple[bytes, dict[bytes, bytes]]],
+            self._redis.xrange(self.channel, min="-", max=last_event_id),
+        )
+        latest_phase = None
+
+        for _entry_id_bytes, fields in entries:
+            try:
+                payload = json.loads(fields[b"data"].decode())
+                if payload.get("type", "").endswith("phase.update"):
+                    latest_phase = payload.get("data", {})
+            except (json.JSONDecodeError, KeyError):
+                continue
+        return latest_phase
+
     def stream(self, last_event_id: str | None = None) -> Generator[str, None, None]:
         """
         Generator that yields SSE-formatted strings.
@@ -82,6 +102,29 @@ class RedisSSEStream:
 
         # Initialize cursor. "0-0" means "from the start of the stream"
         cursor = last_event_id or "0-0"
+
+        # On reconnect, surface the last known phase
+        if last_event_id:
+            latest_phase = self._find_latest_phase(last_event_id)
+            if latest_phase:
+                yield self._make_system_event(
+                    "com.watchtower.system.status",
+                    "reconnect-status",
+                    {
+                        "specversion": "1.0",
+                        "source": "/system/sse",
+                        "time": self._now_iso(),
+                        "data": {
+                            "status": "resuming",
+                            "last_known_step": latest_phase.get("step"),
+                            "last_known_status": latest_phase.get("status"),
+                            "message": (
+                                f"Resuming stream from last known phase: "
+                                f"{latest_phase.get('step')} ({latest_phase.get('status')})."
+                            ),
+                        },
+                    },
+                )
 
         # ------------------------------ replay backlog ------------------------------ #
         # Note: we use "(" to make it exclusive if we have an ID
