@@ -51,7 +51,7 @@ def build_cloud_event(
     return event
 
 
-def format_sse(event_id: str, cloud_event: dict) -> str:
+def format_sse(event_id: str | None, cloud_event: dict) -> str:
     """
     Serialize a CloudEvent dict to an SSE frame.
 
@@ -59,9 +59,10 @@ def format_sse(event_id: str, cloud_event: dict) -> str:
     filter on either layer consistently.
 
     Args:
-        event_id (str): Unique identifier for this SSE message. Used as the SSE `id:` field.
-            For replay events, this should be the Redis stream entry ID. For system events
-            like "connected", it can be an arbitrary string.
+        event_id (str | None): Unique identifier for this SSE message. Used as the SSE `id:` field.
+            For replay events, this should be the Redis stream entry ID. For other events, this
+            field should ideally be set to `None` (so no ID will be set) as to not overwrite the
+            `last-event-id` header value that the frontend relies on for reconnection.
         cloud_event (dict): A CloudEvent dict (as produced by `build_cloud_event()`)
             containing the event data, type, and metadata to be sent as the SSE `data:` field.
 
@@ -69,11 +70,11 @@ def format_sse(event_id: str, cloud_event: dict) -> str:
         str: A properly formatted SSE message string with event, id, and data fields,
             ending with two newlines as required by SSE protocol.
     """
-    return (
-        f"event: {cloud_event['type']}\n"
-        f"id: {event_id}\n"
-        f"data: {json.dumps(cloud_event)}\n\n"
-    )
+    lines = f"event: {cloud_event['type']}\n"
+    if event_id is not None:
+        lines += f"id: {event_id}\n"
+    lines += f"data: {json.dumps(cloud_event)}\n\n"
+    return lines
 
 
 class RedisSSEStream:
@@ -215,7 +216,7 @@ class RedisSSEStream:
                 These include both system events and regular CloudEvents.
         """
         yield format_sse(
-            "system-connected",
+            None,
             self._system_event(self.EVT_CONNECTED, {"status": "connected"}),
         )
 
@@ -227,7 +228,7 @@ class RedisSSEStream:
 
             if latest_phase:
                 yield format_sse(
-                    "system-resuming",
+                    None,
                     self._system_event(
                         self.EVT_RESUMING,
                         {

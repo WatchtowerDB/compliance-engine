@@ -273,7 +273,7 @@ def stream_check_updates(request, check_id):
                     "message": "Analysis previously finished.",
                 },
             )
-            yield format_sse("system-completed", event)
+            yield format_sse(None, event)
 
         return StreamingHttpResponse(_done(), content_type="text/event-stream")
 
