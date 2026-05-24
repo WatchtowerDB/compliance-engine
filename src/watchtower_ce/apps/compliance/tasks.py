@@ -17,15 +17,16 @@ def publish_event(
     check_id: int, event_type_suffix: str, data: dict, subject: Optional[str] = None
 ):
     """
-    Publishes a CloudEvent (v1.0) to Redis using the official Python SDK.
+    Publishes a CloudEvent (v1.0) into the Redis stream backing SSE delivery.
 
     Constructs attributes via build_cloud_event() for consistency with the
-    system events emitted in sse.py, then re-serializes through the SDK for
-    spec-validated structured-mode JSON before writing to Redis.
+    system events emitted in `sse.py`, then re-serializes through the official
+    CloudEvents SDK for spec-validated structured-mode JSON before writing
+    to Redis.
 
-    Two writes per call:
-    - PUBLISH  → wakes any live XREAD-blocking Django generator.
-    - XADD     → appends to the durable stream for backlog replay on reconnect.
+    Events are appended to the Redis stream via XADD and consumed by
+    `RedisSSEStream.stream()`, which handles both backlog replay and live
+    SSE streaming from the same durable event source.
     """
 
     source = "/system/model" if check_id == 0 else f"/compliance/checks/{check_id}"
@@ -46,7 +47,6 @@ def publish_event(
 
     channel = f"check_updates_{check_id}"
     redis_client = get_redis()
-    redis_client.publish(channel, body)
     redis_client.xadd(channel, {"data": body})
     redis_client.expire(channel, RedisSSEStream.STREAM_TTL)
 
