@@ -94,13 +94,20 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
     filterset_class = ClientDBSchemaFilter
 
     def update(self, request, *args, **kwargs):
-        return Response({"detail": "Update not allowed."}, status=405)
+        return Response(
+            {"detail": "Update not allowed."}, status=status.HTTP_405_METHOD_NOT_ALLOWED
+        )
 
     def partial_update(self, request, *args, **kwargs):
-        return Response({"detail": "Partial update not allowed."}, status=405)
+        return Response(
+            {"detail": "Partial update not allowed."},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
 
     def destroy(self, request, *args, **kwargs):
-        return Response({"detail": "Delete not allowed."}, status=405)
+        return Response(
+            {"detail": "Delete not allowed."}, status=status.HTTP_405_METHOD_NOT_ALLOWED
+        )
 
     @extend_schema(
         request=serializers.ClientDBSchemaUploadSerializer,
@@ -209,7 +216,7 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
                 "message": "Compliance check created. Assertions are processing.",
                 "id": check.id,
             },
-            status=201,
+            status=status.HTTP_201_CREATED,
         )
 
     @extend_schema(
@@ -243,10 +250,11 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
         "**Workflow:**\n"
         "1. Validates that the `ComplianceCheck` with the given `check_id` exists (404 if not).\n"
         "2. If the pipeline has already completed (all failed assertions have recommendations), "
-        "immediately emits a `com.watchtower.system.status` completion event and closes the stream.\n"
-        "3. Otherwise, subscribes to the Redis pub/sub channel `check_updates_{check_id}` "
-        "and emits a `com.watchtower.system.connection` event to confirm the connection.\n"
-        "4. Streams all subsequent Redis messages as CloudEvents until the client disconnects.\n\n"
+        "immediately emits a `com.watchtower.system.completed` event and closes the stream.\n"
+        "3. Otherwise, emits a `com.watchtower.system.connected` event to confirm the connection.\n"
+        "4. Replays any events missed since `Last-Event-ID` (if provided), then tails the "
+        "Redis stream live via XREAD, forwarding events as CloudEvents until the pipeline "
+        "reaches a terminal state.\n\n"
         "Requires authentication."
     ),
 )
@@ -286,31 +294,27 @@ def stream_check_updates(request, check_id):
 
 @extend_schema(
     responses={
-        200: OpenApiResponse(
-            description="Server-Sent Events stream (text/event-stream)."
-        ),
+        200: OpenApiResponse(description="Model initialization triggered."),
     },
-    summary="Stream model initialization status",
+    summary="Trigger model initialization",
     description=(
-        "SSE endpoint that triggers and streams the status of the AI model initialization process.\n\n"
-        "**Workflow:**\n"
-        "1. Subscribes to the global Redis pub/sub channel `check_updates_0`.\n"
-        "2. Emits a `com.watchtower.system.connection` event to confirm the connection.\n"
-        "3. Triggers the `initialize_model_task` Celery task asynchronously.\n"
-        "4. Streams status messages from Redis. The stream closes automatically upon receiving "
-        "a terminal status: `initialized`, `already_initialized`, or `error`.\n\n"
-        "Requires authentication."
+        "Enqueues the model initialization task so that compliance checker weights "
+        "are loaded into memory before the first check is submitted. "
+        "Returns immediately; initialization runs asynchronously in the Celery worker.\n\n"
+        "Requires authentication.\n"
+        "WARNING: IMPLEMENTATION WILL BE CHANGED LATER!\n"
+        "For starters, it'll support GET to poll for the model state. "
+        "Please recognise that this endpoint is not and will not be "
+        "reliable or complete until certain other features are implemented."
     ),
 )
-@api_view(["GET"])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
-@renderer_classes([SSERenderer])
-def stream_model_init(request):
-    last_event_id = request.headers.get("Last-Event-ID")
-    sse = RedisSSEStream("check_updates_0")
-
-    def event_stream():
-        cast(Task, initialize_model_task).delay()
-        yield from sse.stream(last_event_id)
-
-    return StreamingHttpResponse(event_stream(), content_type="text/event-stream")
+def trigger_model_init(request):
+    # TODO: ADD MODEL STATES AFTER NEW SINGLETON IMPLEMENTATION,
+    #       GET FOR POLLING, OTHER STATUS CODES, AND UPDATE THE
+    #       TASK ITSELF.
+    cast(Task, initialize_model_task).delay()
+    return Response(
+        {"message": "Model initialization enqueued."}, status=status.HTTP_202_ACCEPTED
+    )
