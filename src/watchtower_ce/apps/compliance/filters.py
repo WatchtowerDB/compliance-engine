@@ -1,5 +1,6 @@
 from django_filters import rest_framework as filters
-from .models import ComplianceAssertion, ClientDBSchema, ClientDB, ComplianceFramework
+
+from .models import ClientDB, ClientDBSchema, ComplianceAssertion, ComplianceFramework
 
 
 class ComplianceAssertionFilter(filters.FilterSet):

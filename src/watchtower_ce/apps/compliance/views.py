@@ -15,9 +15,9 @@ from rest_framework.response import Response
 
 from . import models, serializers
 from .filters import (
+    ClientDBFilter,
     ClientDBSchemaFilter,
     ComplianceAssertionFilter,
-    ClientDBFilter,
     ComplianceFrameworkFilter,
 )
 from .tasks import initialize_model_task, schedule_sql_assertion_pipeline
