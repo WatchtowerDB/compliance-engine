@@ -294,7 +294,7 @@ def stream_check_updates(request, check_id):
 
 @extend_schema(
     responses={
-        200: OpenApiResponse(description="Model initialization triggered."),
+        202: OpenApiResponse(description="Model initialization triggered."),
     },
     summary="Trigger model initialization",
     description=(
@@ -302,7 +302,8 @@ def stream_check_updates(request, check_id):
         "are loaded into memory before the first check is submitted. "
         "Returns immediately; initialization runs asynchronously in the Celery worker.\n\n"
         "Requires authentication.\n"
-        "WARNING: IMPLEMENTATION WILL BE CHANGED LATER!\n"
+        "WARNING: THIS ENDPOINT WILL CRASH YOUR BACKEND!\n"
+        "IMPLEMENTATION WILL BE CHANGED LATER!\n"
         "For starters, it'll support GET to poll for the model state. "
         "Please recognise that this endpoint is not and will not be "
         "reliable or complete until certain other features are implemented."
