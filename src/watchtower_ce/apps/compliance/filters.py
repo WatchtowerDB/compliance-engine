@@ -22,7 +22,12 @@ class ComplianceAssertionFilter(filters.FilterSet):
 
 class ClientDBSchemaFilter(filters.FilterSet):
     client_db = filters.NumberFilter(field_name="client_db__id")
-    ordering = filters.OrderingFilter(fields=(("created_at", "created_at"),))
+    ordering = filters.OrderingFilter(
+        fields=(
+            ("created_at", "date"),
+            ("created_at", "created_at"),
+        )
+    )
 
     class Meta:
         model = ClientDBSchema
