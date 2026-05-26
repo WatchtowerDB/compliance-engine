@@ -87,7 +87,7 @@ class RedisSSEStream:
     The SSE `event:` field always mirrors the CloudEvent `type`.
 
     Consuming side: instantiate and call .stream(last_event_id).
-    Publishing side: handled exclusively by publish_event() in tasks.py.
+    Streaming side: handled exclusively by stream_event() in tasks.py.
     """
 
     BLOCK_MS = 5_000  # how long XREAD blocks waiting for new messages
@@ -104,7 +104,7 @@ class RedisSSEStream:
 
         Args:
             channel (str): The Redis stream channel/key name to read events from.
-                This should match the channel used by the publishing side.
+                This should match the channel used by the streaming side.
         """
         self.channel = channel
         self._redis = get_redis()
