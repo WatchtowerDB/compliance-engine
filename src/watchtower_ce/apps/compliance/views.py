@@ -19,6 +19,7 @@ from .filters import (
     ComplianceAssertionFilter,
     ClientDBFilter,
     ComplianceFrameworkFilter,
+    ComplianceCheckFilter,
 )
 from .tasks import initialize_model_task, schedule_sql_assertion_pipeline
 
@@ -92,7 +93,7 @@ class ClientDBViewSet(viewsets.ModelViewSet):
     destroy=extend_schema(exclude=True),
 )
 class ClientDBSchemaViewSet(viewsets.ModelViewSet):
-    queryset: QuerySet = models.ClientDBSchema.objects.all()
+    queryset: QuerySet = models.ClientDBSchema.objects.all().order_by("-created_at")
     serializer_class = serializers.ClientDBSchemaSerializer
     filterset_class = ClientDBSchemaFilter
 
@@ -190,9 +191,10 @@ class ComplianceAssertionViewSet(viewsets.ReadOnlyModelViewSet):
     ),
 )
 class ComplianceCheckViewSet(viewsets.ModelViewSet):
-    queryset: QuerySet = models.ComplianceCheck.objects.all()
+    queryset: QuerySet = models.ComplianceCheck.objects.all().order_by("-date")
     serializer_class = serializers.ComplianceCheckSerializer
     http_method_names: list[str] = ["get", "post", "head", "options"]
+    filterset_class = ComplianceCheckFilter
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

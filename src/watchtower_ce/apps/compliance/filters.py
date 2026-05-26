@@ -1,5 +1,11 @@
 from django_filters import rest_framework as filters
-from .models import ComplianceAssertion, ClientDBSchema, ClientDB, ComplianceFramework
+from .models import (
+    ComplianceAssertion,
+    ClientDBSchema,
+    ClientDB,
+    ComplianceFramework,
+    ComplianceCheck,
+)
 
 
 class ComplianceAssertionFilter(filters.FilterSet):
@@ -16,6 +22,7 @@ class ComplianceAssertionFilter(filters.FilterSet):
 
 class ClientDBSchemaFilter(filters.FilterSet):
     client_db = filters.NumberFilter(field_name="client_db__id")
+    ordering = filters.OrderingFilter(fields=(("created_at", "created_at"),))
 
     class Meta:
         model = ClientDBSchema
@@ -37,3 +44,13 @@ class ComplianceFrameworkFilter(filters.FilterSet):
     class Meta:
         model = ComplianceFramework
         fields = ["name", "description"]
+
+
+class ComplianceCheckFilter(filters.FilterSet):
+    framework = filters.NumberFilter(field_name="framework__id")
+    client_db = filters.NumberFilter(field_name="client_db__id")
+    ordering = filters.OrderingFilter(fields=(("date", "date"),))
+
+    class Meta:
+        model = ComplianceCheck
+        fields = ["framework", "client_db"]
