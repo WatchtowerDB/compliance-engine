@@ -18,7 +18,7 @@ def build_cloud_event(
     event_id: str | None = None,
 ) -> dict:
     """
-    Build a spec-compliant CloudEvent (v1.0) dict.
+    Build a dictionary following the CloudEvent (v1.0) specification.
 
     Required attributes per spec: specversion, id, source, type.
     Optional included: time, datacontenttype, subject.
@@ -35,7 +35,7 @@ def build_cloud_event(
             a UUID v4 will be generated automatically.
 
     Returns:
-        dict: the built CloudEvent ready for serialization and transmission
+        dict: The built event dictionary ready for serialization and transmission.
     """
     event = {
         "specversion": "1.0",
@@ -53,9 +53,9 @@ def build_cloud_event(
 
 def format_sse(event_id: str | None, cloud_event: dict) -> str:
     """
-    Serialize a CloudEvent dict to an SSE frame.
+    Serialize an event dictionary to an SSE frame.
 
-    The SSE `event:` field mirrors the CloudEvent `type` so consumers can
+    The SSE `event:` field mirrors the event `type` so consumers can
     filter on either layer consistently.
 
     Args:
@@ -63,8 +63,8 @@ def format_sse(event_id: str | None, cloud_event: dict) -> str:
             For replay events, this should be the Redis stream entry ID. For other events, this
             field should ideally be set to `None` (so no ID will be set) as to not overwrite the
             `last-event-id` header value that the frontend relies on for reconnection.
-        cloud_event (dict): A CloudEvent dict (as produced by `build_cloud_event()`)
-            containing the event data, type, and metadata to be sent as the SSE `data:` field.
+        cloud_event (dict): An event dictionary (structured per CloudEvent spec, as
+            produced by `build_cloud_event()`) to be sent as the SSE `data:` field.
 
     Returns:
         str: A properly formatted SSE message string with event, id, and data fields,
@@ -83,8 +83,8 @@ class RedisSSEStream:
     durable, replayable event history keyed by stream entry IDs.
 
     All events emitted — including system events — are spec-compliant
-    CloudEvents serialised as JSON in the SSE `data:` field.
-    The SSE `event:` field always mirrors the CloudEvent `type`.
+    event payloads serialised as JSON in the SSE `data:` field.
+    The SSE `event:` field always mirrors the event `type`.
 
     Consuming side: instantiate and call .stream(last_event_id).
     Streaming side: handled exclusively by stream_event() in tasks.py.
@@ -118,7 +118,7 @@ class RedisSSEStream:
             data (dict): Event payload data
 
         Returns:
-            dict: A complete CloudEvent dict ready for serialization
+            dict: A complete event dictionary ready for serialization.
         """
         return build_cloud_event(
             event_type=event_type,
@@ -136,7 +136,7 @@ class RedisSSEStream:
           status="completed" or "partial"
 
         Args:
-            cloud_event (dict): A CloudEvent dict to evaluate
+            cloud_event (dict): An event dictionary to evaluate.
 
         Returns:
             bool: True if this event indicates the stream should terminate,
@@ -213,7 +213,7 @@ class RedisSSEStream:
 
         Yields:
             str: SSE-formatted strings ready to be written to an HTTP response.
-                These include both system events and regular CloudEvents.
+                These include both system events and regular data events.
         """
         yield format_sse(
             None,
@@ -269,7 +269,7 @@ class RedisSSEStream:
                 ),
             )
             if not results:
-                yield ": keepalive\n\n"  # SSE comment, not a CloudEvent
+                yield ": keepalive\n\n"  # SSE comment, not a formatted event
                 continue
 
             for _stream, entries in results:

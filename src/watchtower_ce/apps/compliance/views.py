@@ -254,7 +254,7 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
         "3. Otherwise, emits a `com.watchtower.system.connected` event to confirm the connection.\n"
         "4. Replays any events missed since `Last-Event-ID` (if provided), then tails the "
         "Redis stream live via XREAD, forwarding events as CloudEvents until the pipeline "
-        "reaches a terminal state.\n\n"
+        "forwarding events in CloudEvent format until the pipeline reaches a terminal state.\n\n"
         "Requires authentication."
     ),
 )

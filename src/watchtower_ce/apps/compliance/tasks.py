@@ -1,9 +1,8 @@
+import json
 import logging
 from typing import Optional
 
 from celery import chain, chord, shared_task
-from cloudevents.conversion import to_structured
-from cloudevents.http import CloudEvent
 
 from . import ml_inference as ml
 from . import models
@@ -17,12 +16,11 @@ def stream_event(
     check_id: int, event_type_suffix: str, data: dict, subject: Optional[str] = None
 ):
     """
-    Writes a CloudEvent (v1.0) into the Redis stream backing SSE delivery.
+    Writes an event following the CloudEvent (v1.0) spec into the Redis stream.
 
     Constructs attributes via build_cloud_event() for consistency with the
-    system events emitted in `sse.py`, then re-serializes through the official
-    CloudEvents SDK for spec-validated structured-mode JSON before writing
-    to Redis.
+    system events emitted in `sse.py`, then serializes the dictionary
+    to JSON before writing to Redis.
 
     Events are appended to the Redis stream via XADD and consumed by
     `RedisSSEStream.stream()`, which handles both backlog replay and live
@@ -31,23 +29,16 @@ def stream_event(
 
     source = "/system/model" if check_id == 0 else f"/compliance/checks/{check_id}"
 
-    event_dict = build_cloud_event(
+    event = build_cloud_event(
         event_type=f"com.watchtower.compliance.{event_type_suffix}",
         source=source,
         data=data,
         subject=subject,
     )
 
-    # Re-validate and serialize through the official SDK.
-    sdk_event = CloudEvent(
-        attributes={k: v for k, v in event_dict.items() if k != "data"},
-        data=event_dict["data"],
-    )
-    _, body = to_structured(sdk_event)
-
     channel = f"check_updates_{check_id}"
     redis_client = get_redis()
-    redis_client.xadd(channel, {"data": body})
+    redis_client.xadd(channel, {"data": json.dumps(event)})
     redis_client.expire(channel, RedisSSEStream.STREAM_TTL)
 
 
