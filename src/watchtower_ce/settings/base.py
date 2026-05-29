@@ -2,6 +2,8 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any, Iterable
 
+from corsheaders.defaults import default_headers
+
 from .. import apps
 from .env import AUTH_COOKIE_SECURE
 
@@ -101,6 +103,11 @@ SIMPLE_JWT: dict[str, Any] = {
 }
 
 CORS_ALLOW_CREDENTIALS: bool = True
+
+CORS_ALLOW_HEADERS = (
+    *default_headers,
+    "last-event-id",  # SSE resume header
+)
 
 REST_FRAMEWORK: dict[str, int | Iterable] = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
