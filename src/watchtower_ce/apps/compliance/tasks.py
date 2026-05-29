@@ -1,58 +1,58 @@
-import datetime
 import logging
-import uuid
 from typing import Optional
 
-import redis
-from celery import chain, chord, group, shared_task
+from celery import chain, chord, shared_task
 from cloudevents.conversion import to_structured
 from cloudevents.http import CloudEvent
-from django.conf import settings
 
 from . import ml_inference as ml
 from . import models
+from .redis_client import get_redis
+from .sse import RedisSSEStream, build_cloud_event
 
 logger = logging.getLogger(__name__)
 
-redis_client = redis.Redis.from_url(settings.CELERY_BROKER_URL)
 
-
-def publish_event(
+def stream_event(
     check_id: int, event_type_suffix: str, data: dict, subject: Optional[str] = None
 ):
     """
-    Publishes a CloudEvent (v1.0.2) to Redis using the official Python SDK.
+    Writes a CloudEvent (v1.0) into the Redis stream backing SSE delivery.
 
-    Process:
-    1. Define Attributes: Sets up standard header fields (specversion, type, source, id, time, datacontenttype)
-       and conditionally adds optional fields (e.g., subject) if they exist.
-    2. Create CloudEvent: Instantiates the event object, which triggers SDK validation of the attributes.
-    3. Serialize: Converts the event to JSON (structured mode), discarding headers to retain only the body.
-    4. Publish: Pushes the serialized JSON body to the Redis channel 'check_updates_{check_id}'.
+    Constructs attributes via build_cloud_event() for consistency with the
+    system events emitted in `sse.py`, then re-serializes through the official
+    CloudEvents SDK for spec-validated structured-mode JSON before writing
+    to Redis.
+
+    Events are appended to the Redis stream via XADD and consumed by
+    `RedisSSEStream.stream()`, which handles both backlog replay and live
+    SSE streaming from the same durable event source.
     """
 
-    attributes = {
-        "specversion": "1.0",
-        "type": f"com.watchtower.compliance.{event_type_suffix}",
-        "source": f"/compliance/checks/{check_id}",
-        "id": str(uuid.uuid4()),
-        "time": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "datacontenttype": "application/json",
-    }
+    source = "/system/model" if check_id == 0 else f"/compliance/checks/{check_id}"
 
-    if subject:
-        attributes["subject"] = subject
+    event_dict = build_cloud_event(
+        event_type=f"com.watchtower.compliance.{event_type_suffix}",
+        source=source,
+        data=data,
+        subject=subject,
+    )
 
-    event = CloudEvent(attributes, data)
-
-    _, body = to_structured(event)
+    # Re-validate and serialize through the official SDK.
+    sdk_event = CloudEvent(
+        attributes={k: v for k, v in event_dict.items() if k != "data"},
+        data=event_dict["data"],
+    )
+    _, body = to_structured(sdk_event)
 
     channel = f"check_updates_{check_id}"
-    redis_client.publish(channel, body)
+    redis_client = get_redis()
+    redis_client.xadd(channel, {"data": body})
+    redis_client.expire(channel, RedisSSEStream.STREAM_TTL)
 
 
 @shared_task
-def initialize_model_task():
+def initialize_model_task() -> None:
     """
     Initializes all registered compliance checker models.
 
@@ -60,10 +60,9 @@ def initialize_model_task():
     instantiates its checker so model weights are loaded into VRAM once at
     worker startup rather than on the first request.
 
-    Configuration:
-    - Uses value 0 as the default channel number for initialization events.
+    Uses check_id=0 as the conventional channel for model-init events.
     """
-    publish_event(
+    stream_event(
         0,
         "phase.update",
         {
@@ -85,7 +84,7 @@ def initialize_model_task():
                 "Failed to initialize checker for framework '%s'", framework_name
             )
             failed_frameworks.append(framework_name)
-            publish_event(
+            stream_event(
                 0,
                 "pipeline.error",
                 {
@@ -96,7 +95,7 @@ def initialize_model_task():
             )
 
     if failed_frameworks:
-        publish_event(
+        stream_event(
             0,
             "phase.update",
             {
@@ -109,7 +108,7 @@ def initialize_model_task():
             },
         )
     else:
-        publish_event(
+        stream_event(
             0,
             "phase.update",
             {
@@ -129,14 +128,14 @@ def infer_sql_assertions_task(
     Returns a list of created assertion IDs.
 
     Workflow:
-    1. Protocol: Publishes a 'phase.update' event to signal the start of the assertion generation step.
+    1. Protocol: Streams a 'phase.update' event to signal the start of the assertion generation step.
     2. Retrieval: Fetches the schema and framework objects; handles missing data errors.
     3. Generation: Uses ML to generate SQL assertions based on the schema JSON.
     4. Persistence: Creates ComplianceAssertion records, ensuring each is explicitly linked to the compliance check.
-    5. Protocol: Publishes a completion 'phase.update' event including the count of generated assertions.
+    5. Protocol: Streams a completion 'phase.update' event including the count of generated assertions.
     """
 
-    publish_event(
+    stream_event(
         check_id,
         "phase.update",
         {
@@ -157,7 +156,7 @@ def infer_sql_assertions_task(
             "ClientDBSchema or ComplianceFramework %s not found. Skipping assertion inference.",
             schema_id,
         )
-        publish_event(
+        stream_event(
             check_id,
             "pipeline.error",
             {"check_id": check_id, "step": "assertion_generation", "error": str(e)},
@@ -174,11 +173,11 @@ def infer_sql_assertions_task(
                 compliance_framework=framework,
                 sql_query=sql,
                 compliance_check_id=check_id,
-            ).id
+            ).id  # type: ignore[attr-defined]
             for sql in sql_assertions
         ]
 
-        publish_event(
+        stream_event(
             check_id,
             "phase.update",
             {
@@ -192,7 +191,7 @@ def infer_sql_assertions_task(
 
     except Exception as e:
         logger.exception("Failed to generate assertions")
-        publish_event(
+        stream_event(
             check_id,
             "pipeline.error",
             {"step": "assertion_generation", "error": str(e)},
@@ -201,16 +200,17 @@ def infer_sql_assertions_task(
 
 
 @shared_task
-def execute_sql_assertion_task(assertion_id: int, check_id) -> tuple[int, str]:
+def execute_sql_assertion_task(assertion_id: int, check_id: int) -> tuple[int, str]:
     """
     Execute a single SQL compliance assertion and store the result.
 
     Steps:
     1. Retrieval: Fetches the assertion object.
-    2. Execution: Runs the SQL query against the client DB, returning a pass/fail status and output details.
+    2. Execution: Runs the SQL query against the client DB, returning a pass/fail result and output details.
     3. Storage: Updates the assertion record with the result and query output.
-    4. Protocol: Publishes an 'assertion.result' event (with subject) containing the status.
+    4. Protocol: Streams an 'assertion.result' event (with subject) containing the status.
     """
+
     try:
         assertion = models.ComplianceAssertion.objects.get(id=assertion_id)
     except models.ComplianceAssertion.DoesNotExist:
@@ -229,13 +229,11 @@ def execute_sql_assertion_task(assertion_id: int, check_id) -> tuple[int, str]:
     assertion.query_output = output_str
     assertion.save(update_fields=["result", "query_output"])
 
-    publish_event(
+    stream_event(
         check_id=check_id,
         event_type_suffix="assertion.result",
         subject=f"assertion/{assertion_id}",
-        data={
-            "status": "passed" if passed else "failed",
-        },
+        data={"status": "passed" if passed else "failed"},
     )
 
     return assertion_id, output_str
@@ -250,15 +248,16 @@ def generate_compliance_recommendation_task(
 
     Logic:
     1. Filter: Skips processing if the assertion passed (analyzes failures only).
-    2. Protocol (Start): Publishes a 'recommendation.stream' start event.
+    2. Protocol (Start): Streams a 'recommendation.stream' start event.
     3. Streaming: Iterates over the ML generator using the framework name retrieved
        from ``assertion.compliance_framework.name``, so recommendations are always
        grounded in the correct compliance standard.
-       - Publishes 'recommendation.stream' token events for each chunk.
-    4. Error Handling: Catches exceptions and publishes 'recommendation.stream' error events.
+       - Streams 'recommendation.stream' token events for each chunk.
+    4. Error Handling: Catches exceptions and streams 'recommendation.stream' error events.
     5. Persistence: Saves the aggregated recommendation text to the assertion.
-    6. Protocol (End): Publishes a 'recommendation.stream' complete event.
+    6. Protocol (End): Streams a 'recommendation.stream' complete event.
     """
+
     try:
         assertion = models.ComplianceAssertion.objects.get(id=assertion_id)
     except models.ComplianceAssertion.DoesNotExist:
@@ -271,7 +270,7 @@ def generate_compliance_recommendation_task(
     if assertion.result is not False:
         return assertion_id
 
-    publish_event(
+    stream_event(
         check_id,
         "recommendation.stream",
         {"event": "start"},
@@ -288,7 +287,7 @@ def generate_compliance_recommendation_task(
             token = chunk["choices"][0]["text"]  # type: ignore (chunk can be str or something else if stream is False, but it isn't)
             full_recommendation += token
 
-            publish_event(
+            stream_event(
                 check_id,
                 "recommendation.stream",
                 {"event": "token", "content": token},
@@ -297,7 +296,7 @@ def generate_compliance_recommendation_task(
 
     except Exception as exc:
         logger.exception("Recommendation generation failed")
-        publish_event(
+        stream_event(
             check_id,
             "recommendation.stream",
             {"event": "error", "error": str(exc)},
@@ -308,7 +307,7 @@ def generate_compliance_recommendation_task(
     assertion.recommendation = full_recommendation
     assertion.save(update_fields=["recommendation"])
 
-    publish_event(
+    stream_event(
         check_id,
         "recommendation.stream",
         {"event": "complete"},
@@ -319,22 +318,37 @@ def generate_compliance_recommendation_task(
 
 
 @shared_task
+def finalize_analysis_task(results, check_id: int) -> None:
+    """
+    Final callback for the analysis phase. Streams a completion event
+    after all recommendation tasks in the chord have finished.
+    """
+    stream_event(
+        check_id,
+        "phase.update",
+        {
+            "step": "analysis",
+            "status": "completed",
+            "message": "Analysis and recommendation generation finished.",
+        },
+    )
+
+
+@shared_task
 def generate_recommendations_group(
     assertion_output: list[tuple[int, str]], check_id: int
-):
+) -> list | None:
     """
-    Callback after all executions are done. Triggers analysis phase.
+    Callback after all executions are done. Triggers the analysis phase.
 
     Sequence:
-    1. Protocol: Publishes a 'phase.update' event marking the execution phase as completed.
+    1. Protocol: Streams a 'phase.update' event marking the execution phase as completed.
     2. Filtering: Identifies failed assertions that require recommendations.
     3. Verification: Re-checks failure status against the database for safety.
-    4. Launch: If failures exist, publishes a 'phase.update' start event for analysis
-       and launches a Celery group of `generate_compliance_recommendation_task`.
+    4. Launch: If failures exist, streams a 'phase.update' start event for analysis
+       and launches a Celery chord of `generate_compliance_recommendation_task`.
     """
-    publish_event(
-        check_id, "phase.update", {"step": "execution", "status": "completed"}
-    )
+    stream_event(check_id, "phase.update", {"step": "execution", "status": "completed"})
 
     if not assertion_output:
         return []
@@ -352,7 +366,7 @@ def generate_recommendations_group(
     ]
 
     if filtered_results:
-        publish_event(
+        stream_event(
             check_id,
             "phase.update",
             {
@@ -362,27 +376,37 @@ def generate_recommendations_group(
             },
         )
 
-        group(
-            generate_compliance_recommendation_task.s(aid, out, check_id)
-            for aid, out in filtered_results
+        chord(
+            header=[
+                generate_compliance_recommendation_task.s(aid, out, check_id)  # type: ignore[attr-defined]
+                for aid, out in filtered_results
+            ],
+            body=finalize_analysis_task.s(check_id),  # type: ignore[attr-defined]
         ).apply_async()
+    else:
+        # If no failures exist, the analysis phase is effectively complete immediately
+        stream_event(
+            check_id, "phase.update", {"step": "analysis", "status": "completed"}
+        )
 
 
 @shared_task
-def execute_then_recommendations(assertion_ids: list[int], check_id: int):
+def execute_then_recommendations(
+    assertion_ids: list[int], check_id: int
+) -> list | None:
     """
-    Orchestrator: Starts Execution Phase.
+    Orchestrator: starts the execution phase.
 
     Process:
-    1. Protocol: Publishes a 'phase.update' event indicating the execution phase has started.
-    2. Workflow: Initiates a Celery Chord.
+    1. Protocol: Streams a 'phase.update' event indicating the execution phase has started.
+    2. Workflow: Initiates a Celery chord.
        - Header: Executes all SQL assertions in parallel via `execute_sql_assertion_task`.
        - Body: Triggers `generate_recommendations_group` once all executions complete.
     """
     if not assertion_ids:
         return []
 
-    publish_event(
+    stream_event(
         check_id,
         "phase.update",
         {
@@ -394,10 +418,10 @@ def execute_then_recommendations(assertion_ids: list[int], check_id: int):
 
     chord(
         header=[
-            execute_sql_assertion_task.s(assertion_id, check_id)
+            execute_sql_assertion_task.s(assertion_id, check_id)  # type: ignore[attr-defined]
             for assertion_id in assertion_ids
         ],
-        body=generate_recommendations_group.s(check_id),
+        body=generate_recommendations_group.s(check_id),  # type: ignore[attr-defined]
     ).apply_async()
 
 
@@ -407,19 +431,19 @@ def schedule_sql_assertion_pipeline(
     client_db_id: int,
     framework_id: int,
     check_id: int,
-):
+) -> None:
     """
-    Full compliance pipeline:
-    1. Generate assertions
-    2. Execute assertions
-    3. Analyze failures
+    Entry point for the full compliance pipeline:
+    1. Generate assertions (infer_sql_assertions_task)
+    2. Execute assertions (execute_then_recommendations)
+    3. Analyze failures and stream recommendations (generate_recommendations_group → chord)
     """
     chain(
-        infer_sql_assertions_task.s(
+        infer_sql_assertions_task.s(  # type: ignore[attr-defined]
             schema_id,
             client_db_id,
             framework_id,
             check_id,
         ),
-        execute_then_recommendations.s(check_id),
+        execute_then_recommendations.s(check_id),  # type: ignore[attr-defined]
     ).apply_async()

@@ -100,6 +100,13 @@ else
   "${usage_container_image}" \
   redis-server
 fi
+
+gum spin --title "Waiting for redis to be ready" -- \
+  timeout 60s bash -c \
+  "until docker exec ${usage_container_name} redis-cli ping 2>/dev/null | grep -q PONG; \
+  do sleep 1; done"
+
+gum log -l info "Redis is ready"
 '''
 
 [tasks.migrate]

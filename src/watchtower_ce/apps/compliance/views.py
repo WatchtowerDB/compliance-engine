@@ -1,20 +1,24 @@
-import datetime
-import json
+from typing import cast
 
-import redis
-from django.conf import settings
-from django.db.models import QuerySet
+from celery.app.task import Task
 from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import (
+    action,
+    api_view,
+    permission_classes,
+    renderer_classes,
+)
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from . import models, serializers
 from .filters import ClientDBSchemaFilter, ComplianceAssertionFilter
+from .renderers import SSERenderer
+from .sse import RedisSSEStream, build_cloud_event, format_sse
 from .tasks import initialize_model_task, schedule_sql_assertion_pipeline
 
 
@@ -29,7 +33,7 @@ from .tasks import initialize_model_task, schedule_sql_assertion_pipeline
     ),
 )
 class ComplianceFrameworkViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset: QuerySet = models.ComplianceFramework.objects.all()
+    queryset = models.ComplianceFramework.objects.all()
     serializer_class = serializers.ComplianceFrameworkSerializer
 
 
@@ -60,7 +64,7 @@ class ComplianceFrameworkViewSet(viewsets.ReadOnlyModelViewSet):
     ),
 )
 class ClientDBViewSet(viewsets.ModelViewSet):
-    queryset: QuerySet = models.ClientDB.objects.all()
+    queryset = models.ClientDB.objects.all()
     serializer_class = serializers.ClientDBSerializer
 
 
@@ -85,18 +89,25 @@ class ClientDBViewSet(viewsets.ModelViewSet):
     destroy=extend_schema(exclude=True),
 )
 class ClientDBSchemaViewSet(viewsets.ModelViewSet):
-    queryset: QuerySet = models.ClientDBSchema.objects.all()
+    queryset = models.ClientDBSchema.objects.all()
     serializer_class = serializers.ClientDBSchemaSerializer
     filterset_class = ClientDBSchemaFilter
 
     def update(self, request, *args, **kwargs):
-        return Response({"detail": "Update not allowed."}, status=405)
+        return Response(
+            {"detail": "Update not allowed."}, status=status.HTTP_405_METHOD_NOT_ALLOWED
+        )
 
     def partial_update(self, request, *args, **kwargs):
-        return Response({"detail": "Partial update not allowed."}, status=405)
+        return Response(
+            {"detail": "Partial update not allowed."},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
 
     def destroy(self, request, *args, **kwargs):
-        return Response({"detail": "Delete not allowed."}, status=405)
+        return Response(
+            {"detail": "Delete not allowed."}, status=status.HTTP_405_METHOD_NOT_ALLOWED
+        )
 
     @extend_schema(
         request=serializers.ClientDBSchemaUploadSerializer,
@@ -149,7 +160,7 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
     ),
 )
 class ComplianceAssertionViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset: QuerySet = models.ComplianceAssertion.objects.select_related(
+    queryset = models.ComplianceAssertion.objects.select_related(
         "schema", "client_db", "compliance_framework"
     )
     serializer_class = serializers.ComplianceAssertionSerializer
@@ -183,9 +194,9 @@ class ComplianceAssertionViewSet(viewsets.ReadOnlyModelViewSet):
     ),
 )
 class ComplianceCheckViewSet(viewsets.ModelViewSet):
-    queryset: QuerySet = models.ComplianceCheck.objects.all()
+    queryset = models.ComplianceCheck.objects.all()
     serializer_class = serializers.ComplianceCheckSerializer
-    http_method_names: list[str] = ["get", "post", "head", "options"]
+    http_method_names = ["get", "post", "head", "options"]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -193,7 +204,7 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
 
         check = serializer.save(user=request.user)
 
-        schedule_sql_assertion_pipeline.delay(
+        cast(Task, schedule_sql_assertion_pipeline).delay(
             schema_id=check.schema.id,
             client_db_id=check.client_db.id,
             framework_id=check.framework.id,
@@ -205,8 +216,25 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
                 "message": "Compliance check created. Assertions are processing.",
                 "id": check.id,
             },
-            status=201,
+            status=status.HTTP_201_CREATED,
         )
+
+    @extend_schema(
+        summary="Retrieve latest compliance check",
+        description="Return the most recently created compliance check.",
+    )
+    @action(detail=False, methods=["get"], url_path="latest")
+    def latest(self, request):
+        latest_check = self.get_queryset().last()
+
+        if latest_check is None:
+            return Response(
+                {"detail": "No compliance checks found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = self.get_serializer(latest_check)
+        return Response(serializer.data)
 
 
 @extend_schema(
@@ -222,129 +250,72 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
         "**Workflow:**\n"
         "1. Validates that the `ComplianceCheck` with the given `check_id` exists (404 if not).\n"
         "2. If the pipeline has already completed (all failed assertions have recommendations), "
-        "immediately emits a `com.watchtower.system.status` completion event and closes the stream.\n"
-        "3. Otherwise, subscribes to the Redis pub/sub channel `check_updates_{check_id}` "
-        "and emits a `com.watchtower.system.connection` event to confirm the connection.\n"
-        "4. Streams all subsequent Redis messages as CloudEvents until the client disconnects.\n\n"
+        "immediately emits a `com.watchtower.system.completed` event and closes the stream.\n"
+        "3. Otherwise, emits a `com.watchtower.system.connected` event to confirm the connection.\n"
+        "4. Replays any events missed since `Last-Event-ID` (if provided), then tails the "
+        "Redis stream live via XREAD, forwarding events as CloudEvents until the pipeline "
+        "reaches a terminal state.\n\n"
         "Requires authentication."
     ),
 )
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@renderer_classes([SSERenderer])
 def stream_check_updates(request, check_id):
     get_object_or_404(models.ComplianceCheck, pk=check_id)
 
-    def event_stream():
-        failed_assertions = models.ComplianceAssertion.objects.filter(
-            compliance_check_id=check_id, result=False
-        )
+    failed_assertions = models.ComplianceAssertion.objects.filter(
+        compliance_check_id=check_id, result=False
+    )
+    if (
+        failed_assertions.exists()
+        and not failed_assertions.filter(recommendation__isnull=True).exists()
+    ):
 
-        if (
-            failed_assertions.exists()
-            and not failed_assertions.filter(recommendation__isnull=True).exists()
-        ):
-            completion_event = {
-                "specversion": "1.0",
-                "type": "com.watchtower.system.status",
-                "source": "/system/sse",
-                "id": "init-complete",
-                "time": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                "data": {
+        def _done():
+            event = build_cloud_event(
+                event_type=RedisSSEStream.EVT_COMPLETED,
+                source=f"/compliance/checks/{check_id}",
+                data={
                     "status": "completed",
                     "message": "Analysis previously finished.",
                 },
-            }
-            yield f"data: {json.dumps(completion_event)}\n\n"
-            return
+            )
+            yield format_sse(None, event)
 
-        r = redis.from_url(settings.CELERY_BROKER_URL)
-        pubsub = r.pubsub()
-        channel_name = f"check_updates_{check_id}"
+        return StreamingHttpResponse(_done(), content_type="text/event-stream")
 
-        pubsub.subscribe(channel_name)
-
-        try:
-            initial_event = {
-                "specversion": "1.0",
-                "type": "com.watchtower.system.connection",
-                "source": "/system/sse",
-                "id": "init-1",
-                "time": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                "data": {"status": "connected"},
-            }
-            yield f"data: {json.dumps(initial_event)}\n\n"
-
-            for message in pubsub.listen():
-                if message["type"] == "message":
-                    data = message["data"].decode("utf-8")
-                    yield f"data: {data}\n\n"
-        finally:
-            pubsub.unsubscribe(channel_name)
-            r.close()
-
-    return StreamingHttpResponse(event_stream(), content_type="text/event-stream")
+    last_event_id = request.headers.get("Last-Event-ID")
+    sse = RedisSSEStream(f"check_updates_{check_id}")
+    return StreamingHttpResponse(
+        sse.stream(last_event_id), content_type="text/event-stream"
+    )
 
 
 @extend_schema(
     responses={
-        200: OpenApiResponse(
-            description="Server-Sent Events stream (text/event-stream)."
-        ),
+        202: OpenApiResponse(description="Model initialization triggered."),
     },
-    summary="Stream model initialization status",
+    summary="Trigger model initialization",
     description=(
-        "SSE endpoint that triggers and streams the status of the AI model initialization process.\n\n"
-        "**Workflow:**\n"
-        "1. Subscribes to the global Redis pub/sub channel `check_updates_0`.\n"
-        "2. Emits a `com.watchtower.system.connection` event to confirm the connection.\n"
-        "3. Triggers the `initialize_model_task` Celery task asynchronously.\n"
-        "4. Streams status messages from Redis. The stream closes automatically upon receiving "
-        "a terminal status: `initialized`, `already_initialized`, or `error`.\n\n"
-        "Requires authentication."
+        "Enqueues the model initialization task so that compliance checker weights "
+        "are loaded into memory before the first check is submitted. "
+        "Returns immediately; initialization runs asynchronously in the Celery worker.\n\n"
+        "Requires authentication.\n"
+        "WARNING: THIS ENDPOINT WILL CRASH YOUR BACKEND!\n"
+        "IMPLEMENTATION WILL BE CHANGED LATER!\n"
+        "For starters, it'll support GET to poll for the model state. "
+        "Please recognise that this endpoint is not and will not be "
+        "reliable or complete until certain other features are implemented."
     ),
 )
-@api_view(["GET"])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def stream_model_init(request):
-    def event_stream():
-        r = redis.from_url(settings.CELERY_BROKER_URL)
-        pubsub = r.pubsub()
-        channel_name = "check_updates_0"
-        pubsub.subscribe(channel_name)
-
-        try:
-            initial_event = {
-                "specversion": "1.0",
-                "type": "com.watchtower.system.connection",
-                "source": "/system/sse",
-                "id": "init-model",
-                "time": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                "data": {"status": "connected"},
-            }
-            yield f"data: {json.dumps(initial_event)}\n\n"
-
-            initialize_model_task.delay()
-
-            for message in pubsub.listen():
-                if message["type"] == "message":
-                    data = message["data"].decode("utf-8")
-                    try:
-                        payload = json.loads(data)
-                        # renamed from `status` to avoid shadowing `rest_framework.status`
-                        event_status = payload.get("status")
-
-                        yield f"data: {data}\n\n"
-
-                        if event_status in [
-                            "initialized",
-                            "already_initialized",
-                            "error",
-                        ]:
-                            break
-                    except json.JSONDecodeError:
-                        yield f"data: {data}\n\n"
-        finally:
-            pubsub.unsubscribe(channel_name)
-            r.close()
-
-    return StreamingHttpResponse(event_stream(), content_type="text/event-stream")
+def trigger_model_init(request):
+    # TODO: ADD MODEL STATES AFTER NEW SINGLETON IMPLEMENTATION,
+    #       GET FOR POLLING, OTHER STATUS CODES, AND UPDATE THE
+    #       TASK ITSELF.
+    cast(Task, initialize_model_task).delay()
+    return Response(
+        {"message": "Model initialization enqueued."}, status=status.HTTP_202_ACCEPTED
+    )
