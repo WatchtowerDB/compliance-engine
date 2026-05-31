@@ -12,7 +12,7 @@ from rest_framework.decorators import (
     permission_classes,
     renderer_classes,
 )
-from rest_framework.filters import OrderingFilter
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -35,7 +35,8 @@ from .tasks import initialize_model_task, schedule_sql_assertion_pipeline
         summary="List compliance frameworks",
         description=(
             "Return a list of all available compliance frameworks. "
-            "Supports filtering by name and description, and ordering by name or ID."
+            "Supports filtering by name and description, searching on both, "
+            "and ordering by name or ID."
         ),
     ),
     retrieve=extend_schema(
@@ -47,7 +48,14 @@ class ComplianceFrameworkViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = models.ComplianceFramework.objects.all()
     serializer_class = serializers.ComplianceFrameworkSerializer
     filterset_class = ComplianceFrameworkFilter
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
+
+    filter_backends = [
+        DjangoFilterBackend,
+        SearchFilter,
+        OrderingFilter,
+    ]
+
+    search_fields = ["name", "description"]
     ordering_fields = ["name", "id"]
 
 
