@@ -3,6 +3,7 @@ from typing import cast
 from celery.app.task import Task
 from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.decorators import (
@@ -11,12 +12,19 @@ from rest_framework.decorators import (
     permission_classes,
     renderer_classes,
 )
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from . import models, serializers
-from .filters import ClientDBSchemaFilter, ComplianceAssertionFilter
+from .filters import (
+    ClientDBFilter,
+    ClientDBSchemaFilter,
+    ComplianceAssertionFilter,
+    ComplianceCheckFilter,
+    ComplianceFrameworkFilter,
+)
 from .renderers import SSERenderer
 from .sse import RedisSSEStream, build_cloud_event, format_sse
 from .tasks import initialize_model_task, schedule_sql_assertion_pipeline
@@ -25,7 +33,11 @@ from .tasks import initialize_model_task, schedule_sql_assertion_pipeline
 @extend_schema_view(
     list=extend_schema(
         summary="List compliance frameworks",
-        description="Return a list of all available compliance frameworks.",
+        description=(
+            "Return a list of all available compliance frameworks. "
+            "Supports filtering by name and description, searching on both, "
+            "and ordering by name or ID."
+        ),
     ),
     retrieve=extend_schema(
         summary="Retrieve a compliance framework",
@@ -35,12 +47,25 @@ from .tasks import initialize_model_task, schedule_sql_assertion_pipeline
 class ComplianceFrameworkViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = models.ComplianceFramework.objects.all()
     serializer_class = serializers.ComplianceFrameworkSerializer
+    filterset_class = ComplianceFrameworkFilter
+
+    filter_backends = [
+        DjangoFilterBackend,
+        SearchFilter,
+        OrderingFilter,
+    ]
+
+    search_fields = ["name", "description"]
+    ordering_fields = ["name", "id"]
 
 
 @extend_schema_view(
     list=extend_schema(
         summary="List client databases",
-        description="Return a list of all registered client databases.",
+        description=(
+            "Return a list of all registered client databases. "
+            "Supports filtering by name and ordering by name or ID."
+        ),
     ),
     retrieve=extend_schema(
         summary="Retrieve a client database",
@@ -66,12 +91,18 @@ class ComplianceFrameworkViewSet(viewsets.ReadOnlyModelViewSet):
 class ClientDBViewSet(viewsets.ModelViewSet):
     queryset = models.ClientDB.objects.all()
     serializer_class = serializers.ClientDBSerializer
+    filterset_class = ClientDBFilter
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    ordering_fields = ["name", "id"]
 
 
 @extend_schema_view(
     list=extend_schema(
         summary="List database schemas",
-        description="Return a list of all client database schemas.",
+        description=(
+            "Return a list of all client database schemas. Results default to newest first. "
+            "Supports ordering by created_at and id."
+        ),
     ),
     retrieve=extend_schema(
         summary="Retrieve a database schema",
@@ -92,6 +123,8 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
     queryset = models.ClientDBSchema.objects.all()
     serializer_class = serializers.ClientDBSchemaSerializer
     filterset_class = ClientDBSchemaFilter
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    ordering_fields = ["created_at", "id"]
 
     def update(self, request, *args, **kwargs):
         return Response(
@@ -151,7 +184,9 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
         summary="List compliance assertions",
         description=(
             "Return a filtered list of compliance assertions. "
-            "Supports filtering by schema, client database, and compliance framework."
+            "Supports filtering by schema, database, framework, result, and check. "
+            "Supports ordering by compliance_check, client_db, result, or id. "
+            "Use the `ordering` parameter (e.g., `?ordering=-id`, `ordering=client_db,id`)."
         ),
     ),
     retrieve=extend_schema(
@@ -165,12 +200,18 @@ class ComplianceAssertionViewSet(viewsets.ReadOnlyModelViewSet):
     )
     serializer_class = serializers.ComplianceAssertionSerializer
     filterset_class = ComplianceAssertionFilter
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    ordering_fields = ["compliance_check", "client_db", "result", "id"]
 
 
 @extend_schema_view(
     list=extend_schema(
         summary="List compliance checks",
-        description="Return a list of all compliance checks.",
+        description=(
+            "Return a list of all compliance checks. Results default to newest first. "
+            "Supports filtering by framework and database, and ordering by date, "
+            "framework, client_db, or id."
+        ),
     ),
     retrieve=extend_schema(
         summary="Retrieve a compliance check",
@@ -197,6 +238,9 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
     queryset = models.ComplianceCheck.objects.all()
     serializer_class = serializers.ComplianceCheckSerializer
     http_method_names = ["get", "post", "head", "options"]
+    filterset_class = ComplianceCheckFilter
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    ordering_fields = ["date", "framework", "client_db", "id"]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
