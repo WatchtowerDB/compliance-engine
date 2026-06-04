@@ -1,7 +1,5 @@
 import textwrap
-import threading
 from pathlib import Path
-from typing import Optional
 
 from ..core.compliance_checker import ComplianceChecker
 
@@ -27,31 +25,7 @@ class PCIComplianceChecker(ComplianceChecker):
             The compliance standard being checked ("PCI-DSS v4.0.1").
     """
 
-    _instance: Optional["PCIComplianceChecker"] = None
-    _lock: threading.Lock = threading.Lock()
     standard: str = "PCI-DSS v4.0.1"
-
-    def __new__(cls, *args, **kwargs):
-        """
-        Create a new instance of PCIComplianceChecker, ensuring singleton behavior.
-
-        This method implements the Singleton design pattern using double-checked locking
-        to ensure thread safety. Only one instance of the class will exist throughout the
-        application's lifetime.
-
-        Args:
-            cls: The class being instantiated.
-            *args: Variable length argument list passed to the constructor.
-            **kwargs: Arbitrary keyword arguments passed to the constructor.
-
-        Returns:
-            PCIComplianceChecker: The singleton instance of the class.
-        """
-        if not cls._instance:
-            with cls._lock:
-                if not cls._instance:
-                    cls._instance = super(PCIComplianceChecker, cls).__new__(cls)
-        return cls._instance
 
     def __init__(
         self,
@@ -161,7 +135,7 @@ class PCIComplianceChecker(ComplianceChecker):
                these are two separate topics, so two separate questions if needed).
             4. Avoid using raw database field names in the questions; translate them into natural English descriptions (e.g., "card number" instead of "card_number", etc.).
             5. Ensure questions are retrieval friendly to vector stores. They should sound like they are seeking specific guidance from the standard.
-            
+
             Response:
             - Respond ONLY with a valid JSON list of strings containing the questions.
             - Ensure the output is valid JSON and respects proper escaping.

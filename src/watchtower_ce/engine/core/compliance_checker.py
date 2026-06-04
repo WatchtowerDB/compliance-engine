@@ -4,10 +4,11 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Iterator
 
+from django.conf import settings
 from llama_cpp import CreateCompletionStreamResponse
 
 from .context_retriever import ContextRetriever
-from .llm_inference import LLMInference
+from .llm_inference import LLMInferencePool
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +27,6 @@ class ComplianceChecker(ABC):
     3. Provide specific remediation recommendations
 
     Subclasses must implement standard-specific prompt engineering and analysis logic.
-
-    Attributes:
-        context_retriever (ContextRetriever):
-            Vector store interface for document retrieval.
-        llm (LLMInference):
-            Language model interface for generation tasks.
     """
 
     def __init__(
@@ -82,14 +77,15 @@ class ComplianceChecker(ABC):
                 Whether to use SWA-Full attention (if supported by the model and hardware).
                 Defaults to `None`, and leave it like that if you don't know what it is.
         """
-        self.context_retriever = ContextRetriever(
+        self._context_retriever = ContextRetriever(
             chroma_dir=chroma_dir,
             collection_name=collection_name,
             embedding_model=embedding_model,
             retrieval_k=retrieval_k,
         )
-        self.llm = LLMInference(
-            model_path=base_model_path,
+        self._llm_pool = LLMInferencePool.for_model(
+            base_model_path,
+            pool_size=settings.LLM_INSTANCE_POOL_SIZE,
             context_window=context_window,
             n_gpu_layers=n_gpu_layers,
             prompt_template=prompt_template,
@@ -304,9 +300,10 @@ class ComplianceChecker(ABC):
         # - https://arxiv.org/html/2506.07295v1
         # - https://unsloth.ai/docs/models/gemma-4
         # - https://ollama.com/library/gemma4:latest
-        response = self.llm.generate(
-            prompt, max_tokens=1024, temperature=0.3, stream=False
-        )
+        with self._llm_pool.acquire() as llm:
+            response = llm.generate(
+                prompt, max_tokens=1024, temperature=0.3, stream=False
+            )
 
         return self._parse_list_response(response)
 
@@ -337,9 +334,10 @@ class ComplianceChecker(ABC):
         prompt = self._build_assertion_questions_prompt(assertion)
 
         # Use lower temperature for more consistent, focused question generation
-        response = self.llm.generate(
-            prompt, max_tokens=2048, temperature=0.1, stream=False
-        )
+        with self._llm_pool.acquire() as llm:
+            response = llm.generate(
+                prompt, max_tokens=2048, temperature=0.1, stream=False
+            )
 
         return self._parse_list_response(response, 4)
 
@@ -376,10 +374,10 @@ class ComplianceChecker(ABC):
                 question,
             )
             if retrieval_k:
-                for context in self.context_retriever.context(question, retrieval_k):
+                for context in self._context_retriever.context(question, retrieval_k):
                     all_contexts.add(context.page_content)
             else:
-                for context in self.context_retriever.context(question):
+                for context in self._context_retriever.context(question):
                     all_contexts.add(context.page_content)
 
         combined_context = "\n\n--- Context chunks seperator ---\n\n".join(all_contexts)
@@ -418,9 +416,10 @@ class ComplianceChecker(ABC):
         prompt = self._build_assertions_prompt(context, schema)
 
         logger.info("Generating SQL assertions")
-        response = self.llm.generate(
-            prompt, max_tokens=2048, temperature=0.1, stream=False
-        )
+        with self._llm_pool.acquire() as llm:
+            response = llm.generate(
+                prompt, max_tokens=2048, temperature=0.1, stream=False
+            )
 
         assertions = self._parse_list_response(response, fallback_item_limit=10)
         logger.info("Successfully generated %s SQL assertions", len(assertions))
@@ -466,9 +465,8 @@ class ComplianceChecker(ABC):
             context, assertion, failure_result
         )
 
-        stream_chunks = self.llm.stream_chunks(prompt, max_tokens=2048, temperature=0.9)
-
-        return stream_chunks
+        with self._llm_pool.acquire() as llm:
+            yield from llm.stream_chunks(prompt, max_tokens=2048, temperature=0.9)
 
     def analyze_failed_assertion_stdout(
         self, assertion: str, failure_result: str
@@ -498,9 +496,10 @@ class ComplianceChecker(ABC):
         )
 
         logger.info("Analyzing failed assertion")
-        response = self.llm.generate(
-            prompt, max_tokens=2048, temperature=0.9, stream=True
-        )
+        with self._llm_pool.acquire() as llm:
+            response = llm.generate(
+                prompt, max_tokens=2048, temperature=0.9, stream=True
+            )
         logger.info("Successfully analyzed failed assertion")
 
         return response
@@ -521,7 +520,8 @@ class ComplianceChecker(ABC):
         Returns:
             int: The token count.
         """
-        return self.llm.count_tokens(text)
+        with self._llm_pool.acquire() as llm:
+            return llm.count_tokens(text)
 
     def close(self):
         """
@@ -537,4 +537,9 @@ class ComplianceChecker(ABC):
             ... finally:
             ...     checker.close()
         """
-        self.llm.close()
+        # ! POOL MANAGES LIFECYCLE NOW, NOTHING TO DO PER CHECKER
+        # ! THAT BEING SAID, A PROPER CLOSING MECHANISM IS NOT PARTICULARLY
+        # !  ESTABLISHED IN THE POOL YET.
+        # TODO: Make sure resources are managed correctly after the pool works
+        # self.llm.close()
+        pass

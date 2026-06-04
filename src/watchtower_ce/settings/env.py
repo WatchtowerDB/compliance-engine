@@ -46,6 +46,8 @@ DATABASES: dict[str, dj_database_url.DBConfig] = {
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 
+LLM_INSTANCE_POOL_SIZE: int = int(os.getenv("LLM_INSTANCE_POOL_SIZE", "1"))
+
 USE_MOCK_COMPLIANCE_CHECKER: bool = (
     os.getenv("USE_MOCK_COMPLIANCE_CHECKER", "false").lower() == "true"
 )

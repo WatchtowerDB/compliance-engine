@@ -374,9 +374,9 @@ class LLMInferencePool:
 
     State transitions:
 
-                                       → INITIALIZED
+                                       ↗ INITIALIZED
         NOT_INITIALIZED → INITIALIZING → PARTIAL (some failed)
-                                       → ERROR   (all failed)
+                                       ↘ ERROR   (all failed)
     """
 
     _pools: dict[str, "LLMInferencePool"] = {}
@@ -556,10 +556,10 @@ class LLMInferencePool:
 
         Pool state transitions automatically as loading progresses:
 
-            NOT_INITIALIZED -> INITIALIZING
-                            -> INITIALIZED
-                            -> PARTIAL
-                            -> ERROR
+            NOT_INITIALIZED → INITIALIZING
+                            → INITIALIZED
+                            → PARTIAL
+                            → ERROR
 
         Subsequent calls after initialization has started are ignored.
 
