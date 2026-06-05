@@ -344,7 +344,8 @@ def stream_check_updates(request, check_id):
     summary="Get inference server status",
     description=(
         "Return the current state of the llama-server inference server.\n\n"
-        "Queries the server's `/health` endpoint directly.\n\n"
+        "Queries the server's `/health` endpoint directly. "
+        'Possible statuses: "not_initialized", "initializing", "initialized", "error".\n\n'
         "Requires authentication."
     ),
 )
