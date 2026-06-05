@@ -130,10 +130,8 @@ class RedisSSEStream:
         """
         Return True if this event should close the stream.
 
-        Terminal events include:
+        Terminal events currently include:
         - compliance phase updates with step="analysis" and status="completed"
-        - compliance phase updates with step="model_initialization" and
-          status="completed" or "partial"
 
         Args:
             cloud_event (dict): An event dictionary to evaluate.
@@ -147,11 +145,6 @@ class RedisSSEStream:
 
         if event_type == "com.watchtower.compliance.phase.update":
             if data.get("step") == "analysis" and data.get("status") == "completed":
-                return True
-            if data.get("step") == "model_initialization" and data.get("status") in {
-                "completed",
-                "partial",
-            }:
                 return True
 
         return False
