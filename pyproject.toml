@@ -41,11 +41,6 @@ ai = [
   "langchain-chroma~=1.1",
   "langchain-community~=0.4",
   "langchain-huggingface~=1.2",
-  "llama-cpp-python~=0.3",
-  "sentence-transformers~=5.5",
-  "torch~=2.9.0",
-  "torchaudio~=2.9.0",
-  "torchvision~=0.24.0",
 ]
 
 [build-system]

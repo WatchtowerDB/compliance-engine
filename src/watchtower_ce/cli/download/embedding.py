@@ -1,13 +1,13 @@
 from pathlib import Path
 
 import click
-from sentence_transformers import SentenceTransformer
+from huggingface_hub import snapshot_download
 
 
 @click.command(
     "embedding",
-    short_help="Download a Sentence Transformer embeddings model",
-    help="Download a Sentence Transformer embeddings model from HuggingFace.",
+    short_help="Download an embeddings model",
+    help="Download an embeddings model from HuggingFace.",
 )
 @click.help_option("-h", "--help")
 @click.option(
@@ -24,12 +24,9 @@ from sentence_transformers import SentenceTransformer
     help="Model directory on disk. Can be relative to the current working directory or absolute.",
     default="",
 )
-def embedding(
-    name: str,
-    output_dir: str,
-) -> None:
+def embedding(name: str, output_dir: str) -> None:
     """
-    Downloads a Sentence Transformer model to a local directory for offline use.
+    Downloads a model to a local directory from HuggingFace Hub for offline use.
 
     Args:
         name (str):
@@ -52,9 +49,6 @@ def embedding(
     # Ensure parent directory exists
     absolute_path.mkdir(parents=True, exist_ok=True)
 
-    print(f"Downloading embedding model '{name}'...")
-    model = SentenceTransformer(name)
-
-    print(f"Saving model to '{absolute_path}'...")
-    model.save_pretrained(str(absolute_path))
-    print(f"Model saved successfully to {absolute_path}")
+    print(f"Downloading embedding model '{name}' via huggingface_hub...")
+    snapshot_download(repo_id=name, local_dir=absolute_path)
+    print(f"Model downloaded successfully to {absolute_path}")

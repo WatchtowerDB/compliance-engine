@@ -23,6 +23,8 @@ _.python.venv = { create = true, path = ".venv" }
 PYTHONPATH = "{{ config_root }}/src"
 DJANGO_SETTINGS_MODULE = "watchtower_ce.settings"
 DATABASE_URL = "postgresql://wtce:wtce@localhost:5432/wtce"
+LLM_INSTANCE_POOL_SIZE = 1
+LLM_SERVER_URL = "http://localhost:6767"
 CMAKE_ARGS = "-DGGML_CUDA=on"
 
 [tasks.install]
@@ -149,9 +151,49 @@ run = '''
 celery -A watchtower_ce worker -P solo -l INFO
 '''
 
+[tasks.llm-server]
+description = "Run llama.cpp inference server"
+tools = { docker-cli = "29" }
+usage = '''
+flag "-m --model <model>" help="Path to GGUF model"
+flag "-n --gpu-layers <gpu-layers>" help="GPU layers to offload" default="-1"
+flag "-c --ctx-size <ctx-size>" help="Context size" default="131072"
+flag "-f --flash-attn <flash-attn>" help="Use flash attention ('on', 'off', or 'auto')" default="on"
+flag "-p --parallel <parallel>" help="Parallel request slots"
+flag "-H --host <host>" help="Host to bind to" default="127.0.0.1"
+flag "-P --port <port>" help="Port to bind to" default="6767"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "${USE_MOCK_COMPLIANCE_CHECKER:-false}" = "true" ]; then
+gum log -l info "Using mock compliance checker."
+exit 0
+fi
+
+gum log -l info "Starting llama.cpp server"
+MODEL_PATH="${usage_model:-$WTCE_BASE_MODEL_PATH}"
+PARALLEL="${usage_parallel:-${LLM_INSTANCE_POOL_SIZE:-1}}"
+
+docker run --rm \
+  --gpus all \
+  --name wtce-llm-server-dev \
+  -p "${usage_port}:${usage_port}" \
+  -v "$(dirname "${MODEL_PATH}"):/models:ro" \
+  ghcr.io/ggml-org/llama.cpp:server-cuda13 \
+  -m "/models/$(basename "${MODEL_PATH}")" \
+  -ngl "${usage_gpu_layers}" \
+  -c "${usage_ctx_size}" \
+  -fa "${usage_flash_attn}" \
+  -np "${PARALLEL}" \
+  --host "0.0.0.0" \
+  --port "${usage_port}"
+'''
+
 [tasks.backend]
 description = "Starts the entire backend application"
-depends = ["devserver", "celery"]
+depends = ["devserver", "celery", "llm-server"]
 
 [tasks.stop-dev]
 description = "Stop all running dev containers (requires containers to have the defined prefix)"

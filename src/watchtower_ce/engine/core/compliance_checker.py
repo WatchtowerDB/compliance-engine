@@ -4,11 +4,8 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Iterator
 
-from django.conf import settings
-from llama_cpp import CreateCompletionStreamResponse
-
 from .context_retriever import ContextRetriever
-from .llm_inference import LLMInferencePool
+from .llm_inference import LLMInference
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +45,6 @@ class ComplianceChecker(ABC):
         Initialize the compliance checker with RAG components.
 
         Args:
-            base_model_path (Path | str):
-                Path to the GGUF model file for LLM inference.
             chroma_dir (Path | str):
                 Directory containing the Chroma vector database.
             collection_name (str):
@@ -83,16 +78,10 @@ class ComplianceChecker(ABC):
             embedding_model=embedding_model,
             retrieval_k=retrieval_k,
         )
-        self._llm_pool = LLMInferencePool.for_model(
-            base_model_path,
-            pool_size=settings.LLM_INSTANCE_POOL_SIZE,
-            context_window=context_window,
-            n_gpu_layers=n_gpu_layers,
+        self._llm = LLMInference(
             prompt_template=prompt_template,
             stop=stop,
             top_k=top_k,
-            fa=fa,
-            swa_full=swa_full,
         )
 
     @abstractmethod
@@ -300,10 +289,9 @@ class ComplianceChecker(ABC):
         # - https://arxiv.org/html/2506.07295v1
         # - https://unsloth.ai/docs/models/gemma-4
         # - https://ollama.com/library/gemma4:latest
-        with self._llm_pool.acquire() as llm:
-            response = llm.generate(
-                prompt, max_tokens=1024, temperature=0.3, stream=False
-            )
+        response = self._llm.generate(
+            prompt, max_tokens=1024, temperature=0.3, stream=False
+        )
 
         return self._parse_list_response(response)
 
@@ -334,10 +322,9 @@ class ComplianceChecker(ABC):
         prompt = self._build_assertion_questions_prompt(assertion)
 
         # Use lower temperature for more consistent, focused question generation
-        with self._llm_pool.acquire() as llm:
-            response = llm.generate(
-                prompt, max_tokens=2048, temperature=0.1, stream=False
-            )
+        response = self._llm.generate(
+            prompt, max_tokens=2048, temperature=0.1, stream=False
+        )
 
         return self._parse_list_response(response, 4)
 
@@ -416,10 +403,9 @@ class ComplianceChecker(ABC):
         prompt = self._build_assertions_prompt(context, schema)
 
         logger.info("Generating SQL assertions")
-        with self._llm_pool.acquire() as llm:
-            response = llm.generate(
-                prompt, max_tokens=2048, temperature=0.1, stream=False
-            )
+        response = self._llm.generate(
+            prompt, max_tokens=2048, temperature=0.1, stream=False
+        )
 
         assertions = self._parse_list_response(response, fallback_item_limit=10)
         logger.info("Successfully generated %s SQL assertions", len(assertions))
@@ -428,7 +414,7 @@ class ComplianceChecker(ABC):
 
     def analyze_failed_assertion(
         self, assertion: str, failure_result: str
-    ) -> Iterator[CreateCompletionStreamResponse]:
+    ) -> Iterator[dict]:
         """
         Analyze a failed assertion and provide remediation recommendations.
 
@@ -442,7 +428,7 @@ class ComplianceChecker(ABC):
                 The result returned by the failed assertion (violating rows/data).
 
         Returns:
-            Iterator[CreateCompletionStreamResponse]: An iterator yielding chunks of the
+            Iterator[dict]: An iterator yielding chunks of the
                 generated analysis. This is used for streaming output.
 
         Example:
@@ -465,8 +451,7 @@ class ComplianceChecker(ABC):
             context, assertion, failure_result
         )
 
-        with self._llm_pool.acquire() as llm:
-            yield from llm.stream_chunks(prompt, max_tokens=2048, temperature=0.9)
+        yield from self._llm.stream_chunks(prompt, max_tokens=2048, temperature=0.9)
 
     def analyze_failed_assertion_stdout(
         self, assertion: str, failure_result: str
@@ -496,10 +481,9 @@ class ComplianceChecker(ABC):
         )
 
         logger.info("Analyzing failed assertion")
-        with self._llm_pool.acquire() as llm:
-            response = llm.generate(
-                prompt, max_tokens=2048, temperature=0.9, stream=True
-            )
+        response = self._llm.generate(
+            prompt, max_tokens=2048, temperature=0.9, stream=True
+        )
         logger.info("Successfully analyzed failed assertion")
 
         return response
@@ -520,8 +504,7 @@ class ComplianceChecker(ABC):
         Returns:
             int: The token count.
         """
-        with self._llm_pool.acquire() as llm:
-            return llm.count_tokens(text)
+        return self._llm.count_tokens(text)
 
     def close(self):
         """
@@ -537,9 +520,6 @@ class ComplianceChecker(ABC):
             ... finally:
             ...     checker.close()
         """
-        # ! POOL MANAGES LIFECYCLE NOW, NOTHING TO DO PER CHECKER
-        # ! THAT BEING SAID, A PROPER CLOSING MECHANISM IS NOT PARTICULARLY
-        # !  ESTABLISHED IN THE POOL YET.
-        # TODO: Make sure resources are managed correctly after the pool works
+        # TODO: Make sure resources are managed correctly after the server works
         # self.llm.close()
         pass
