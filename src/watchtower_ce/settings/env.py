@@ -48,15 +48,14 @@ CELERY_RESULT_BACKEND = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 
 LLM_INSTANCE_POOL_SIZE: int = int(os.getenv("LLM_INSTANCE_POOL_SIZE", "1"))
 LLM_SERVER_URL: str = os.getenv("LLM_SERVER_URL", "http://127.0.0.1:6767")
-
-USE_MOCK_COMPLIANCE_CHECKER: bool = (
-    os.getenv("USE_MOCK_COMPLIANCE_CHECKER", "false").lower() == "true"
+LLM_USE_MOCK_COMPLIANCE_CHECKER: bool = (
+    os.getenv("LLM_USE_MOCK_COMPLIANCE_CHECKER", "false").lower() == "true"
+)
+LLM_SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING: bool = (
+    os.getenv("LLM_SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING", "false").lower() == "true"
 )
 
-SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING: bool = (
-    os.getenv("SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING", "false").lower() == "true"
-)
-
+# TODO: change the variable name to LLM_BASE_MODEL_PATH
 BASE_MODEL_PATH: t.Optional[Path] = (
     Path(os.environ["WTCE_BASE_MODEL_PATH"])
     if os.getenv("WTCE_BASE_MODEL_PATH")

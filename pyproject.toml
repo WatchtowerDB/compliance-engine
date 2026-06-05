@@ -41,6 +41,8 @@ ai = [
   "langchain-chroma~=1.1",
   "langchain-community~=0.4",
   "langchain-huggingface~=1.2",
+  "sentence-transformers~=5.5",  # needed by langchain-huggingface
+  "torch~=2.12",  # needed by sentence-transformers
 ]
 
 [build-system]
@@ -60,3 +62,11 @@ ignore = ["F403"]
 include-package-data = true
 
 [tool.setuptools_scm]
+
+[tool.uv.sources]
+torch = [{ index = "torch-cpu" }]
+
+[[tool.uv.index]]
+name = "torch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
