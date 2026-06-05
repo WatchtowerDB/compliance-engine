@@ -160,7 +160,7 @@ flag "-n --gpu-layers <gpu-layers>" help="GPU layers to offload" default="-1"
 flag "-c --ctx-size <ctx-size>" help="Context size" default="131072"
 flag "-f --flash-attn <flash-attn>" help="Use flash attention ('on', 'off', or 'auto')" default="on"
 flag "-p --parallel <parallel>" help="Parallel request slots"
-flag "-H --host <host>" help="Host to bind to" default="127.0.0.1"
+flag "-H --host <host>" help="Host to bind to" default="0.0.0.0"
 flag "-P --port <port>" help="Port to bind to" default="6767"
 '''
 run = '''
@@ -187,7 +187,7 @@ docker run --rm \
   -c "${usage_ctx_size}" \
   -fa "${usage_flash_attn}" \
   -np "${PARALLEL}" \
-  --host "0.0.0.0" \
+  --host "${usage_host}" \
   --port "${usage_port}"
 '''
 
