@@ -65,7 +65,9 @@ class ContextRetriever:
         self._retriever: Chroma
 
         logger.info('Loading embedding model "%s"', embedding_model)
-        self._embedding_model = HuggingFaceEmbeddings(model_name=str(embedding_model))
+        self._embedding_model = HuggingFaceEmbeddings(
+            model_name=str(embedding_model), model_kwargs={"device": "cpu"}
+        )
         logger.info('Successfully loaded embedding model "%s"', embedding_model)
 
         logger.info('Initializing Chroma retriever for "%s"', self.collection_name)
