@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 # Read timeout is long because LLM generation can be slow.
 _http_client = httpx.Client(
     base_url=settings.LLM_SERVER_URL,
-    timeout=httpx.Timeout(connect=10.0, read=300.0, write=30.0, pool=None),
+    timeout=httpx.Timeout(connect=30.0, read=300.0, write=30.0, pool=None),
 )
 
 
@@ -100,6 +100,7 @@ class LLMInference:
         with _http_client.stream(
             "POST",
             "/v1/completions",
+            timeout=httpx.Timeout(read=None),
             json={
                 "prompt": formatted_prompt,
                 "max_tokens": max_tokens,
