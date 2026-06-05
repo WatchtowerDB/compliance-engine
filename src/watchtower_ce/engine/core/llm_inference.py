@@ -8,19 +8,28 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+
+class _TimeoutConfig(httpx.Timeout, Enum):
+    """Timeout configuration for the LLM inference client."""
+
+    DEFAULT = httpx.Timeout(connect=30.0, read=30.0, write=10.0, pool=10)
+    STREAMING = httpx.Timeout(connect=10.0, read=None, write=30.0, pool=None)
+    BATCH = httpx.Timeout(connect=10.0, read=300.0, write=30.0, pool=None)
+    HEALTH = httpx.Timeout(connect=5.0, read=5.0, write=5.0, pool=5.0)
+
+
 # Module-level persistent client; one connection pool for the entire process.
 # All checkers share this client; the server handles concurrency.
 # Read timeout is long because LLM generation can be slow.
 _http_client = httpx.Client(
-    base_url=settings.LLM_SERVER_URL,
-    timeout=httpx.Timeout(connect=30.0, read=300.0, write=30.0, pool=None),
+    base_url=settings.LLM_SERVER_URL, timeout=_TimeoutConfig.DEFAULT
 )
 
 
 class LLMInference:
     """HTTP client wrapper around the llama inference server."""
 
-    class ServerStatus(Enum):
+    class ServerStatus(str, Enum):
         """
         Namespace for inference server status string constants.
 
@@ -104,7 +113,7 @@ class LLMInference:
         with _http_client.stream(
             "POST",
             "/v1/completions",
-            timeout=httpx.Timeout(connect=30.0, read=None, write=30.0, pool=None),
+            timeout=_TimeoutConfig.STREAMING,
             json={
                 "prompt": formatted_prompt,
                 "max_tokens": max_tokens,
@@ -181,6 +190,7 @@ class LLMInference:
         formatted_prompt = self.prompt_template.format(prompt=prompt)
         response = _http_client.post(
             "/v1/completions",
+            timeout=_TimeoutConfig.BATCH,
             json={
                 "prompt": formatted_prompt,
                 "max_tokens": max_tokens,
@@ -278,7 +288,7 @@ class LLMInference:
                 with the raw server response body or error description.
         """
         try:
-            response = _http_client.get("/health", timeout=5.0)
+            response = _http_client.get("/health", timeout=_TimeoutConfig.HEALTH)
             if response.status_code == 200:
                 return {
                     "status": self.ServerStatus.INITIALIZED,
