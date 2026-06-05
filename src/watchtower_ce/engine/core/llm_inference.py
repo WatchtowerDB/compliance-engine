@@ -1,5 +1,6 @@
 import json
 import logging
+from enum import Enum
 from typing import Iterator
 
 import httpx
@@ -17,18 +18,21 @@ _http_client = httpx.Client(
 
 
 class LLMInference:
-    """
-    HTTP client wrapper around the llama inference server.
+    """HTTP client wrapper around the llama inference server."""
 
-    Attributes:
-        prompt_template (str):
-            Template string for formatting prompts. Use `{prompt}`
-            as a placeholder for the actual prompt text.
-        stop (list[str]):
-            Stop sequences that halt generation.
-        top_k (int):
-            Number of highest-probability tokens considered during sampling.
-    """
+    class ServerStatus(Enum):
+        """
+        Namespace for inference server status string constants.
+
+        The llama-server communicates readiness through HTTP status codes.
+        These constants normalize that into strings suitable for API responses
+        and SSE event payloads.
+        """
+
+        NOT_INITIALIZED = "not_initialized"  # server not reachable
+        INITIALIZING = "initializing"  # server up, model still loading (HTTP 503)
+        INITIALIZED = "initialized"  # server ready (HTTP 200)
+        ERROR = "error"  # unexpected response or exception
 
     def __init__(
         self,
@@ -100,7 +104,7 @@ class LLMInference:
         with _http_client.stream(
             "POST",
             "/v1/completions",
-            timeout=httpx.Timeout(read=None),
+            timeout=httpx.Timeout(connect=30.0, read=None, write=30.0, pool=None),
             json={
                 "prompt": formatted_prompt,
                 "max_tokens": max_tokens,
@@ -255,6 +259,47 @@ class LLMInference:
                 "Tokenize endpoint unavailable; falling back to character estimate"
             )
             return len(text) // 4
+
+    def health(self) -> dict:
+        """
+        Query the llama-server `/health` endpoint and return a normalized
+        status dict.
+
+        The native llama-server communicates readiness through HTTP status codes:
+
+        - `200`: server and model are ready → `initialized`
+        - `503`: server is up but model is still loading → `initializing`
+        - `ConnectError`: server is not running → `not_initialized`
+        - Anything else → `error`
+
+        Returns:
+            dict: A dict with at minimum a `status` key (one of
+                `ServerStatus` constants) and optionally a `detail` key
+                with the raw server response body or error description.
+        """
+        try:
+            response = _http_client.get("/health", timeout=5.0)
+            if response.status_code == 200:
+                return {
+                    "status": self.ServerStatus.INITIALIZED,
+                    "detail": response.json(),
+                }
+            if response.status_code == 503:
+                return {
+                    "status": self.ServerStatus.INITIALIZING,
+                    "detail": response.json(),
+                }
+            return {
+                "status": self.ServerStatus.ERROR,
+                "detail": {"error": f"Unexpected status {response.status_code}"},
+            }
+        except httpx.ConnectError:
+            return {
+                "status": self.ServerStatus.NOT_INITIALIZED,
+                "detail": {"error": "Inference server unreachable."},
+            }
+        except Exception as e:
+            return {"status": self.ServerStatus.ERROR, "detail": {"error": str(e)}}
 
     def close(self) -> None:
         """

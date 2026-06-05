@@ -28,18 +28,13 @@ class ComplianceChecker(ABC):
 
     def __init__(
         self,
-        base_model_path: Path | str,
         chroma_dir: Path | str,
         collection_name: str,
         embedding_model: Path | str = "sentence-transformers/all-MiniLM-L12-v2",
         retrieval_k: int = 4,
-        context_window: int = 8192,
-        n_gpu_layers: int = -1,
         prompt_template: str = "<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
         stop: str | list[str] | None = ["<turn|>"],
         top_k: int = 64,
-        fa: bool = True,
-        swa_full: bool | None = None,
     ) -> None:
         """
         Initialize the compliance checker with RAG components.
@@ -54,10 +49,6 @@ class ComplianceChecker(ABC):
                 Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`.
             retrieval_k (int):
                 Number of similar documents to retrieve per query. Defaults to `4`.
-            context_window (int):
-                Maximum context length for the LLM in tokens. Defaults to `8192`.
-            n_gpu_layers (int):
-                GPU layers to offload. `-1` for all, `0` for CPU only. Defaults to `-1`.
             prompt_template (str):
                 Template for formatting LLM prompts. Should include `{prompt}`
                 placeholder. Defaults to Gemma 4's format: `"<|turn>user\n{prompt}<turn|>\n<|turn>model\n"`.
@@ -66,11 +57,6 @@ class ComplianceChecker(ABC):
             top_k (int):
                 The number of highest probability tokens to keep for top-k sampling.
                 Higher values increase diversity but may reduce coherence. Defaults to `64`, Gemma 4's default.
-            fa (bool):
-                Whether to use flash attention (if supported by the model and hardware). Defaults to `True`.
-            swa_full (bool | None):
-                Whether to use SWA-Full attention (if supported by the model and hardware).
-                Defaults to `None`, and leave it like that if you don't know what it is.
         """
         self._context_retriever = ContextRetriever(
             chroma_dir=chroma_dir,

@@ -17,5 +17,5 @@ urlpatterns: list[URLPattern | URLResolver] = [
         views.stream_check_updates,
         name="stream-check-updates",
     ),
-    path("model/init/", views.trigger_model_init, name="trigger-model-init"),
+    path("model/status/", views.model_status, name="model-status"),
 ]

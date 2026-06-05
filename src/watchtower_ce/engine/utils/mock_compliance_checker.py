@@ -11,6 +11,7 @@ from typing import Iterator
 logger = logging.getLogger(__name__)
 
 
+# TODO: CHANGE THIS ENTIRE IMPLEMENTATION TO MATCH THE NEW COMPLIANCE CHECKER
 class MockComplianceChecker:
     """
     A lightweight mock compliance checker for development workflows.
@@ -25,7 +26,7 @@ class MockComplianceChecker:
     ```python
     from django.conf import settings
 
-    if settings.USE_MOCK_COMPLIANCE_CHECKER:
+    if settings.LLM_USE_MOCK_COMPLIANCE_CHECKER:
         from watchtower_ce.engine.utils.mock_compliance_checker import MockComplianceChecker as PCIComplianceChecker
     else:
         from watchtower_ce.engine.standards.pci_compliance_checker import PCIComplianceChecker
@@ -65,18 +66,13 @@ class MockComplianceChecker:
 
     def __init__(
         self,
-        base_model_path: Path | str,
         chroma_dir: Path | str,
         collection_name: str = "Mock-v1.0.0",
         embedding_model: Path | str = "sentence-transformers/all-MiniLM-L12-v2",
         retrieval_k: int = 2,
-        context_window: int = 8192,
-        n_gpu_layers: int = -1,
         prompt_template: str = "<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
         stop: str | list[str] | None = ["<turn|>"],
         top_k: int = 64,
-        fa: bool = True,
-        swa_full: bool | None = None,
     ) -> None:
         """
         Initialize the MockComplianceChecker.
@@ -86,8 +82,6 @@ class MockComplianceChecker:
         mock responses for development and testing purposes.
 
         Args:
-            base_model_path (Path | str):
-                Mock parameter - not used in mock implementation.
             chroma_dir (Path | str):
                 Mock parameter - not used in mock implementation.
             collection_name (str):
@@ -98,12 +92,6 @@ class MockComplianceChecker:
             retrieval_k (int):
                 Mock parameter - not used in mock implementation.
                 Defaults to `2`.
-            context_window (int):
-                Mock parameter - not used in mock implementation.
-                Defaults to `8192`.
-            n_gpu_layers (int):
-                Mock parameter - not used in mock implementation.
-                Defaults to `-1`.
             prompt_template (str):
                 Mock parameter - not used in mock implementation.
                 Defaults to Gemma 4's format: `"<|turn>user\n{prompt}<turn|>\n<|turn>model\n"`.
@@ -113,12 +101,6 @@ class MockComplianceChecker:
             top_k (int):
                 Mock parameter - not used in mock implementation.
                 Defaults to `64`.
-            fa (bool):
-                Mock parameter - not used in mock implementation.
-                Defaults to `True`.
-            swa_full (bool | None):
-                Mock parameter - not used in mock implementation.
-                Defaults to `None`.
         """
         if hasattr(self, "_initialized") and self._initialized:
             return
@@ -130,7 +112,7 @@ class MockComplianceChecker:
         if not self.suppress_mock_warning:
             logger.warning(
                 "Using MockComplianceChecker for '%s' instead of a real compliance checker. "
-                "Set USE_MOCK_COMPLIANCE_CHECKER=false in settings to disable the mock, "
+                "Set LLM_USE_MOCK_COMPLIANCE_CHECKER=false in settings to disable the mock, "
                 "or set MockComplianceChecker.suppress_mock_warning=True to silence this warning.",
                 collection_name,
             )
@@ -236,7 +218,7 @@ class MockComplianceChecker:
             Failed assertion: `{assertion}`
 
             ## STANDARD REFERENCE
-            This violates {self.standard} control 1.1: "Mock controls are not real controls." 
+            This violates {self.standard} control 1.1: "Mock controls are not real controls."
 
             ## SECURITY IMPACT
             Non-compliance with {self.standard} may lead to undetected mock violations and a false sense of security during development.
@@ -255,7 +237,7 @@ class MockComplianceChecker:
                 SELECT AVG(mock_column2) FROM mock_table
             );
             ```
-            
+
             4. Turn off mock compliance checker in production.
 
             The rest of the text here is to generate more tokens for testing streaming behaviour. Lorem ipsum dolor sit amet,
@@ -265,7 +247,7 @@ class MockComplianceChecker:
             non. Cras fringilla est eu arcu tempus, quis elementum ipsum semper. Pellentesque efficitur mauris sed nulla
             ornaresagittis. Vestibulum suscipit turpis sit amet malesuada pharetra. Proin ac dolor ac orci egestas interdum
             nec vel ipsum. Curabitur id mi velit. Vestibulum a metus in neque placerat pellentesque id sit amet magna.
-            
+
             Fusce faucibus consectetur semper. Aenean aliquet semper lorem, vitae luctus ipsum. Phasellus semper, ipsum nec
             hendrerit cursus, augue nulla ultricies ipsum, eu faucibus quam odio eu diam. Maecenas mattis elementum massa imperdiet
             pulvinar. Etiam quis tortor auctor, ullamcorper risus eu, consectetur sapien. Aenean ex turpis, pharetra vitae iaculis

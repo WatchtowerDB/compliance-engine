@@ -1,5 +1,4 @@
 import textwrap
-from pathlib import Path
 
 from ..core.compliance_checker import ComplianceChecker
 
@@ -28,72 +27,6 @@ class GDPRComplianceChecker(ComplianceChecker):
     """
 
     standard: str = "GDPR"
-
-    def __init__(
-        self,
-        base_model_path: Path | str,
-        chroma_dir: Path | str,
-        collection_name: str = "GDPR",
-        embedding_model: Path | str = "sentence-transformers/all-MiniLM-L12-v2",
-        retrieval_k: int = 2,
-        context_window: int = 131072,
-        n_gpu_layers: int = -1,
-        prompt_template: str = "<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
-        stop: str | list[str] | None = ["<turn|>"],
-        top_k: int = 64,
-        fa: bool = True,
-        swa_full: bool | None = None,
-    ) -> None:
-        """
-        Initialize the GDPR compliance checker.
-
-        Args:
-            base_model_path (Path | str):
-                Path to the GGUF model file for LLM inference.
-            chroma_dir (Path | str):
-                Directory containing the Chroma vector database with GDPR documentation.
-            collection_name (str):
-                Name of the Chroma collection. Defaults to `"GDPR"`.
-            embedding_model (Path | str):
-                HuggingFace model identifier or local path for text embeddings.
-                Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`.
-            retrieval_k (int):
-                Number of document chunks to retrieve per question.
-                Defaults to `2` (more focused retrieval for GDPR specific queries).
-            context_window (int):
-                Maximum context length in tokens. Defaults to `131072`, the maximum for Gemma-4-E4B-it-Q5_K_M.
-            n_gpu_layers (int):
-                GPU layer offloading. `-1` for all layers (recommended).
-                Defaults to `-1`.
-            prompt_template (str):
-                Template for formatting LLM prompts. Should include `{prompt}`
-                placeholder. Defaults to Gemma 4's format: `"<|turn>user\n{prompt}<turn|>\n<|turn>model\n"`.
-            stop (str | list[str] | None):
-                Stop sequences for generation. Defaults to `["<turn|>"]`.
-            top_k (int):
-                The number of highest probability tokens to keep for top-k sampling.
-                Higher values increase diversity but may reduce coherence. Defaults to `64`, Gemma 4's default.
-            fa (bool):
-                Whether to use flash attention (if supported by the model and hardware). Defaults to `True`.
-            swa_full (bool | None):
-                Whether to use SWA-Full attention (if supported by the model and hardware).
-                Defaults to `None`, and leave it like that if you don't know what it is.
-        """
-        super().__init__(
-            base_model_path=base_model_path,
-            chroma_dir=chroma_dir,
-            collection_name=collection_name,
-            embedding_model=embedding_model,
-            retrieval_k=retrieval_k,
-            context_window=context_window,
-            n_gpu_layers=n_gpu_layers,
-            prompt_template=prompt_template,
-            stop=stop,
-            top_k=top_k,
-            fa=fa,
-            swa_full=swa_full,
-        )
-        self._initialized: bool = True
 
     def _build_schema_questions_prompt(self, schema: str) -> str:
         """
