@@ -187,19 +187,39 @@ docker run --rm \
   -c "${usage_ctx_size}" \
   -fa "${usage_flash_attn}" \
   -np "${PARALLEL}" \
+  -lv "${usage_log_level}" \
+  --no-log-timestamps \
   --host "${usage_host}" \
   --port "${usage_port}" \
+  --offline \
   2>&1 | awk '{print "[" strftime("%Y-%m-%d %H:%M:%S") "]", $0}; fflush()'
 '''
 
 [tasks.backend]
-description = "Starts the entire backend application"
-depends = ["devserver", "celery", "llm-server"]
+description = "Start all backend services"
+depends_post = ["stop-dev"]
+run='''
+#!/usr/bin/env bash
+set -euo pipefail
+
+gum log -l info "Launching all backend services"
+
+cleanup() {
+  gum log -l info "Backend stopped, running cleanup"
+  exit 0
+}
+trap cleanup EXIT
+
+mise run -o prefix devserver &
+mise run -o prefix celery &
+mise run -o prefix llm-server &
+wait
+'''
 
 [tasks.stop-dev]
 description = "Stop all running dev containers (requires containers to have the defined prefix)"
 alias="stop"
-wait_for = ["devserver", "celery"]
+wait_for = ["devserver", "celery", "llm-server"]
 tools = { docker-cli = "29" }
 usage = '''
 flag "-p --prefix <prefix>" help="Prefix used for all project containers" default="wtce-"
