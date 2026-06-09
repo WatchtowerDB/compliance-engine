@@ -248,7 +248,7 @@ wait
 [tasks.stop-dev]
 description = "Stop all running dev containers (requires containers to have the defined prefix)"
 alias="stop"
-wait_for = ["devserver", "celery", "llm-server"]
+wait_for = ["devserver", "celery", "chroma", "llm-server"]
 tools = { docker-cli = "29" }
 usage = '''
 flag "-p --prefix <prefix>" help="Prefix used for all project containers" default="wtce-"
