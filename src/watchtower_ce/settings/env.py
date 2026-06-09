@@ -46,26 +46,20 @@ DATABASES: dict[str, dj_database_url.DBConfig] = {
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 
-LLM_INSTANCE_POOL_SIZE: int = int(os.getenv("LLM_INSTANCE_POOL_SIZE", "1"))
-LLM_SERVER_URL: str = os.getenv("LLM_SERVER_URL", "http://127.0.0.1:6767")
+CHROMA_SERVER_URL: str = os.getenv("CHROMA_SERVER_URL", "http://localhost:7777")
+CHROMA_DIR: t.Optional[Path] = (
+    Path(os.environ["CHROMA_DIR"]) if os.getenv("CHROMA_DIR") else None
+)
+CHROMA_EMBEDDING_MODEL_DIR: t.Optional[Path] = (
+    Path(os.environ["CHROMA_EMBEDDING_MODEL_DIR"])
+    if os.getenv("CHROMA_EMBEDDING_MODEL_DIR")
+    else None
+)
+
 LLM_USE_MOCK_COMPLIANCE_CHECKER: bool = (
     os.getenv("LLM_USE_MOCK_COMPLIANCE_CHECKER", "false").lower() == "true"
 )
 LLM_SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING: bool = (
     os.getenv("LLM_SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING", "false").lower() == "true"
 )
-
-# TODO: change the variable name to LLM_BASE_MODEL_PATH
-BASE_MODEL_PATH: t.Optional[Path] = (
-    Path(os.environ["WTCE_BASE_MODEL_PATH"])
-    if os.getenv("WTCE_BASE_MODEL_PATH")
-    else None
-)
-CHROMA_DIR: t.Optional[Path] = (
-    Path(os.environ["WTCE_CHROMA_DIR"]) if os.getenv("WTCE_CHROMA_DIR") else None
-)
-EMBEDDING_MODEL_DIR: t.Optional[Path] = (
-    Path(os.environ["WTCE_EMBEDDING_MODEL_DIR"])
-    if os.getenv("WTCE_EMBEDDING_MODEL_DIR")
-    else None
-)
+LLM_SERVER_URL: str = os.getenv("LLM_SERVER_URL", "http://127.0.0.1:6767")

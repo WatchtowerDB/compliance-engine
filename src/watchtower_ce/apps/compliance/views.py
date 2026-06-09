@@ -17,7 +17,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from ...engine.core.llm_inference import LLMInference
+from ...engine.clients.llm_inference import LLMInference
 from . import models, serializers
 from .filters import (
     ClientDBFilter,

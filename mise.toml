@@ -24,7 +24,6 @@ PYTHONPATH = "{{ config_root }}/src"
 DJANGO_SETTINGS_MODULE = "watchtower_ce.settings"
 DATABASE_URL = "postgresql://wtce:wtce@localhost:5432/wtce"
 LLM_INSTANCE_POOL_SIZE = 1
-LLM_SERVER_URL = "http://localhost:6767"
 
 [tasks.install]
 description = "Install project dependencies"
@@ -150,6 +149,35 @@ run = '''
 celery -A watchtower_ce worker -P solo -l INFO
 '''
 
+[tasks.chroma]
+description = "Run Chroma server"
+usage = '''
+flag "-H --host <host>" help="Host to bind to" default="localhost"
+flag "-P --port <port>" help="Port to bind to" default="7777"
+flag "-d --dir <dir>" help="Directory where the Chroma database is persisted"
+flag "-m --embedding-model <embedding-model>" help="HuggingFace embedding model identifier or path"
+flag "-l --log-level <log-level>" help="Log level (debug, info, warning, error, critical)" default="info"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+DIR=${usage_dir:-${CHROMA_DIR:-}}
+EMBEDDING_MODEL=${usage_embedding_model:-${CHROMA_EMBEDDING_MODEL_DIR:-}}
+
+if [ -z "$DIR" ]; then
+    gum log -l error "No persistence directory specified for Chroma. Set CHROMA_DIR environment variable or use --dir flag."
+    exit 1
+fi
+
+if [ -z "$EMBEDDING_MODEL" ]; then
+    gum log -l error "No embedding model specified for Chroma. Set CHROMA_EMBEDDING_MODEL_DIR environment variable or use --embedding-model flag."
+    exit 1
+fi
+
+wtce chroma -H ${usage_host} -P ${usage_port} -d ${DIR} -m ${EMBEDDING_MODEL} -l ${usage_log_level}
+'''
+
 [tasks.llm-server]
 description = "Run llama.cpp inference server"
 tools = { docker-cli = "29" }
@@ -173,7 +201,7 @@ exit 0
 fi
 
 gum log -l info "Starting llama.cpp server"
-MODEL_PATH="${usage_model:-$WTCE_BASE_MODEL_PATH}"
+MODEL_PATH="${usage_model:-$LLM_BASE_MODEL_PATH}"
 PARALLEL="${usage_parallel:-${LLM_INSTANCE_POOL_SIZE:-1}}"
 
 docker run --rm \
@@ -212,6 +240,7 @@ trap cleanup EXIT
 
 mise run -o prefix devserver &
 mise run -o prefix celery &
+mise run -o prefix chroma &
 mise run -o prefix llm-server &
 wait
 '''

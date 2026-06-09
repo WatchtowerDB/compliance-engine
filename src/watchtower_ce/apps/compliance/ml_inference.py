@@ -39,11 +39,10 @@ _FRAMEWORK_REGISTRY: dict[str, dict] = {
     },
 }
 _CHECKER_KWARGS: dict = {
-    "chroma_dir": settings.CHROMA_DIR,
-    "embedding_model": settings.EMBEDDING_MODEL_DIR,
+    "retrieval_k": 4,
     "prompt_template": "<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
     "stop": ["<turn|>"],
-    "top_k": 64,  #  lower slightly if facing VRAM constraints.
+    "top_k": 64,  # lower slightly if facing VRAM constraints.
 }
 
 

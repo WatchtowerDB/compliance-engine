@@ -4,7 +4,6 @@ import random
 import re
 import textwrap
 import threading
-from pathlib import Path
 from time import sleep
 from typing import Iterator
 
@@ -66,9 +65,7 @@ class MockComplianceChecker:
 
     def __init__(
         self,
-        chroma_dir: Path | str,
         collection_name: str = "Mock-v1.0.0",
-        embedding_model: Path | str = "sentence-transformers/all-MiniLM-L12-v2",
         retrieval_k: int = 2,
         prompt_template: str = "<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
         stop: str | list[str] | None = ["<turn|>"],
@@ -82,13 +79,8 @@ class MockComplianceChecker:
         mock responses for development and testing purposes.
 
         Args:
-            chroma_dir (Path | str):
-                Mock parameter - not used in mock implementation.
             collection_name (str):
                 Name of the mock collection. Will be used as the key for the instance registry. Defaults to `"Mock-v1.0.0"`.
-            embedding_model (Path | str):
-                Mock parameter - not used in mock implementation.
-                Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`.
             retrieval_k (int):
                 Mock parameter - not used in mock implementation.
                 Defaults to `2`.
