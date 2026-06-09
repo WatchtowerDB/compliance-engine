@@ -1,6 +1,7 @@
 import json
 import logging
 from enum import Enum
+from time import sleep
 from typing import Iterator
 
 import httpx
@@ -18,10 +19,7 @@ class _TimeoutConfig(httpx.Timeout, Enum):
     HEALTH = httpx.Timeout(connect=5.0, read=5.0, write=5.0, pool=5.0)
 
 
-# Module-level persistent client; one connection pool for the entire process.
-# All checkers share this client; the server handles concurrency.
-# Read timeout is long because LLM generation can be slow.
-_http_client = httpx.Client(
+_llm_client = httpx.Client(
     base_url=settings.LLM_SERVER_URL, timeout=_TimeoutConfig.DEFAULT
 )
 
@@ -72,6 +70,30 @@ class LLMInference:
                 The number of highest probability tokens to keep for top-k sampling.
                 Higher values increase diversity but may reduce coherence. Defaults to `64`.
         """
+        logging.debug(
+            "Attempting to connect to the inference server at %s", _llm_client.base_url
+        )
+        for retries in range(5):
+            try:
+                response = _llm_client.get("/health", timeout=5.0)
+                response.raise_for_status()
+                logger.debug(
+                    "Successfully connected to inference server at %s",
+                    _llm_client.base_url,
+                )
+                break
+            except (httpx.HTTPStatusError, httpx.ConnectError) as e:
+                logging.warning(f"Attempt {retries + 1} failed: {e}")
+                logging.warning(
+                    f"Waiting {5 * (2**retries)} seconds before retrying..."
+                )
+                sleep(5 * (2**retries))
+        else:
+            raise ConnectionError(
+                "Failed to connect to the inference server at %s after 5 attempts."
+                % _llm_client.base_url
+            )
+
         self.prompt_template = prompt_template
         self.stop: list[str] = (
             [stop] if isinstance(stop, str) else (list(stop) if stop else [])
@@ -110,7 +132,7 @@ class LLMInference:
         """
         formatted_prompt = self.prompt_template.format(prompt=prompt)
 
-        with _http_client.stream(
+        with _llm_client.stream(
             "POST",
             "/v1/completions",
             timeout=_TimeoutConfig.STREAMING,
@@ -188,7 +210,7 @@ class LLMInference:
             httpx.HTTPStatusError: If the server returns a non-2xx response.
         """
         formatted_prompt = self.prompt_template.format(prompt=prompt)
-        response = _http_client.post(
+        response = _llm_client.post(
             "/v1/completions",
             timeout=_TimeoutConfig.BATCH,
             json={
@@ -261,7 +283,7 @@ class LLMInference:
             return 0
 
         try:
-            response = _http_client.post("/tokenize", json={"content": text})
+            response = _llm_client.post("/tokenize", json={"content": text})
             response.raise_for_status()
             return len(response.json().get("tokens", []))
         except Exception:
@@ -288,39 +310,25 @@ class LLMInference:
                 with the raw server response body or error description.
         """
         try:
-            response = _http_client.get("/health", timeout=_TimeoutConfig.HEALTH)
+            response = _llm_client.get("/health", timeout=_TimeoutConfig.HEALTH)
             if response.status_code == 200:
                 return {
                     "status": self.ServerStatus.INITIALIZED,
-                    "detail": response.json(),
+                    "details": response.json(),
                 }
             if response.status_code == 503:
                 return {
                     "status": self.ServerStatus.INITIALIZING,
-                    "detail": response.json(),
+                    "details": response.json(),
                 }
             return {
                 "status": self.ServerStatus.ERROR,
-                "detail": {"error": f"Unexpected status {response.status_code}"},
+                "details": {"error": f"Unexpected status {response.status_code}"},
             }
         except httpx.ConnectError:
             return {
                 "status": self.ServerStatus.NOT_INITIALIZED,
-                "detail": {"error": "Inference server unreachable."},
+                "details": {"error": "Inference server unreachable."},
             }
         except Exception as e:
-            return {"status": self.ServerStatus.ERROR, "detail": {"error": str(e)}}
-
-    def close(self) -> None:
-        """
-        No-op. The inference server manages its own model lifecycle.
-
-        Retained for API compatibility with the old in-process backend.
-        Call `_http_client.close()` at process shutdown if explicit
-        connection cleanup is needed.
-
-        TODO: Remove instances of this method from code, if any, and check
-        if resources are being properly cleaned up, or if a proper cleanup
-        mechanism is needed.
-        """
-        pass
+            return {"status": self.ServerStatus.ERROR, "details": {"error": str(e)}}

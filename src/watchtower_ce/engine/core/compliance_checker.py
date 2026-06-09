@@ -1,11 +1,10 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from pathlib import Path
 from typing import Iterator
 
-from .context_retriever import ContextRetriever
-from .llm_inference import LLMInference
+from ..clients.context_retriever import ContextRetriever
+from ..clients.llm_inference import LLMInference
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +27,7 @@ class ComplianceChecker(ABC):
 
     def __init__(
         self,
-        chroma_dir: Path | str,
         collection_name: str,
-        embedding_model: Path | str = "sentence-transformers/all-MiniLM-L12-v2",
         retrieval_k: int = 4,
         prompt_template: str = "<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
         stop: str | list[str] | None = ["<turn|>"],
@@ -40,13 +37,8 @@ class ComplianceChecker(ABC):
         Initialize the compliance checker with RAG components.
 
         Args:
-            chroma_dir (Path | str):
-                Directory containing the Chroma vector database.
             collection_name (str):
                 Name of the Chroma collection with compliance documents.
-            embedding_model (Path | str):
-                HuggingFace model identifier or local path for text embeddings.
-                Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`.
             retrieval_k (int):
                 Number of similar documents to retrieve per query. Defaults to `4`.
             prompt_template (str):
@@ -59,9 +51,7 @@ class ComplianceChecker(ABC):
                 Higher values increase diversity but may reduce coherence. Defaults to `64`, Gemma 4's default.
         """
         self._context_retriever = ContextRetriever(
-            chroma_dir=chroma_dir,
             collection_name=collection_name,
-            embedding_model=embedding_model,
             retrieval_k=retrieval_k,
         )
         self._llm = LLMInference(
@@ -376,7 +366,7 @@ class ComplianceChecker(ABC):
                       rows only when violations exist (empty = compliant).
 
         Example:
-            >>> checker = PCIComplianceChecker(base_model_path, chroma_dir)
+            >>> checker = PCIComplianceChecker(collection_name="PCI-DSS-v4.0.1")
             >>> assertions = checker.generate_assertions(schema)
             >>> # Execute assertions externally
             >>> for assertion in assertions:
@@ -418,7 +408,7 @@ class ComplianceChecker(ABC):
                 generated analysis. This is used for streaming output.
 
         Example:
-            >>> checker = PCIComplianceChecker(base_model_path, chroma_dir)
+            >>> checker = PCIComplianceChecker(collection_name="PCI-DSS-v4.0.1")
             >>> assertion = "SELECT * FROM customers WHERE cvv IS NOT NULL"
             >>> result = "id: 1, cvv: 123\\nid: 2, cvv: 456"
             >>> stream_chunks = checker.analyze_failed_assertion(assertion, result)
@@ -491,21 +481,3 @@ class ComplianceChecker(ABC):
             int: The token count.
         """
         return self._llm.count_tokens(text)
-
-    def close(self):
-        """
-        Clean up resources used by the compliance checker.
-
-        Releases LLM model resources and frees associated memory (GPU/CPU).
-        Should be called when the compliance checker is no longer needed.
-
-        Example:
-            >>> checker = PCIComplianceChecker(base_model_path, chroma_dir)
-            >>> try:
-            ...     assertions = checker.generate_assertions(schema)
-            ... finally:
-            ...     checker.close()
-        """
-        # TODO: Make sure resources are managed correctly after the server works
-        # self.llm.close()
-        pass

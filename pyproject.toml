@@ -36,9 +36,10 @@ models = ["hf-xet~=1.5", "huggingface-hub~=1.17", "yaspin~=3.4"]
 tests = ["pytest~=9.0", "pytest-django~=4.12"]
 
 [dependency-groups]
-ai = [
-  "chromadb~=1.5",
-  "langchain-chroma~=1.1",
+ai = [  # technically, just chroma dependencies now
+  "chromadb~=1.5",  # if separated the client and server in different modules, just `chroma-client` is enough
+  "fastapi~=0.136",  # needed for the retrieval server
+  "langchain-chroma~=1.1",  # though not sure if it will bug this
   "langchain-community~=0.4",
   "langchain-huggingface~=1.2",
   "sentence-transformers~=5.5",  # needed by langchain-huggingface
