@@ -12,11 +12,11 @@ uvicorn_logger = logging.getLogger("uvicorn.error")
 uvicorn_logger.name = "uvicorn"
 
 LOGGING_CONFIG["formatters"]["default"]["fmt"] = (
-    "%(asctime)s [%(name)s] %(levelprefix)s %(message)s"
+    "[%(asctime)s: %(name)s] %(levelprefix)s %(message)s"
 )
 logging.basicConfig(
     level=logging.WARNING,
-    format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
+    format="[%(asctime)s: %(name)s] %(levelname)s %(message)s",
 )
 
 
