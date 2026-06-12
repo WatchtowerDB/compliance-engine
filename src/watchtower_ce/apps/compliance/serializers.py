@@ -1,4 +1,5 @@
-from django.db import models
+from django.db import models, transaction
+from django.db.models import Max
 from rest_framework import serializers
 
 from .models import (
@@ -23,9 +24,12 @@ class ClientDBSerializer(serializers.ModelSerializer):
 
 
 class ClientDBSchemaSerializer(serializers.ModelSerializer):
+    internal_version = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = ClientDBSchema
         fields = "__all__"
+        read_only_fields = ("internal_version",)
 
 
 class ClientDBSchemaUploadSerializer(serializers.Serializer):
@@ -51,6 +55,8 @@ class ClientDBSchemaUploadSerializer(serializers.Serializer):
             "incorrect_type": "Invalid client_db type.",
         },
     )
+    name = serializers.CharField(max_length=200, required=True)
+    description = serializers.CharField(required=False, allow_blank=True, default="")
 
     def validate_sql_file(self, value):
         """
@@ -85,18 +91,27 @@ class ClientDBSchemaUploadSerializer(serializers.Serializer):
         return value
 
     def create(self, validated_data):
-        """
-        Create a ClientDBSchema instance from the validated data.
-        """
         sql_file = validated_data["sql_file"]
         client_db = validated_data["client_db"]
-
+        name = validated_data["name"]
+        description = validated_data.get("description", "")
         sql_content = sql_file.read().decode("utf-8")
 
-        schema = ClientDBSchema.objects.create(
-            client_db=client_db,
-            sql_definition=sql_content,
-        )
+        with transaction.atomic():
+            max_version = (
+                ClientDBSchema.objects.select_for_update()
+                .filter(client_db=client_db, name=name)
+                .aggregate(Max("internal_version"))["internal_version__max"]
+            )
+            internal_version = (max_version or 0) + 1
+
+            schema = ClientDBSchema.objects.create(
+                client_db=client_db,
+                name=name,
+                description=description or None,
+                sql_definition=sql_content,
+                internal_version=internal_version,
+            )
 
         return schema
 

@@ -1,6 +1,8 @@
 from typing import cast
 
 from celery.app.task import Task
+from django.db import transaction
+from django.db.models import Max
 from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -125,6 +127,18 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
     filterset_class = ClientDBSchemaFilter
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     ordering_fields = ["created_at", "id"]
+
+    def perform_create(self, serializer):
+        name = serializer.validated_data.get("name", "")
+        client_db = serializer.validated_data.get("client_db")
+
+        with transaction.atomic():
+            max_version = (
+                models.ClientDBSchema.objects.select_for_update()
+                .filter(client_db=client_db, name=name)
+                .aggregate(Max("internal_version"))["internal_version__max"]
+            )
+            serializer.save(internal_version=(max_version or 0) + 1)
 
     def update(self, request, *args, **kwargs):
         return Response(

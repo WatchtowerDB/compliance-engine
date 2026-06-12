@@ -23,10 +23,11 @@ class ComplianceAssertionFilter(filters.FilterSet):
 
 class ClientDBSchemaFilter(filters.FilterSet):
     client_db = filters.NumberFilter(field_name="client_db__id")
+    name = filters.CharFilter(field_name="name", lookup_expr="icontains")
 
     class Meta:
         model = ClientDBSchema
-        fields = ["client_db"]
+        fields = ["client_db", "name"]
 
 
 class ClientDBFilter(filters.FilterSet):
