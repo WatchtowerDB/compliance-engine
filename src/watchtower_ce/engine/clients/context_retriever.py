@@ -93,6 +93,9 @@ class ContextRetriever:
         """
         current_k = retrieval_k if retrieval_k else self.retrieval_k
 
+        if current_k < 1:
+            raise ValueError("retrieval_k must be at least 1")
+
         logger.debug(
             'Retrieving top %s chunks from "%s" collection for query "%s"',
             current_k,
