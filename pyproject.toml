@@ -31,20 +31,9 @@ dynamic = ["version"]
 wtce = "watchtower_ce.cli.main:main"
 
 [project.optional-dependencies]
-dev = ["pypdf~=6.12", "uv-bump~=0.5"]
-models = ["hf-xet~=1.5", "huggingface-hub~=1.17", "yaspin~=3.4"]
+dev = ["uv-bump~=0.5"]
+models = ["hf-xet~=1.5", "huggingface-hub~=1.17"]
 tests = ["pytest~=9.0", "pytest-django~=4.12"]
-
-[dependency-groups]
-ai = [  # technically, just chroma dependencies now
-  "chromadb~=1.5",  # if separated the client and server in different modules, just `chroma-client` is enough
-  "fastapi~=0.136",  # needed for the retrieval server
-  "langchain-chroma~=1.1",  # though not sure if it will bug this
-  "langchain-community~=0.4",
-  "langchain-huggingface~=1.2",
-  "sentence-transformers~=5.5",  # needed by langchain-huggingface
-  "torch~=2.12",  # needed by sentence-transformers
-]
 
 [build-system]
 requires = ["setuptools>=82", "setuptools-scm>=8"]

@@ -3,10 +3,14 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Iterator
 
+from django.conf import settings
+
 from ..clients.context_retriever import ContextRetriever
 from ..clients.llm_inference import LLMInference
 
 logger = logging.getLogger(__name__)
+
+USE_MOCK = settings.USE_MOCK
 
 
 class ComplianceChecker(ABC):

@@ -1,7 +1,5 @@
 import click
 
-from .ccdb import ccdb
-from .chroma import chroma
 from .download import download
 from .server import server
 from .test import test
@@ -13,8 +11,6 @@ def main():
     pass
 
 
-main.add_command(ccdb)
-main.add_command(chroma)
 main.add_command(download)
 main.add_command(server)
 main.add_command(test)

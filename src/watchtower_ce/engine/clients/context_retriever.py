@@ -11,7 +11,7 @@ from langchain_core.documents import Document
 logger = logging.getLogger(__name__)
 
 _chroma_client = httpx.Client(
-    base_url=settings.CHROMA_SERVER_URL,
+    base_url=settings.WTVS_SERVER_URL,
     timeout=httpx.Timeout(connect=5.0, read=20.0, write=10.0, pool=10.0),
     limits=httpx.Limits(max_keepalive_connections=10),
 )
