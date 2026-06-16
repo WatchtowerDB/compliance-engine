@@ -57,6 +57,9 @@ def infer_sql_assertions_task(
     4. Persistence: Creates ComplianceAssertion records, ensuring each is explicitly linked to the compliance check.
     5. Protocol: Streams a completion 'phase.update' event including the count of generated assertions.
     """
+    models.ComplianceCheck.objects.filter(id=check_id).update(
+        status=models.ComplianceCheck.Status.GENERATING
+    )
 
     stream_event(
         check_id,
@@ -79,6 +82,9 @@ def infer_sql_assertions_task(
             "ClientDBSchema or ComplianceFramework %s not found. Skipping assertion inference.",
             schema_id,
         )
+        models.ComplianceCheck.objects.filter(id=check_id).update(
+            status=models.ComplianceCheck.Status.FAILED
+        )
         stream_event(
             check_id,
             "pipeline.error",
@@ -96,7 +102,8 @@ def infer_sql_assertions_task(
                 compliance_framework=framework,
                 sql_query=sql,
                 compliance_check_id=check_id,
-            ).id  # type: ignore[attr-defined]
+                status=models.ComplianceAssertion.Status.PENDING,
+            ).id  # pyright: ignore[reportAttributeAccessIssue]
             for sql in sql_assertions
         ]
 
@@ -114,6 +121,9 @@ def infer_sql_assertions_task(
 
     except Exception as e:
         logger.exception("Failed to generate assertions")
+        models.ComplianceCheck.objects.filter(id=check_id).update(
+            status=models.ComplianceCheck.Status.FAILED
+        )
         stream_event(
             check_id,
             "pipeline.error",
@@ -143,6 +153,9 @@ def execute_sql_assertion_task(assertion_id: int, check_id: int) -> tuple[int, s
         )
         return assertion_id, ""
 
+    assertion.status = models.ComplianceAssertion.Status.EXECUTING
+    assertion.save(update_fields=["status"])
+
     passed, output_str = ml.execute_sql_assertion(
         assertion.client_db.connection_string,
         assertion.sql_query,
@@ -150,7 +163,13 @@ def execute_sql_assertion_task(assertion_id: int, check_id: int) -> tuple[int, s
 
     assertion.result = passed
     assertion.query_output = output_str
-    assertion.save(update_fields=["result", "query_output"])
+
+    assertion.status = (
+        models.ComplianceAssertion.Status.COMPLETED
+        if passed
+        else models.ComplianceAssertion.Status.EXECUTING
+    )
+    assertion.save(update_fields=["result", "query_output", "status"])
 
     stream_event(
         check_id=check_id,
@@ -191,7 +210,14 @@ def generate_compliance_recommendation_task(
         return None
 
     if assertion.result is not False:
+        if assertion.status != models.ComplianceAssertion.Status.COMPLETED:
+            assertion.status = models.ComplianceAssertion.Status.COMPLETED
+            assertion.save(update_fields=["status"])
+
         return assertion_id
+
+    assertion.status = models.ComplianceAssertion.Status.ANALYZING
+    assertion.save(update_fields=["status"])
 
     stream_event(
         check_id,
@@ -207,7 +233,7 @@ def generate_compliance_recommendation_task(
         for chunk in ml.analyze_failed_assertion(
             assertion.sql_query, query_output, framework_name
         ):
-            token = chunk["choices"][0]["text"]  # type: ignore (chunk can be str or something else if stream is False, but it isn't)
+            token = chunk["choices"][0]["text"]
             full_recommendation += token
 
             stream_event(
@@ -219,6 +245,8 @@ def generate_compliance_recommendation_task(
 
     except Exception as exc:
         logger.exception("Recommendation generation failed")
+        assertion.status = models.ComplianceAssertion.Status.FAILED
+        assertion.save(update_fields=["status"])
         stream_event(
             check_id,
             "recommendation.stream",
@@ -228,7 +256,8 @@ def generate_compliance_recommendation_task(
         return assertion_id
 
     assertion.recommendation = full_recommendation
-    assertion.save(update_fields=["recommendation"])
+    assertion.status = models.ComplianceAssertion.Status.COMPLETED
+    assertion.save(update_fields=["recommendation", "status"])
 
     stream_event(
         check_id,
@@ -246,6 +275,10 @@ def finalize_analysis_task(results, check_id: int) -> None:
     Final callback for the analysis phase. Streams a completion event
     after all recommendation tasks in the chord have finished.
     """
+    models.ComplianceCheck.objects.filter(id=check_id).update(
+        status=models.ComplianceCheck.Status.COMPLETED
+    )
+
     stream_event(
         check_id,
         "phase.update",
@@ -274,6 +307,9 @@ def generate_recommendations_group(
     stream_event(check_id, "phase.update", {"step": "execution", "status": "completed"})
 
     if not assertion_output:
+        models.ComplianceCheck.objects.filter(id=check_id).update(
+            status=models.ComplianceCheck.Status.COMPLETED
+        )
         return []
 
     failed_ids = [res[0] for res in assertion_output if res[0] is not None]
@@ -289,6 +325,9 @@ def generate_recommendations_group(
     ]
 
     if filtered_results:
+        models.ComplianceCheck.objects.filter(id=check_id).update(
+            status=models.ComplianceCheck.Status.ANALYZING
+        )
         stream_event(
             check_id,
             "phase.update",
@@ -301,13 +340,16 @@ def generate_recommendations_group(
 
         chord(
             header=[
-                generate_compliance_recommendation_task.s(aid, out, check_id)  # type: ignore[attr-defined]
+                generate_compliance_recommendation_task.s(aid, out, check_id)  # pyright: ignore[reportFunctionMemberAccess]
                 for aid, out in filtered_results
             ],
-            body=finalize_analysis_task.s(check_id),  # type: ignore[attr-defined]
+            body=finalize_analysis_task.s(check_id),  # pyright: ignore[reportFunctionMemberAccess]
         ).apply_async()
     else:
         # If no failures exist, the analysis phase is effectively complete immediately
+        models.ComplianceCheck.objects.filter(id=check_id).update(
+            status=models.ComplianceCheck.Status.COMPLETED
+        )
         stream_event(
             check_id, "phase.update", {"step": "analysis", "status": "completed"}
         )
@@ -327,8 +369,14 @@ def execute_then_recommendations(
        - Body: Triggers `generate_recommendations_group` once all executions complete.
     """
     if not assertion_ids:
+        models.ComplianceCheck.objects.filter(id=check_id).update(
+            status=models.ComplianceCheck.Status.COMPLETED
+        )
         return []
 
+    models.ComplianceCheck.objects.filter(id=check_id).update(
+        status=models.ComplianceCheck.Status.EXECUTING
+    )
     stream_event(
         check_id,
         "phase.update",
@@ -341,10 +389,10 @@ def execute_then_recommendations(
 
     chord(
         header=[
-            execute_sql_assertion_task.s(assertion_id, check_id)  # type: ignore[attr-defined]
+            execute_sql_assertion_task.s(assertion_id, check_id)  # pyright: ignore[reportFunctionMemberAccess]
             for assertion_id in assertion_ids
         ],
-        body=generate_recommendations_group.s(check_id),  # type: ignore[attr-defined]
+        body=generate_recommendations_group.s(check_id),  # pyright: ignore[reportFunctionMemberAccess]
     ).apply_async()
 
 
@@ -362,11 +410,11 @@ def schedule_sql_assertion_pipeline(
     3. Analyze failures and stream recommendations (generate_recommendations_group → chord)
     """
     chain(
-        infer_sql_assertions_task.s(  # type: ignore[attr-defined]
+        infer_sql_assertions_task.s(  # pyright: ignore[reportFunctionMemberAccess]
             schema_id,
             client_db_id,
             framework_id,
             check_id,
         ),
-        execute_then_recommendations.s(check_id),  # type: ignore[attr-defined]
+        execute_then_recommendations.s(check_id),  # pyright: ignore[reportFunctionMemberAccess]
     ).apply_async()
