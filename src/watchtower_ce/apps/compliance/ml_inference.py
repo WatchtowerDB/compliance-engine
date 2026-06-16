@@ -1,29 +1,9 @@
 import logging
 from typing import Iterator, List
 
-from django.conf import settings
-
+from ...engine.core import ComplianceChecker
+from ...engine.standards import GDPRComplianceChecker, PCIComplianceChecker
 from .sql_execution import ExecutorFactory
-
-if settings.LLM_USE_MOCK_COMPLIANCE_CHECKER:
-    from ...engine.utils.mock_compliance_checker import (
-        MockComplianceChecker as ComplianceChecker,
-    )
-    from ...engine.utils.mock_compliance_checker import (
-        MockComplianceChecker as GDPRComplianceChecker,
-    )
-    from ...engine.utils.mock_compliance_checker import (
-        MockComplianceChecker as PCIComplianceChecker,
-    )
-
-    PCIComplianceChecker.suppress_mock_warning = (
-        settings.LLM_SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING
-    )
-else:
-    from ...engine.core.compliance_checker import ComplianceChecker
-    from ...engine.standards.gdpr_compliance_checker import GDPRComplianceChecker
-    from ...engine.standards.pci_compliance_checker import PCIComplianceChecker
-
 
 logger = logging.getLogger(__name__)
 

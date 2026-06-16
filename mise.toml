@@ -23,7 +23,7 @@ _.python.venv = { create = true, path = ".venv" }
 PYTHONPATH = "{{ config_root }}/src"
 DJANGO_SETTINGS_MODULE = "watchtower_ce.settings"
 DATABASE_URL = "postgresql://wtce:wtce@localhost:5432/wtce"
-LLM_INSTANCE_POOL_SIZE = 1
+WTCE_LLM_INSTANCE_POOL_SIZE = 1
 
 [tasks.install]
 description = "Install project dependencies"
@@ -149,33 +149,65 @@ run = '''
 celery -A watchtower_ce worker -P solo -l INFO
 '''
 
-[tasks.chroma]
-description = "Run Chroma server"
+[tasks.wtvs]
+description = "Run Watchtower Vector Store server"
 usage = '''
-flag "-H --host <host>" help="Host to bind to" default="localhost"
+flag "-n --container-name <container-name>" help="Name of the Docker container" default="wtce-wtvs-dev"
+flag "-H --host <host>" help="Host to bind to" default="0.0.0.0"
 flag "-P --port <port>" help="Port to bind to" default="7777"
-flag "-d --dir <dir>" help="Directory where the Chroma database is persisted"
-flag "-m --embedding-model <embedding-model>" help="HuggingFace embedding model identifier or path"
-flag "-l --log-level <log-level>" help="Log level (debug, info, warning, error, critical)" default="info"
+flag "-m --embedding-model <embedding-model>" help="HuggingFace embedding model identifier or local model directory"
+flag "-l --log-level <log-level>" help="Log level [debug|info|warning|error|critical]" default="info"
 '''
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 
-DIR=${usage_dir:-${CHROMA_DIR:-}}
-EMBEDDING_MODEL=${usage_embedding_model:-${CHROMA_EMBEDDING_MODEL_DIR:-}}
+# TODO: REMOVE THESE 2 LINES AND TEST THIS TASK AFTER YOUSSEF UNPRIVATES THE PACKAGE
+gum log -l warn "NOT RUNNING WTVS AS THE REGISTRY IS CURRENTLY INACCESSIBLE. Clone the repository and run locally instead."
+exit 0
 
-if [ -z "$DIR" ]; then
-    gum log -l error "No persistence directory specified for Chroma. Set CHROMA_DIR environment variable or use --dir flag."
-    exit 1
-fi
+EMBEDDING_MODEL=${usage_embedding_model:-${WTVS_EMBEDDING_MODEL:-}}
 
 if [ -z "$EMBEDDING_MODEL" ]; then
-    gum log -l error "No embedding model specified for Chroma. Set CHROMA_EMBEDDING_MODEL_DIR environment variable or use --embedding-model flag."
+    gum log -l error "No embedding model specified. Set WTVS_EMBEDDING_MODEL or use --embedding-model."
     exit 1
 fi
 
-wtce chroma -H ${usage_host} -P ${usage_port} -d ${DIR} -m ${EMBEDDING_MODEL} -l ${usage_log_level}
+DOCKER_ARGS=(
+    -e "WTVS_HOST=${usage_host}"
+    -e "WTVS_PORT=${usage_port}"
+    -e "WTVS_LOG_LEVEL=${usage_log_level}"
+    -p "${usage_port}:${usage_port}"
+)
+
+# Local model directory
+if [ -d "$EMBEDDING_MODEL" ]; then
+    EMBEDDING_MODEL=$(realpath "$EMBEDDING_MODEL")
+
+    gum log -l info "Using local embedding model: $EMBEDDING_MODEL"
+
+    DOCKER_ARGS+=(
+        -v "${EMBEDDING_MODEL}:/app/model:ro"
+        -e "WTVS_EMBEDDING_MODEL=/app/model"
+    )
+else
+    gum log -l warn "Model not found locally. Will download from HuggingFace inside the container: $EMBEDDING_MODEL"
+
+    DOCKER_ARGS+=(
+        -e "WTVS_EMBEDDING_MODEL=${EMBEDDING_MODEL}"
+    )
+fi
+
+if [ -n "$(docker container ls -qaf "name=${usage_container_name}")" ]; then
+    gum log -l info "Starting WTVS container: ${usage_container_name}"
+    docker container start "${usage_container_name}"
+else
+    gum spin --title "Creating WTVS container" -- \
+        docker container run -d \
+        --name "${usage_container_name}" \
+        "${DOCKER_ARGS[@]}" \
+        ghcr.io/watchtowerdb/vector-store:latest
+fi
 '''
 
 [tasks.llm-server]
@@ -195,14 +227,19 @@ run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "${LLM_USE_MOCK_COMPLIANCE_CHECKER:-false}" = "true" ]; then
-gum log -l info "Using mock compliance checker."
-exit 0
-fi
-
 gum log -l info "Starting llama.cpp server"
 MODEL_PATH="${usage_model:-$LLM_BASE_MODEL_PATH}"
 PARALLEL="${usage_parallel:-${LLM_INSTANCE_POOL_SIZE:-1}}"
+
+if [ ! -f "${MODEL_PATH}" ]; then
+  gum log -l error "Model not found: ${MODEL_PATH}"
+  exit 1
+fi
+
+if [ -n "$(docker container ls -q -f name=wtce-llm-server-dev)" ]; then
+  gum log -l info "Stopping existing LLM server"
+  docker stop wtce-llm-server-dev
+fi
 
 docker run --rm \
   --gpus all \
@@ -226,11 +263,9 @@ docker run --rm \
 [tasks.backend]
 description = "Start all backend services"
 depends_post = ["stop-dev"]
-run='''
+run = '''
 #!/usr/bin/env bash
 set -euo pipefail
-
-gum log -l info "Launching all backend services"
 
 cleanup() {
   gum log -l info "Backend stopped, running cleanup"
@@ -238,17 +273,28 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mise run -o prefix devserver &
-mise run -o prefix celery &
-mise run -o prefix chroma &
-mise run -o prefix llm-server &
+gum log -l info "Launching all backend services"
+
+if [ "${WTCE_USE_MOCK_COMPLIANCE_CHECKER:-}" = "true" ]; then
+    gum log -l warn "Using mock compliance checker; no real LLM or WTVS servers"
+    mise run -o prefix devserver &
+    mise run -o prefix celery &
+    wait
+else
+    mise run -o prefix devserver &
+    mise run -o prefix celery &
+    mise run -o prefix llm-server &
+    mise run -o prefix wtvs &
+    wait
+fi
+
 wait
 '''
 
 [tasks.stop-dev]
 description = "Stop all running dev containers (requires containers to have the defined prefix)"
-alias="stop"
-wait_for = ["devserver", "celery", "chroma", "llm-server"]
+alias = "stop"
+wait_for = ["devserver", "celery", "llm-server", "wtvs"]
 tools = { docker-cli = "29" }
 usage = '''
 flag "-p --prefix <prefix>" help="Prefix used for all project containers" default="wtce-"
@@ -271,7 +317,7 @@ fi
 [tasks.clean-dev]
 description = "Remove all development containers and volumes (requires containers to have the defined prefix)"
 depends = ["stop-dev"]
-alias="clean"
+alias = "clean"
 tools = { docker-cli = "29" }
 usage = '''
 flag "-p --prefix <prefix>" help="Prefix used for all project containers" default="wtce-"

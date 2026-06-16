@@ -1,6 +1,8 @@
 import textwrap
 
-from ..core.compliance_checker import ComplianceChecker
+from django.conf import settings
+
+from ..core import ComplianceChecker
 
 
 class GDPRComplianceChecker(ComplianceChecker):
@@ -65,7 +67,7 @@ class GDPRComplianceChecker(ComplianceChecker):
             1. Examine the schema for both clear (e.g., "email", "date_of_birth") and ambiguous (e.g., "blob_data", "user_info") columns that may hold personal data.
             2. Generate questions that use GDPR terminology (e.g., "data subject", "personal data", "special category data", "pseudonymisation", "lawful basis", "purpose limitation", etc.).
             3. Be specific (e.g., special category data and ordinary personal data are not the same thing and should be treated as so in your questions;
-               these are two separate topics, so two separate questions if needed).
+                these are two separate topics, so two separate questions if needed).
             4. Avoid using raw database field names in the questions; translate them into natural English descriptions (e.g., "date of birth" instead of "dob", etc.).
             5. Ensure questions are retrieval friendly to vector stores. They should sound like they are seeking specific guidance from the standard.
 
@@ -118,7 +120,7 @@ class GDPRComplianceChecker(ComplianceChecker):
             1. Examine the assertion for both clear (e.g., "email", "health_record") and ambiguous (e.g., "blob_data", "user_info") columns that may hold personal data.
             2. Generate questions that use GDPR terminology (e.g., "data subject", "personal data", "special category data", "pseudonymisation", "lawful basis", "purpose limitation", etc.).
             3. Be specific (e.g., special category data and ordinary personal data are not the same thing and should be treated as so in your questions;
-               these are two separate topics, so two separate questions if needed).
+                these are two separate topics, so two separate questions if needed).
             4. Avoid using raw database field names in the questions; translate them into natural English descriptions (e.g., "date of birth" instead of "dob", etc.).
             5. End your questions with "according to Article <article number you are asking about> of the GDPR?"
             6. Ensure questions are retrieval friendly to vector stores. They should be written with many keywords to help with searching.
@@ -249,6 +251,12 @@ class GDPRComplianceChecker(ComplianceChecker):
             Your reply should:
             - Use as much wording from the given context as possible except for the REMEDIATION STEPS.
             - Be specific and actionable. If pseudonymisation or encryption is needed, specify what to apply and how.
-              If personal data should be deleted to honour a right-to-erasure request, explain why and provide the SQL to do so safely. And so on.
+                If personal data should be deleted to honour a right-to-erasure request, explain why and provide the SQL to do so safely. And so on.
             """
         ).strip()
+
+
+if settings.USE_MOCK_COMPLIANCE_CHECKER:
+    from ..utils import MockComplianceChecker
+
+    GDPRComplianceChecker = MockComplianceChecker  # pyright: ignore[reportAssignmentType]

@@ -1,6 +1,8 @@
 import textwrap
 
-from ..core.compliance_checker import ComplianceChecker
+from django.conf import settings
+
+from ..core import ComplianceChecker
 
 
 class PCIComplianceChecker(ComplianceChecker):
@@ -62,7 +64,7 @@ class PCIComplianceChecker(ComplianceChecker):
             1. Examine the schema for both clear (e.g., "credit_card") and ambiguous (e.g., "blob_data", "user_info") columns.
             2. Generate questions that use PCI-DSS terminology (e.g., "PAN" instead of "card number", "SAD" instead of "security code", etc.).
             3. Be specific (e.g., PAN and SAD are not the same thing and should be treated as so in your questions;
-               these are two separate topics, so two separate questions if needed).
+                these are two separate topics, so two separate questions if needed).
             4. Avoid using raw database field names in the questions; translate them into natural English descriptions (e.g., "card number" instead of "card_number", etc.).
             5. Ensure questions are retrieval friendly to vector stores. They should sound like they are seeking specific guidance from the standard.
 
@@ -114,7 +116,7 @@ class PCIComplianceChecker(ComplianceChecker):
             1. Examine the assertion for both clear (e.g., "credit_card") and ambiguous (e.g., "blob_data", "user_info") columns.
             2. Generate questions that use PCI-DSS terminology (e.g., "PAN" instead of "card number", "SAD" instead of "security code", etc.).
             3. Be specific (e.g., PAN and SAD are not the same thing and should be treated as so in your questions;
-               these are two separate topics, so two separate questions if needed).
+                these are two separate topics, so two separate questions if needed).
             4. Avoid using raw database field names in the questions; translate them into natural English descriptions (e.g., "card number" instead of "card_number", etc.).
             5. End your questions with "according to requirement <requirement number you are asking about> ?"
             6. Ensure questions are retrieval friendly to vector stores. They should be written with many keywords to help with searching.
@@ -245,6 +247,12 @@ class PCIComplianceChecker(ComplianceChecker):
             Your reply should:
             - Use as much wording from the given context as possible except for the REMEDIATION STEPS.
             - Be specific and actionable. If encryption is needed, specify what to encrypt and how.
-              If data should be deleted, explain why and provide the SQL to do so safely. And so on.
+                If data should be deleted, explain why and provide the SQL to do so safely. And so on.
             """
         ).strip()
+
+
+if settings.USE_MOCK_COMPLIANCE_CHECKER:
+    from ..utils import MockComplianceChecker
+
+    PCIComplianceChecker = MockComplianceChecker  # pyright: ignore[reportAssignmentType]

@@ -1,6 +1,7 @@
 from typing import cast
 
 from celery.app.task import Task
+from django.conf import settings
 from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -17,7 +18,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from ...engine.clients.llm_inference import LLMInference
+from ...engine.clients import LLMInference
 from . import models, serializers
 from .filters import (
     ClientDBFilter,
@@ -352,4 +353,13 @@ def stream_check_updates(request, check_id):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def model_status(request) -> Response:
+    if settings.USE_MOCK_COMPLIANCE_CHECKER:
+        return Response(
+            {
+                "status": "initialized",
+                "details": {"disclaimer": "Mock compliance checker is enabled."},
+            },
+            status=status.HTTP_200_OK,
+        )
+
     return Response(LLMInference().health(), status=status.HTTP_200_OK)

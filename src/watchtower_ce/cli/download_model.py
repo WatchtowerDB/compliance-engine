@@ -5,7 +5,7 @@ from huggingface_hub import snapshot_download
 
 
 @click.command(
-    "base",
+    "download_model",
     short_help="Download a base GGUF LLM model",
     help="Download a base GGUF LLM model from HuggingFace.",
 )
@@ -32,7 +32,7 @@ from huggingface_hub import snapshot_download
     default=[],
     multiple=True,
 )
-def base(name: str, output_dir: str, required_files: tuple[str, ...]) -> None:
+def download_model(name: str, output_dir: str, required_files: tuple[str, ...]) -> None:
     """
     Downloads a base GGUF LLM model from HuggingFace.
 

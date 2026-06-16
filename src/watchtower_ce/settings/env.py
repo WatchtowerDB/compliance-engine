@@ -45,12 +45,19 @@ DATABASES: dict[str, dj_database_url.DBConfig] = {
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 
+# Mock compliance checker settings
 USE_MOCK_COMPLIANCE_CHECKER: bool = (
     os.getenv("WTCE_USE_MOCK_COMPLIANCE_CHECKER", "false").lower() == "true"
 )
 SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING: bool = (
     os.getenv("WTCE_SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING", "false").lower()
     == "true"
+)
+MOCK_ARTIFICIAL_STREAMING_DELAY: float = float(
+    os.getenv("WTCE_MOCK_ARTIFICIAL_STREAMING_DELAY", "0.1")
+)
+MOCK_ARTIFICIAL_PROCESSING_DELAY: float = float(
+    os.getenv("WTCE_MOCK_ARTIFICIAL_PROCESSING_DELAY", "7")
 )
 LLM_SERVER_URL: str = os.getenv("WTCE_LLM_SERVER_URL", "http://127.0.0.1:6767")
 
