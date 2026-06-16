@@ -72,6 +72,7 @@ class ComplianceAssertion(models.Model):
     status: models.CharField = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING
     )
+    updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
         return (
@@ -110,6 +111,7 @@ class ComplianceCheck(models.Model):
     status: models.CharField = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING
     )
+    updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
         return (
