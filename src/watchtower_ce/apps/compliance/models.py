@@ -36,6 +36,7 @@ class ClientDBSchema(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        unique_together = ["client_db", "name", "internal_version"]
         ordering: tuple[str, ...] = ("id",)
 
 
