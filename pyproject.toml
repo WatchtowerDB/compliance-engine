@@ -54,11 +54,3 @@ ignore = ["F403"]
 include-package-data = true
 
 [tool.setuptools_scm]
-
-[tool.uv.sources]
-torch = [{ index = "torch-cpu" }]
-
-[[tool.uv.index]]
-name = "torch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
