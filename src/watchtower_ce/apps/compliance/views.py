@@ -273,6 +273,7 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
     def latest(self, request):
         latest_check = self.get_queryset().last()
 
+        # TODO: RETURN INSTEAD AN EMPTY TEMPLATE RESPONSE OF THE SERIALIZER LIKE THE OTHER VIEWSETS
         if latest_check is None:
             return Response(
                 {"detail": "No compliance checks found."},

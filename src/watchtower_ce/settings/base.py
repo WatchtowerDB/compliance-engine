@@ -2,15 +2,21 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any, Iterable
 
+from celery.schedules import crontab
 from corsheaders.defaults import default_headers
 
 from .. import apps
-from .env import AUTH_COOKIE_SECURE
+from .env import (
+    AUTH_COOKIE_SECURE,
+    CELERY_STALE_PENDING_PROCESS_TIMEOUT,
+    CELERY_STALE_PROCESS_TIMEOUT,
+)
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 
 INSTALLED_APPS: list[str] = [
     # NOTE: django apps
+    "django_celery_beat",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -134,3 +140,14 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
+
+CELERY_BEAT_SCHEDULE = {
+    "cleanup-stale-processes": {
+        "task": "watchtower_ce.apps.compliance.tasks.cleanup_stale_processes",
+        "schedule": crontab(minute="*/5"),  # every 5 minutes
+        "kwargs": {
+            "timeout_minutes": CELERY_STALE_PROCESS_TIMEOUT,
+            "pending_timeout_minutes": CELERY_STALE_PENDING_PROCESS_TIMEOUT,
+        },
+    },
+}

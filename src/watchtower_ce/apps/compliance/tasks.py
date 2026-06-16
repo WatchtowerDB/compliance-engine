@@ -1,8 +1,11 @@
 import json
 import logging
+from datetime import timedelta
 from typing import Optional
 
 from celery import chain, chord, shared_task
+from celery.signals import worker_process_shutdown, worker_shutdown
+from django.utils import timezone
 
 from . import ml_inference as ml
 from . import models
@@ -171,6 +174,9 @@ def execute_sql_assertion_task(assertion_id: int, check_id: int) -> tuple[int, s
     )
     assertion.save(update_fields=["result", "query_output", "status"])
 
+    # Heartbeat for the parent check
+    models.ComplianceCheck.objects.filter(id=check_id).update(updated_at=timezone.now())
+
     stream_event(
         check_id=check_id,
         event_type_suffix="assertion.result",
@@ -218,6 +224,9 @@ def generate_compliance_recommendation_task(
 
     assertion.status = models.ComplianceAssertion.Status.ANALYZING
     assertion.save(update_fields=["status"])
+
+    # Heartbeat for the parent check
+    models.ComplianceCheck.objects.filter(id=check_id).update(updated_at=timezone.now())
 
     stream_event(
         check_id,
@@ -418,3 +427,90 @@ def schedule_sql_assertion_pipeline(
         ),
         execute_then_recommendations.s(check_id),  # pyright: ignore[reportFunctionMemberAccess]
     ).apply_async()
+
+
+@shared_task
+def cleanup_stale_processes(
+    timeout_minutes: int = 15, pending_timeout_minutes: int = 120
+) -> None:
+    """
+    Finds and fails compliance checks and assertions that have become stale.
+
+    A process is considered "stale" if it is in an active state (not COMPLETED, or FAILED)
+    but has not seen an update to its `updated_at` timestamp within the specified timeout.
+
+    Pending processes are considered stale after the pending timeout, which ideally should
+    be a lot longer than the normal timeout.
+
+    This handles abrupt failures like SIGKILL (not directly ofc lol), or unhandled crashes
+    where the worker couldn't perform a graceful cleanup.
+    """
+    logger.info("Cleaning up stale assertions and checks")
+
+    threshold = timezone.now() - timedelta(minutes=timeout_minutes)
+    pending_threshold = timezone.now() - timedelta(minutes=pending_timeout_minutes)
+
+    # Fail stale assertions
+    active_assertions_statuses = [
+        models.ComplianceAssertion.Status.EXECUTING,
+        models.ComplianceAssertion.Status.ANALYZING,
+    ]
+    stale_assertions_count = models.ComplianceAssertion.objects.filter(
+        status__in=active_assertions_statuses, updated_at__lt=threshold
+    ).update(status=models.ComplianceAssertion.Status.FAILED)
+
+    # Fail orphaned pending assertions
+    pending_assertions_count = models.ComplianceAssertion.objects.filter(
+        status=models.ComplianceAssertion.Status.PENDING,
+        updated_at__lt=pending_threshold,
+    ).update(status=models.ComplianceAssertion.Status.FAILED)
+
+    # Fail stale checks
+    active_checks_statuses = [
+        models.ComplianceCheck.Status.GENERATING,
+        models.ComplianceCheck.Status.EXECUTING,
+        models.ComplianceCheck.Status.ANALYZING,
+    ]
+    stale_checks_count = models.ComplianceCheck.objects.filter(
+        status__in=active_checks_statuses, updated_at__lt=threshold
+    ).update(status=models.ComplianceCheck.Status.FAILED)
+
+    # Fail stale pending checks
+    pending_checks_count = models.ComplianceCheck.objects.filter(
+        status=models.ComplianceCheck.Status.PENDING,
+        updated_at__lt=pending_threshold,
+    ).update(status=models.ComplianceCheck.Status.FAILED)
+
+    total_assertions = stale_assertions_count + pending_assertions_count
+    total_checks = stale_checks_count + pending_checks_count
+
+    if total_assertions or total_checks:
+        logger.info(
+            "Cleaned up %d stale assertions and %d stale checks.",
+            total_assertions,
+            total_checks,
+        )
+
+
+@worker_shutdown.connect
+def on_worker_shutdown(sender, signal, **kwargs):
+    """
+    Handle graceful SIGTERM by triggering an immediate cleanup
+    of stale processes.
+    """
+    logger.warning(
+        "Worker shutting down. Triggering checks and assertions status cleanup."
+    )
+
+    # On graceful shutdown, we can be aggressive and cleanup anything currently "active"
+    # since workers are about to stop processing them anyway.
+    cleanup_stale_processes(timeout_minutes=0)
+
+
+@worker_process_shutdown.connect
+def on_worker_process_shutdown(sender, pid, exitcode, **kwargs):
+    """Fires in each worker child process before it exits."""
+    from ...engine.clients import ContextRetriever, LLMInference
+
+    LLMInference.close()
+    ContextRetriever.close()
