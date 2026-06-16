@@ -1,10 +1,16 @@
 from typing import cast
 
 from celery.app.task import Task
+from django.db.models import Count, Max
 from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+)
 from rest_framework import status, viewsets
 from rest_framework.decorators import (
     action,
@@ -363,3 +369,132 @@ def trigger_model_init(request):
     return Response(
         {"message": "Model initialization enqueued."}, status=status.HTTP_202_ACCEPTED
     )
+
+
+@extend_schema(
+    parameters=[
+        OpenApiParameter(
+            "db_id",
+            int,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            description="ID of the ClientDB whose schema history to analyse.",
+        ),
+        OpenApiParameter(
+            "schema_id",
+            int,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            description=(
+                "ID of the ClientDBSchema that serves as the upper bound. "
+                "All schemas for db_id with id ≤ schema_id are included, "
+                "ordered chronologically as v1, v2, v3 …"
+            ),
+        ),
+        OpenApiParameter(
+            "framework_id",
+            int,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            many=True,
+            description=(
+                "One or more ComplianceFramework IDs to include. "
+                "Omit to include all frameworks."
+            ),
+        ),
+    ],
+    responses={
+        200: OpenApiResponse(
+            description=(
+                "List of schema versions with per-framework failure counts. "
+                'Example: [{"version": "v1", "SOC2": 8, "HIPAA": 14}]'
+            )
+        ),
+        400: OpenApiResponse(description="db_id or schema_id missing or not integers."),
+        404: OpenApiResponse(description="schema_id not found under the given db_id."),
+    },
+    summary="Schema iteration failure counts",
+    description=(
+        "Returns a chronological series of schema versions for a given database, "
+        "each annotated with the number of failing compliance assertions per framework "
+        "as of the latest ComplianceCheck recorded for that schema.\n\n"
+        "**Version ordering:** all ClientDBSchema records for db_id with id ≤ schema_id, "
+        "sorted ascending by id, are labelled v1, v2, v3 …\n\n"
+        "**Per-version data:** for each (schema, framework) pair the most recent "
+        "ComplianceCheck is used; its assertions where result=False are counted.\n\n"
+        "Requires authentication."
+    ),
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def schema_iteration_chart(request):
+    raw_db_id = request.query_params.get("db_id")
+    raw_schema_id = request.query_params.get("schema_id")
+
+    if not raw_db_id or not raw_schema_id:
+        return Response(
+            {"detail": "db_id and schema_id are required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        db_id = int(raw_db_id)
+        schema_id = int(raw_schema_id)
+        framework_ids = [
+            int(fid) for fid in request.query_params.getlist("framework_id")
+        ]
+    except (ValueError, TypeError):
+        return Response(
+            {"detail": "db_id, schema_id, and framework_id must be integers."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    get_object_or_404(models.ClientDBSchema, pk=schema_id, client_db_id=db_id)
+
+    schema_ids = list(
+        models.ClientDBSchema.objects.filter(client_db_id=db_id, id__lte=schema_id)
+        .order_by("id")
+        .values_list("id", flat=True)
+    )
+
+    frameworks_qs = models.ComplianceFramework.objects.all()
+    if framework_ids:
+        frameworks_qs = frameworks_qs.filter(id__in=framework_ids)
+    framework_map: dict[int, str] = dict(frameworks_qs.values_list("id", "name"))
+
+    if not framework_map:
+        return Response([{"version": f"v{i + 1}"} for i in range(len(schema_ids))])
+
+    # Latest ComplianceCheck id per (schema, framework) pair
+    latest_check_map: dict[tuple[int, int], int] = {
+        (row["schema_id"], row["framework_id"]): row["latest_id"]
+        for row in models.ComplianceCheck.objects.filter(
+            schema_id__in=schema_ids,
+            framework_id__in=list(framework_map),
+        )
+        .values("schema_id", "framework_id")
+        .annotate(latest_id=Max("id"))
+    }
+
+    # Failure counts for each of those checks
+    failure_count_map: dict[int, int] = {
+        row["compliance_check_id"]: row["count"]
+        for row in models.ComplianceAssertion.objects.filter(
+            compliance_check_id__in=list(set(latest_check_map.values())),
+            result=False,
+        )
+        .values("compliance_check_id")
+        .annotate(count=Count("id"))
+    }
+
+    result = []
+    for i, sid in enumerate(schema_ids):
+        entry: dict[str, int | str] = {"version": f"v{i + 1}"}
+        for fw_id, fw_name in framework_map.items():
+            check_id = latest_check_map.get((sid, fw_id))
+            entry[fw_name] = (
+                failure_count_map.get(check_id, 0) if check_id is not None else 0
+            )
+        result.append(entry)
+
+    return Response(result)

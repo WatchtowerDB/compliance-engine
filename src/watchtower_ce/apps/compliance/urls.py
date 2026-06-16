@@ -18,4 +18,9 @@ urlpatterns: list[URLPattern | URLResolver] = [
         name="stream-check-updates",
     ),
     path("model/init/", views.trigger_model_init, name="trigger-model-init"),
+    path(
+        "analytics/schema-iterations/",
+        views.schema_iteration_chart,
+        name="analytics-schema-iterations",
+    ),
 ]
