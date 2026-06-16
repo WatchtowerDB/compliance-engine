@@ -3,27 +3,27 @@ from rest_framework import serializers
 
 from .models import (
     ClientDB,
-    ComplianceAssertion,
     ClientDBSchema,
-    ComplianceFramework,
+    ComplianceAssertion,
     ComplianceCheck,
+    ComplianceFramework,
 )
 
 
 class ComplianceFrameworkSerializer(serializers.ModelSerializer):
-    class Meta:
+    class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
         model: type[models.Model] = ComplianceFramework
         fields: str = "__all__"
 
 
 class ClientDBSerializer(serializers.ModelSerializer):
-    class Meta:
+    class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
         model = ClientDB
         fields = "__all__"
 
 
 class ClientDBSchemaSerializer(serializers.ModelSerializer):
-    class Meta:
+    class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
         model = ClientDBSchema
         fields = "__all__"
 
@@ -102,7 +102,7 @@ class ClientDBSchemaUploadSerializer(serializers.Serializer):
 
 
 class ComplianceAssertionSerializer(serializers.ModelSerializer):
-    class Meta:
+    class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
         model = ComplianceAssertion
         fields = "__all__"
 
@@ -135,10 +135,10 @@ class ComplianceCheckSerializer(serializers.ModelSerializer):
     client_db = serializers.PrimaryKeyRelatedField(read_only=True)
     user = serializers.PrimaryKeyRelatedField(read_only=True)
 
-    class Meta:
+    class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
         model = ComplianceCheck
         fields = "__all__"
-        read_only_fields = ("date", "client_db", "user")
+        read_only_fields = ("date", "client_db", "user", "status")
 
     def create(self, validated_data):
         schema = validated_data["schema"]

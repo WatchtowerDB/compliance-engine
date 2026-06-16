@@ -1,10 +1,11 @@
 from django.contrib import admin
+
 from .models import (
-    ComplianceFramework,
     ClientDB,
     ClientDBSchema,
     ComplianceAssertion,
     ComplianceCheck,
+    ComplianceFramework,
 )
 
 
@@ -35,12 +36,19 @@ class ClientDBSchemaAdmin(BaseAdmin):
 
 @admin.register(ComplianceAssertion)
 class ComplianceAssertionAdmin(BaseAdmin):
-    list_display = ("id", "compliance_framework", "client_db", "schema", "result")
-    list_filter = ("result", "compliance_framework", "client_db")
+    list_display = (
+        "id",
+        "compliance_framework",
+        "client_db",
+        "schema",
+        "result",
+        "status",
+    )
+    list_filter = ("result", "status", "compliance_framework", "client_db")
     search_fields = ("sql_query",)
 
 
 @admin.register(ComplianceCheck)
 class ComplianceCheckAdmin(BaseAdmin):
-    list_display = ("id", "framework", "client_db", "schema", "user", "date")
-    list_filter = ("framework", "client_db", "date")
+    list_display = ("id", "framework", "client_db", "schema", "user", "date", "status")
+    list_filter = ("framework", "client_db", "date", "status")

@@ -27,10 +27,20 @@ class ComplianceAssertionFilter(filters.FilterSet):
     )
     result = filters.BooleanFilter(field_name="result")
     check = NumberInFilter(field_name="compliance_check__id", lookup_expr="in")
+    status = filters.MultipleChoiceFilter(
+        field_name="status", choices=ComplianceAssertion.Status.choices
+    )
 
     class Meta:
         model = ComplianceAssertion
-        fields = ["schema", "client_db", "compliance_framework", "result", "check"]
+        fields = [
+            "schema",
+            "client_db",
+            "compliance_framework",
+            "result",
+            "check",
+            "status",
+        ]
 
 
 class ClientDBSchemaFilter(filters.FilterSet):
@@ -61,7 +71,10 @@ class ComplianceFrameworkFilter(filters.FilterSet):
 class ComplianceCheckFilter(filters.FilterSet):
     framework = NumberInFilter(field_name="framework__id", lookup_expr="in")
     client_db = NumberInFilter(field_name="client_db__id", lookup_expr="in")
+    status = filters.MultipleChoiceFilter(
+        field_name="status", choices=ComplianceCheck.Status.choices
+    )
 
     class Meta:
         model = ComplianceCheck
-        fields = ["framework", "client_db"]
+        fields = ["framework", "client_db", "status"]

@@ -186,8 +186,8 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
         summary="List compliance assertions",
         description=(
             "Return a filtered list of compliance assertions. "
-            "Supports filtering by schema, database, framework, result, and check. "
-            "Supports ordering by compliance_check, client_db, result, or id. "
+            "Supports filtering by schema, database, framework, result, check and status. "
+            "Supports ordering by compliance_check, client_db, result, status, or id. "
             "Use the `ordering` parameter (e.g., `?ordering=-id`, `ordering=client_db,id`)."
         ),
     ),
@@ -203,7 +203,7 @@ class ComplianceAssertionViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = serializers.ComplianceAssertionSerializer
     filterset_class = ComplianceAssertionFilter
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    ordering_fields = ["compliance_check", "client_db", "result", "id"]
+    ordering_fields = ["compliance_check", "client_db", "result", "status", "id"]
 
 
 @extend_schema_view(
@@ -211,8 +211,8 @@ class ComplianceAssertionViewSet(viewsets.ReadOnlyModelViewSet):
         summary="List compliance checks",
         description=(
             "Return a list of all compliance checks. Results default to newest first. "
-            "Supports filtering by framework and database, and ordering by date, "
-            "framework, client_db, or id."
+            "Supports filtering by framework, database and status, and ordering by date, "
+            "framework, client_db, status, or id."
         ),
     ),
     retrieve=extend_schema(
@@ -242,7 +242,7 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "head", "options"]
     filterset_class = ComplianceCheckFilter
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    ordering_fields = ["date", "framework", "client_db", "id"]
+    ordering_fields = ["date", "framework", "client_db", "status", "id"]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
