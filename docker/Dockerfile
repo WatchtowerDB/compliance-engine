@@ -1,4 +1,4 @@
-FROM nvidia/cuda:13.1.1-cudnn-devel-ubuntu24.04 AS base
+FROM debian:trixie-slim AS base
 
 # NOTE: Install UV
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
@@ -13,40 +13,34 @@ FROM base AS build
 
 ARG VERSION=0.0.0
 
-ENV SETUPTOOLS_SCM_PRETEND_VERSION="${VERSION}" \
-  CMAKE_ARGS="-DGGML_CUDA=on"
+ENV SETUPTOOLS_SCM_PRETEND_VERSION="${VERSION}"
 
 WORKDIR /app
-
-RUN apt-get update && \
-  apt-get install --no-install-recommends -y gcc='4:13.2.0-*' g++='4:13.2.0-*'
 
 COPY src src/
 COPY pyproject.toml uv.lock MANIFEST.in ./
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-  uv sync --no-install-project --frozen --active --group=ai --extra=models && \
+  uv sync --no-install-project --frozen --active && \
   python src/manage.py collectstatic --noinput && \
   uv pip install .
 
 FROM base AS runtime
 
 ENV DJANGO_SETTINGS_MODULE=watchtower_ce.settings \
-  DJANGO_DB_PATH=/home/watchtower/db.sqlite3 \
-  WTCE_CHROMA_DIR=/home/watchtower/chroma \
-  WTCE_EMBEDDING_MODEL_DIR=/home/watchtower/models/embedding
+    DJANGO_DB_PATH=/home/watchtower/db.sqlite3
 
 ARG SOURCE_URL=https://github.com/watchtowerdb/compliance-engine \
-  VCS_REF=HEAD \
-  VERSION=0.0.0 \
-  LICENSE=GPL-3.0-or-later
+    VCS_REF=HEAD \
+    VERSION=0.0.0 \
+    LICENSE=GPL-3.0-or-later
 
 LABEL org.opencontainers.image.title="Watchtower Compliance Engine" \
-  org.opencontainers.image.description="Watchtower database compliance engine" \
-  org.opencontainers.image.source="${SOURCE_URL}" \
-  org.opencontainers.image.version="${VERSION}" \
-  org.opencontainers.image.revision="${VCS_REF}" \
-  org.opencontainers.image.licenses="${LICENSE}"
+    org.opencontainers.image.description="Watchtower database compliance engine" \
+    org.opencontainers.image.source="${SOURCE_URL}" \
+    org.opencontainers.image.version="${VERSION}" \
+    org.opencontainers.image.revision="${VCS_REF}" \
+    org.opencontainers.image.licenses="${LICENSE}"
 
 COPY --from=build /usr/local/venv /usr/local/venv
 
@@ -56,13 +50,6 @@ RUN useradd -ms /usr/bin/bash watchtower && \
   apt-get update && \
   apt-get install -y --no-install-recommends tzdata && \
   rm -rf /var/lib/apt/lists/*
-
-COPY --chown=watchtower:watchtower data/chroma_db $WTCE_CHROMA_DIR
-
-RUN --mount=type=cache,target=/tmp/models/embedding \
-  wtce download embedding -o /tmp/models/embedding && \
-  mkdir -p $WTCE_EMBEDDING_MODEL_DIR && cp -r /tmp/models/embedding/* $WTCE_EMBEDDING_MODEL_DIR && \
-  chown -R watchtower:watchtower $WTCE_EMBEDDING_MODEL_DIR
 
 USER watchtower:watchtower
 

@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import click
-from huggingface_hub import snapshot_download
 
 
 @click.command(
@@ -49,6 +48,10 @@ def download_model(name: str, output_dir: str, required_files: tuple[str, ...]) 
         If `required_files` is not specified, the function will always
         download the entire model.
     """
+    from huggingface_hub import (
+        snapshot_download,  # lazy import to make it an optional dependency
+    )
+
     if not output_dir:
         # Default to a 'base' directory in the current working directory
         absolute_path = Path.cwd() / "base" / name
