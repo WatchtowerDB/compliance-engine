@@ -19,13 +19,12 @@ class _TimeoutConfig(httpx.Timeout, Enum):
     HEALTH = httpx.Timeout(connect=5.0, read=5.0, write=5.0, pool=5.0)
 
 
-_llm_client = httpx.Client(
-    base_url=settings.LLM_SERVER_URL, timeout=_TimeoutConfig.DEFAULT
-)
-
-
 class LLMInference:
     """HTTP client wrapper around the llama inference server."""
+
+    _client = httpx.Client(
+        base_url=settings.LLM_SERVER_URL, timeout=_TimeoutConfig.DEFAULT
+    )
 
     class ServerStatus(str, Enum):
         """
@@ -71,15 +70,15 @@ class LLMInference:
                 Higher values increase diversity but may reduce coherence. Defaults to `64`.
         """
         logging.debug(
-            "Attempting to connect to the inference server at %s", _llm_client.base_url
+            "Attempting to connect to the inference server at %s", self._client.base_url
         )
         for retries in range(5):
             try:
-                response = _llm_client.get("/health", timeout=5.0)
+                response = self._client.get("/health", timeout=5.0)
                 response.raise_for_status()
                 logger.debug(
                     "Successfully connected to inference server at %s",
-                    _llm_client.base_url,
+                    self._client.base_url,
                 )
                 break
             except (httpx.HTTPStatusError, httpx.ConnectError) as e:
@@ -91,7 +90,7 @@ class LLMInference:
         else:
             raise ConnectionError(
                 "Failed to connect to the inference server at %s after 5 attempts."
-                % _llm_client.base_url
+                % self._client.base_url
             )
 
         self.prompt_template = prompt_template
@@ -132,7 +131,7 @@ class LLMInference:
         """
         formatted_prompt = self.prompt_template.format(prompt=prompt)
 
-        with _llm_client.stream(
+        with self._client.stream(
             "POST",
             "/v1/completions",
             timeout=_TimeoutConfig.STREAMING,
@@ -210,7 +209,7 @@ class LLMInference:
             httpx.HTTPStatusError: If the server returns a non-2xx response.
         """
         formatted_prompt = self.prompt_template.format(prompt=prompt)
-        response = _llm_client.post(
+        response = self._client.post(
             "/v1/completions",
             timeout=_TimeoutConfig.BATCH,
             json={
@@ -283,7 +282,7 @@ class LLMInference:
             return 0
 
         try:
-            response = _llm_client.post("/tokenize", json={"content": text})
+            response = self._client.post("/tokenize", json={"content": text})
             response.raise_for_status()
             return len(response.json().get("tokens", []))
         except Exception:
@@ -310,7 +309,7 @@ class LLMInference:
                 with the raw server response body or error description.
         """
         try:
-            response = _llm_client.get("/health", timeout=_TimeoutConfig.HEALTH)
+            response = self._client.get("/health", timeout=_TimeoutConfig.HEALTH)
             if response.status_code == 200:
                 return {
                     "status": self.ServerStatus.INITIALIZED,
@@ -332,3 +331,13 @@ class LLMInference:
             }
         except Exception as e:
             return {"status": self.ServerStatus.ERROR, "details": {"error": str(e)}}
+
+    @classmethod
+    def close(cls) -> None:
+        """
+        Gracefully close the LLM inference client.
+
+        This makes the client unusable after this method is called,
+        so it should only be called on shutdown or similar cleanup operations.
+        """
+        cls._client.close()

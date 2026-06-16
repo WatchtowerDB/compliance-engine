@@ -10,15 +10,15 @@ from langchain_core.documents import Document
 
 logger = logging.getLogger(__name__)
 
-_chroma_client = httpx.Client(
-    base_url=settings.WTVS_SERVER_URL,
-    timeout=httpx.Timeout(connect=5.0, read=20.0, write=10.0, pool=10.0),
-    limits=httpx.Limits(max_keepalive_connections=10),
-)
-
 
 class ContextRetriever:
     """HTTP client wrapper around the context retrieval server."""
+
+    _client = httpx.Client(
+        base_url=settings.WTVS_SERVER_URL,
+        timeout=httpx.Timeout(connect=5.0, read=20.0, write=10.0, pool=10.0),
+        limits=httpx.Limits(max_keepalive_connections=10),
+    )
 
     def __init__(
         self,
@@ -39,15 +39,15 @@ class ContextRetriever:
             ConnectionError: If unable to connect to the retrieval server.
         """
         logger.debug(
-            "Attempting to connect to retrieval server at %s", _chroma_client.base_url
+            "Attempting to connect to retrieval server at %s", self._client.base_url
         )
         for retries in range(5):
             try:
-                response = _chroma_client.get("/health", timeout=5.0)
+                response = self._client.get("/health", timeout=5.0)
                 response.raise_for_status()
                 logger.debug(
                     "Successfully connected to retrieval server at %s",
-                    _chroma_client.base_url,
+                    self._client.base_url,
                 )
                 break
             except (httpx.HTTPStatusError, httpx.ConnectError) as e:
@@ -59,7 +59,7 @@ class ContextRetriever:
         else:
             raise ConnectionError(
                 "Failed to connect to retrieval server at %s after 5 attempts.",
-                _chroma_client.base_url,
+                self._client.base_url,
             )
 
         self.collection_name = collection_name
@@ -104,7 +104,7 @@ class ContextRetriever:
         )
 
         try:
-            response = _chroma_client.post(
+            response = self._client.post(
                 "/retrieve",
                 json={
                     "query": query,
@@ -183,7 +183,7 @@ class ContextRetriever:
             dict: A dictionary containing the health status, embedding model status, and number of available collections.
         """
         try:
-            response = _chroma_client.get(
+            response = self._client.get(
                 "/health",
                 timeout=5.0,
             )
@@ -212,14 +212,14 @@ class ContextRetriever:
             return {
                 "status": "unavailable",
                 "details": {
-                    "error": f"Cannot connect to server at {_chroma_client.base_url}",
+                    "error": f"Cannot connect to server at {self._client.base_url}",
                 },
             }
         except TimeoutException:
             return {
                 "status": "unavailable",
                 "details": {
-                    "error": f"Connection to {_chroma_client.base_url} timed out",
+                    "error": f"Connection to {self._client.base_url} timed out",
                 },
             }
         except Exception as e:
@@ -229,3 +229,13 @@ class ContextRetriever:
                     "error": f"Unexpected error: {str(e)}",
                 },
             }
+
+    @classmethod
+    def close(cls) -> None:
+        """
+        Gracefully close the context retriever client.
+
+        This makes the client unusable after this method is called,
+        so it should only be called on shutdown or similar cleanup operations.
+        """
+        cls._client.close()
