@@ -1,4 +1,5 @@
 from django_filters import rest_framework as filters
+from drf_spectacular.utils import extend_schema_serializer
 
 from .models import (
     ClientDB,
@@ -9,12 +10,23 @@ from .models import (
 )
 
 
+# Custom Reusable Comma-Separated Filter
+# https://django-filter.readthedocs.io/en/stable/ref/filters.html#django_filters.filters.BaseInFilter
+@extend_schema_serializer(many=True)
+class NumberInFilter(filters.BaseInFilter, filters.NumberFilter):
+    """Allows comma-separated integers (e.g., ?schema=1,2,3)"""
+
+    pass
+
+
 class ComplianceAssertionFilter(filters.FilterSet):
-    schema = filters.NumberFilter(field_name="schema__id")
-    client_db = filters.NumberFilter(field_name="client_db__id")
-    compliance_framework = filters.NumberFilter(field_name="compliance_framework__id")
+    schema = NumberInFilter(field_name="schema__id", lookup_expr="in")
+    client_db = NumberInFilter(field_name="client_db__id", lookup_expr="in")
+    compliance_framework = NumberInFilter(
+        field_name="compliance_framework__id", lookup_expr="in"
+    )
     result = filters.BooleanFilter(field_name="result")
-    check = filters.NumberFilter(field_name="compliance_check__id")
+    check = NumberInFilter(field_name="compliance_check__id", lookup_expr="in")
 
     class Meta:
         model = ComplianceAssertion
@@ -22,7 +34,7 @@ class ComplianceAssertionFilter(filters.FilterSet):
 
 
 class ClientDBSchemaFilter(filters.FilterSet):
-    client_db = filters.NumberFilter(field_name="client_db__id")
+    client_db = NumberInFilter(field_name="client_db__id", lookup_expr="in")
 
     class Meta:
         model = ClientDBSchema
@@ -47,8 +59,8 @@ class ComplianceFrameworkFilter(filters.FilterSet):
 
 
 class ComplianceCheckFilter(filters.FilterSet):
-    framework = filters.NumberFilter(field_name="framework__id")
-    client_db = filters.NumberFilter(field_name="client_db__id")
+    framework = NumberInFilter(field_name="framework__id", lookup_expr="in")
+    client_db = NumberInFilter(field_name="client_db__id", lookup_expr="in")
 
     class Meta:
         model = ComplianceCheck
