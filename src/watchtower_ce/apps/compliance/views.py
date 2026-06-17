@@ -1,13 +1,17 @@
 from typing import cast
 
 from celery.app.task import Task
-from django.db import transaction
-from django.db.models import Max
+from django.conf import settings
 from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
-from rest_framework import status, viewsets
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+    inline_serializer,
+)
+from rest_framework import serializers as rest_framework_serializers, status, viewsets
 from rest_framework.decorators import (
     action,
     api_view,
@@ -19,6 +23,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from ...engine.clients import LLMInference
 from . import models, serializers
 from .filters import (
     ClientDBFilter,
@@ -29,7 +34,7 @@ from .filters import (
 )
 from .renderers import SSERenderer
 from .sse import RedisSSEStream, build_cloud_event, format_sse
-from .tasks import initialize_model_task, schedule_sql_assertion_pipeline
+from .tasks import schedule_sql_assertion_pipeline
 
 
 @extend_schema_view(
@@ -128,18 +133,6 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     ordering_fields = ["created_at", "id"]
 
-    def perform_create(self, serializer):
-        name = serializer.validated_data.get("name", "")
-        client_db = serializer.validated_data.get("client_db")
-
-        with transaction.atomic():
-            max_version = (
-                models.ClientDBSchema.objects.select_for_update()
-                .filter(client_db=client_db, name=name)
-                .aggregate(Max("internal_version"))["internal_version__max"]
-            )
-            serializer.save(internal_version=(max_version or 0) + 1)
-
     def update(self, request, *args, **kwargs):
         return Response(
             {"detail": "Update not allowed."}, status=status.HTTP_405_METHOD_NOT_ALLOWED
@@ -198,8 +191,8 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
         summary="List compliance assertions",
         description=(
             "Return a filtered list of compliance assertions. "
-            "Supports filtering by schema, database, framework, result, and check. "
-            "Supports ordering by compliance_check, client_db, result, or id. "
+            "Supports filtering by schema, database, framework, result, check and status. "
+            "Supports ordering by compliance_check, client_db, result, status, or id. "
             "Use the `ordering` parameter (e.g., `?ordering=-id`, `ordering=client_db,id`)."
         ),
     ),
@@ -215,7 +208,7 @@ class ComplianceAssertionViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = serializers.ComplianceAssertionSerializer
     filterset_class = ComplianceAssertionFilter
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    ordering_fields = ["compliance_check", "client_db", "result", "id"]
+    ordering_fields = ["compliance_check", "client_db", "result", "status", "id"]
 
 
 @extend_schema_view(
@@ -223,8 +216,8 @@ class ComplianceAssertionViewSet(viewsets.ReadOnlyModelViewSet):
         summary="List compliance checks",
         description=(
             "Return a list of all compliance checks. Results default to newest first. "
-            "Supports filtering by framework and database, and ordering by date, "
-            "framework, client_db, or id."
+            "Supports filtering by framework, database and status, and ordering by date, "
+            "framework, client_db, status, or id."
         ),
     ),
     retrieve=extend_schema(
@@ -234,17 +227,24 @@ class ComplianceAssertionViewSet(viewsets.ReadOnlyModelViewSet):
     create=extend_schema(
         summary="Submit a compliance check",
         description=(
-            "Submit a new compliance check. Saves the record and immediately triggers "
-            "an asynchronous Celery pipeline to evaluate assertions against the selected "
-            "schema, client database, and compliance framework. "
-            "Returns a confirmation message and the ID of the created check. "
+            "Submit a new compliance check. Pass `client_db`, `framework`, and `schema_name` — "
+            "the system resolves the latest uploaded version of that schema automatically. "
+            "Saves the record and immediately triggers an asynchronous Celery pipeline to "
+            "evaluate compliance assertions. "
             "Track processing progress via the `stream-check-updates` SSE endpoint."
         ),
+        request=serializers.ComplianceCheckSerializer,
         responses={
-            201: OpenApiResponse(
-                description="Compliance check created. Returns message and check ID."
+            201: inline_serializer(
+                name="ComplianceCheckCreatedResponse",
+                fields={
+                    "message": rest_framework_serializers.CharField(),
+                    "id": rest_framework_serializers.IntegerField(),
+                },
             ),
-            400: OpenApiResponse(description="Validation error."),
+            400: OpenApiResponse(
+                description="Validation error — invalid IDs or unknown schema name."
+            ),
         },
     ),
 )
@@ -254,7 +254,7 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "head", "options"]
     filterset_class = ComplianceCheckFilter
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    ordering_fields = ["date", "framework", "client_db", "id"]
+    ordering_fields = ["date", "framework", "client_db", "status", "id"]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -285,6 +285,7 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
     def latest(self, request):
         latest_check = self.get_queryset().last()
 
+        # TODO: RETURN INSTEAD AN EMPTY TEMPLATE RESPONSE OF THE SERIALIZER LIKE THE OTHER VIEWSETS
         if latest_check is None:
             return Response(
                 {"detail": "No compliance checks found."},
@@ -312,7 +313,7 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
         "3. Otherwise, emits a `com.watchtower.system.connected` event to confirm the connection.\n"
         "4. Replays any events missed since `Last-Event-ID` (if provided), then tails the "
         "Redis stream live via XREAD, forwarding events as CloudEvents until the pipeline "
-        "reaches a terminal state.\n\n"
+        "forwarding events in CloudEvent format until the pipeline reaches a terminal state.\n\n"
         "Requires authentication."
     ),
 )
@@ -352,28 +353,26 @@ def stream_check_updates(request, check_id):
 
 @extend_schema(
     responses={
-        202: OpenApiResponse(description="Model initialization triggered."),
+        200: OpenApiResponse(description="Current inference server status."),
     },
-    summary="Trigger model initialization",
+    summary="Get inference server status",
     description=(
-        "Enqueues the model initialization task so that compliance checker weights "
-        "are loaded into memory before the first check is submitted. "
-        "Returns immediately; initialization runs asynchronously in the Celery worker.\n\n"
-        "Requires authentication.\n"
-        "WARNING: THIS ENDPOINT WILL CRASH YOUR BACKEND!\n"
-        "IMPLEMENTATION WILL BE CHANGED LATER!\n"
-        "For starters, it'll support GET to poll for the model state. "
-        "Please recognise that this endpoint is not and will not be "
-        "reliable or complete until certain other features are implemented."
+        "Return the current state of the llama-server inference server.\n\n"
+        "Queries the server's `/health` endpoint directly. "
+        'Possible statuses: "not_initialized", "initializing", "initialized", "error".\n\n'
+        "Requires authentication."
     ),
 )
-@api_view(["POST"])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def trigger_model_init(request):
-    # TODO: ADD MODEL STATES AFTER NEW SINGLETON IMPLEMENTATION,
-    #       GET FOR POLLING, OTHER STATUS CODES, AND UPDATE THE
-    #       TASK ITSELF.
-    cast(Task, initialize_model_task).delay()
-    return Response(
-        {"message": "Model initialization enqueued."}, status=status.HTTP_202_ACCEPTED
-    )
+def model_status(request) -> Response:
+    if settings.USE_MOCK_COMPLIANCE_CHECKER:
+        return Response(
+            {
+                "status": "initialized",
+                "details": {"disclaimer": "Mock compliance checker is enabled."},
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    return Response(LLMInference().health(), status=status.HTTP_200_OK)

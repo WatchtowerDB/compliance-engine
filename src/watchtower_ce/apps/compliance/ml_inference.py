@@ -1,31 +1,12 @@
 import logging
 from typing import Iterator, List
 
-from django.conf import settings
-
+from ...engine.core import ComplianceChecker
+from ...engine.standards import GDPRComplianceChecker, PCIComplianceChecker
 from .sql_execution import ExecutorFactory
 
-if settings.USE_MOCK_COMPLIANCE_CHECKER:
-    from ...engine.utils.mock_compliance_checker import (
-        MockComplianceChecker as ComplianceChecker,
-    )
-    from ...engine.utils.mock_compliance_checker import (
-        MockComplianceChecker as GDPRComplianceChecker,
-    )
-    from ...engine.utils.mock_compliance_checker import (
-        MockComplianceChecker as PCIComplianceChecker,
-    )
-
-    PCIComplianceChecker.suppress_mock_warning = (
-        settings.SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING
-    )
-else:
-    from ...engine.core.compliance_checker import ComplianceChecker
-    from ...engine.standards.gdpr_compliance_checker import GDPRComplianceChecker
-    from ...engine.standards.pci_compliance_checker import PCIComplianceChecker
-
-
 logger = logging.getLogger(__name__)
+
 
 _FRAMEWORK_REGISTRY: dict[str, dict] = {
     "PCI-DSS": {
@@ -37,43 +18,39 @@ _FRAMEWORK_REGISTRY: dict[str, dict] = {
         "collection_name": "GDPR",
     },
 }
-_CHECKER_KWARGS = {
-    "base_model_path": settings.BASE_MODEL_PATH,
-    "chroma_dir": settings.CHROMA_DIR,
-    "embedding_model": settings.EMBEDDING_MODEL_DIR,
-    "context_window": 131072,  # Set lower if you set `fa` to `False` or `swa_full` to `True` since both increase VRAM usage.
-    "n_gpu_layers": -1,
-    "prompt_template": "<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
-    "stop": ["<turn|>"],
-    "top_k": 64,  #  lower slightly if facing VRAM constraints.
-    "fa": True,
-    "swa_full": False,
+_CHECKER_KWARGS: dict = {
+    "retrieval_k": 4,
+    "system_prompt": None,
+    "stop": None,
+    "top_k": 64,  # lower slightly if facing VRAM constraints.
 }
 
 
 def get_checker_instance(framework_name: str) -> ComplianceChecker:
-    """Return the appropriate compliance checker for the given framework name.
+    """
+    Return the appropriate compliance checker for the given framework name.
 
-    Resolves the checker class and Chroma collection from the framework registry,
-    then instantiates and returns a checker using the shared model configuration.
+    Resolves the checker class and Chroma collection from the framework
+    registry, then instantiates a checker using the shared generation
+    configuration.
 
     Args:
-        framework_name (str): The compliance framework identifier, e.g. ``"PCI-DSS"``
-            or ``"GDPR"``. Must match a key in ``_FRAMEWORK_REGISTRY`` and corresponds
-            to ``ComplianceFramework.name`` in the Django model.
+        framework_name (str): The compliance framework identifier, e.g.
+            `"PCI-DSS"` or `"GDPR"`. Must match a key in
+            `_FRAMEWORK_REGISTRY` and corresponds to
+            `ComplianceFramework.name` in the Django model.
 
     Returns:
         ComplianceChecker: An instance of the framework-specific checker.
 
     Raises:
-        ValueError: If ``framework_name`` is not found in the registry.
+        ValueError: If `framework_name` is not found in the registry.
     """
     entry = _FRAMEWORK_REGISTRY.get(framework_name)
     if not entry:
-        supported = list(_FRAMEWORK_REGISTRY.keys())
         raise ValueError(
             f"Unsupported compliance framework: '{framework_name}'. "
-            f"Supported frameworks: {supported}"
+            f"Supported frameworks: {list(_FRAMEWORK_REGISTRY.keys())}"
         )
 
     checker_class: type[ComplianceChecker] = entry["checker_class"]
@@ -90,50 +67,47 @@ def get_checker_instance(framework_name: str) -> ComplianceChecker:
 
 
 def generate_assertions(schema: str, framework_name: str) -> List[str]:
-    """Generate SQL compliance assertions from schema metadata.
+    """
+    Generate SQL compliance assertions from a database schema.
 
-    This function represents the ML / rules-based inference layer.
-    It analyzes a serialized database schema and produces SQL assertion
-    queries that can be executed independently against the client database.
+    Analyzes a serialized database schema and produces SQL assertion queries
+    that can be executed independently against the client database to detect
+    compliance violations.
 
     Args:
-        schema (str): Serialized database schema (e.g., SQL DDL, JSON).
-        framework_name (str): The compliance framework to generate assertions for,
-            e.g. ``"PCI-DSS"`` or ``"GDPR"``.
+        schema (str): Serialized database schema (e.g., SQL DDL).
+        framework_name (str): The compliance framework to generate assertions
+            for, e.g. `"PCI-DSS"` or `"GDPR"`.
 
     Returns:
-        List[str]: A list of SQL assertion queries.
+        List[str]: A list of SQL assertion queries. Empty on failure.
     """
     try:
         schema_str = schema if isinstance(schema, str) else str(schema)
         if not schema_str.strip():
             return []
-
-        assertions = get_checker_instance(framework_name).generate_assertions(
-            schema_str
-        )
-
-        return assertions
-
+        return get_checker_instance(framework_name).generate_assertions(schema_str)
     except Exception as e:
         logger.exception("Failed to generate assertions via ML engine: %s", e)
         return []
 
 
 def execute_sql_assertion(connection_string: str, sql_query: str) -> tuple[bool, str]:
-    """Execute a SQL assertion against a client database.
+    """
+    Execute a SQL assertion against a client database.
 
-    This function runs a single SQL assertion query and evaluates
-    whether it passes or fails.
+    Runs a single SQL assertion query and evaluates whether it passes or
+    fails. Queries that do not begin with `SELECT` or `WITH` are blocked
+    as a safety measure against destructive statements.
 
     Args:
         connection_string (str): Database connection string.
         sql_query (str): SQL assertion query to execute.
 
     Returns:
-        tuple[bool,str]: True and empty string if the assertion passes, False and query result otherwise.
+        tuple[bool, str]: `(True, "")` if the assertion passes (no rows
+            returned), `(False, result)` otherwise.
     """
-
     clean_query = sql_query.strip().upper()
     if not clean_query.startswith("SELECT") and not clean_query.startswith("WITH"):
         logger.error("Blocked potentially unsafe query: %s", sql_query)
@@ -142,7 +116,6 @@ def execute_sql_assertion(connection_string: str, sql_query: str) -> tuple[bool,
     try:
         executor = ExecutorFactory.get_executor(connection_string)
         return executor.execute(sql_query)
-
     except ValueError as val_err:
         logger.error(str(val_err))
         return False, ""
@@ -153,31 +126,30 @@ def execute_sql_assertion(connection_string: str, sql_query: str) -> tuple[bool,
 
 def analyze_failed_assertion(
     assertion: str, failure_result: str, framework_name: str
-) -> Iterator | str:
-    """Analyze a failed SQL assertion and generate remediation guidance.
+) -> Iterator:
+    """
+    Analyze a failed SQL assertion and stream remediation guidance.
 
-    This function represents the ML / LLM-based reasoning layer that explains
-    why an assertion failed and how to remediate the compliance violation.
+    Uses the LLM to explain why an assertion failed and provide concrete
+    remediation steps grounded in the relevant compliance standard.
 
     Args:
         assertion (str): The SQL assertion that failed.
-        failure_result (str): Execution error or failure output.
+        failure_result (str): The rows or error output returned by the assertion.
         framework_name (str): The compliance framework to use when generating
-            remediation guidance, e.g. ``"PCI-DSS"`` or ``"GDPR"``.
+            remediation guidance, e.g. `"PCI-DSS"` or `"GDPR"`.
 
     Returns:
-        Iterator[CreateCompletionStreamResponse] | str: A streaming iterator of
-            LLM response chunks, or a plain string on non-streaming paths.
+        Iterator: A streaming iterator of LLM response chunks. Each chunk
+            exposes `chunk["choices"][0]["text"]`.
 
     Raises:
         ValueError: If the ML engine raises an unexpected error.
     """
     try:
-        stream_chunks = get_checker_instance(framework_name).analyze_failed_assertion(
+        return get_checker_instance(framework_name).analyze_failed_assertion(
             assertion, failure_result
         )
 
-        return stream_chunks
-
     except Exception as e:
-        raise ValueError("ML Engine Failure (analyze_failed_assertion): %s", e)
+        raise ValueError("ML Engine Failure (analyze_failed_assertion): %s" % e)

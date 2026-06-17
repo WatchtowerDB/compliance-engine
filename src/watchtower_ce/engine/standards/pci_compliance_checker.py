@@ -1,9 +1,8 @@
 import textwrap
-import threading
-from pathlib import Path
-from typing import Optional
 
-from ..core.compliance_checker import ComplianceChecker
+from django.conf import settings
+
+from ..core import ComplianceChecker
 
 
 class PCIComplianceChecker(ComplianceChecker):
@@ -27,100 +26,7 @@ class PCIComplianceChecker(ComplianceChecker):
             The compliance standard being checked ("PCI-DSS v4.0.1").
     """
 
-    _instance: Optional["PCIComplianceChecker"] = None
-    _lock: threading.Lock = threading.Lock()
     standard: str = "PCI-DSS v4.0.1"
-
-    def __new__(cls, *args, **kwargs):
-        """
-        Create a new instance of PCIComplianceChecker, ensuring singleton behavior.
-
-        This method implements the Singleton design pattern using double-checked locking
-        to ensure thread safety. Only one instance of the class will exist throughout the
-        application's lifetime.
-
-        Args:
-            cls: The class being instantiated.
-            *args: Variable length argument list passed to the constructor.
-            **kwargs: Arbitrary keyword arguments passed to the constructor.
-
-        Returns:
-            PCIComplianceChecker: The singleton instance of the class.
-        """
-        if not cls._instance:
-            with cls._lock:
-                if not cls._instance:
-                    cls._instance = super(PCIComplianceChecker, cls).__new__(cls)
-        return cls._instance
-
-    def __init__(
-        self,
-        base_model_path: Path | str,
-        chroma_dir: Path | str,
-        collection_name: str = "PCI-DSS-v4.0.1",
-        embedding_model: Path | str = "sentence-transformers/all-MiniLM-L12-v2",
-        retrieval_k: int = 2,
-        context_window: int = 131072,
-        n_gpu_layers: int = -1,
-        prompt_template: str = "<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
-        stop: str | list[str] | None = ["<turn|>"],
-        top_k: int = 64,
-        fa: bool = True,
-        swa_full: bool | None = None,
-    ) -> None:
-        """
-        Initialize the PCI-DSS compliance checker.
-
-        Args:
-            base_model_path (Path | str):
-                Path to the GGUF model file for LLM inference.
-            chroma_dir (Path | str):
-                Directory containing the Chroma vector database with PCI-DSS documentation.
-            collection_name (str):
-                Name of the Chroma collection. Defaults to `"PCI-DSS-v4.0.1"`.
-            embedding_model (Path | str):
-                HuggingFace model identifier or local path for text embeddings.
-                Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`.
-            retrieval_k (int):
-                Number of document chunks to retrieve per question.
-                Defaults to `2` (more focused retrieval for PCI-DSS specific queries).
-            context_window (int):
-                Maximum context length in tokens. Defaults to `131072`, the maximum for Gemma-4-E4B-it-Q5_K_M.
-            n_gpu_layers (int):
-                GPU layer offloading. `-1` for all layers (recommended).
-                Defaults to `-1`.
-            prompt_template (str):
-                Template for formatting LLM prompts. Should include `{prompt}`
-                placeholder. Defaults to Gemma 4's format: `"<|turn>user\n{prompt}<turn|>\n<|turn>model\n"`.
-            stop (str | list[str] | None):
-                Stop sequences for generation. Defaults to `["<turn|>"]`.
-            top_k (int):
-                The number of highest probability tokens to keep for top-k sampling.
-                Higher values increase diversity but may reduce coherence. Defaults to `64`, Gemma 4's default.
-            fa (bool):
-                Whether to use flash attention (if supported by the model and hardware). Defaults to `True`.
-            swa_full (bool | None):
-                Whether to use SWA-Full attention (if supported by the model and hardware).
-                Defaults to `None`, and leave it like that if you don't know what it is.
-        """
-        if hasattr(self, "_initialized") and self._initialized:
-            return
-
-        super().__init__(
-            base_model_path=base_model_path,
-            chroma_dir=chroma_dir,
-            collection_name=collection_name,
-            embedding_model=embedding_model,
-            retrieval_k=retrieval_k,
-            context_window=context_window,
-            n_gpu_layers=n_gpu_layers,
-            prompt_template=prompt_template,
-            stop=stop,
-            top_k=top_k,
-            fa=fa,
-            swa_full=swa_full,
-        )
-        self._initialized: bool = True
 
     def _build_schema_questions_prompt(self, schema: str) -> str:
         """
@@ -158,10 +64,10 @@ class PCIComplianceChecker(ComplianceChecker):
             1. Examine the schema for both clear (e.g., "credit_card") and ambiguous (e.g., "blob_data", "user_info") columns.
             2. Generate questions that use PCI-DSS terminology (e.g., "PAN" instead of "card number", "SAD" instead of "security code", etc.).
             3. Be specific (e.g., PAN and SAD are not the same thing and should be treated as so in your questions;
-               these are two separate topics, so two separate questions if needed).
+                these are two separate topics, so two separate questions if needed).
             4. Avoid using raw database field names in the questions; translate them into natural English descriptions (e.g., "card number" instead of "card_number", etc.).
             5. Ensure questions are retrieval friendly to vector stores. They should sound like they are seeking specific guidance from the standard.
-            
+
             Response:
             - Respond ONLY with a valid JSON list of strings containing the questions.
             - Ensure the output is valid JSON and respects proper escaping.
@@ -210,7 +116,7 @@ class PCIComplianceChecker(ComplianceChecker):
             1. Examine the assertion for both clear (e.g., "credit_card") and ambiguous (e.g., "blob_data", "user_info") columns.
             2. Generate questions that use PCI-DSS terminology (e.g., "PAN" instead of "card number", "SAD" instead of "security code", etc.).
             3. Be specific (e.g., PAN and SAD are not the same thing and should be treated as so in your questions;
-               these are two separate topics, so two separate questions if needed).
+                these are two separate topics, so two separate questions if needed).
             4. Avoid using raw database field names in the questions; translate them into natural English descriptions (e.g., "card number" instead of "card_number", etc.).
             5. End your questions with "according to requirement <requirement number you are asking about> ?"
             6. Ensure questions are retrieval friendly to vector stores. They should be written with many keywords to help with searching.
@@ -341,6 +247,12 @@ class PCIComplianceChecker(ComplianceChecker):
             Your reply should:
             - Use as much wording from the given context as possible except for the REMEDIATION STEPS.
             - Be specific and actionable. If encryption is needed, specify what to encrypt and how.
-              If data should be deleted, explain why and provide the SQL to do so safely. And so on.
+                If data should be deleted, explain why and provide the SQL to do so safely. And so on.
             """
         ).strip()
+
+
+if settings.USE_MOCK_COMPLIANCE_CHECKER:
+    from ..utils import MockComplianceChecker
+
+    PCIComplianceChecker = MockComplianceChecker  # pyright: ignore[reportAssignmentType]

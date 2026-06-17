@@ -4,7 +4,6 @@ from pathlib import Path
 
 import click
 
-from .. import settings
 from ..engine.standards.pci_compliance_checker import PCIComplianceChecker
 from ..engine.test_suite.analysis_quality_evaluator import AnalysisQualityEvaluator
 from ..engine.test_suite.evaluation_metrics import EvaluationMetrics
@@ -37,25 +36,11 @@ def test(
 
     evaluator = AnalysisQualityEvaluator(test_cases)
 
-    if not (
-        settings.BASE_MODEL_PATH
-        and settings.CHROMA_DIR
-        and settings.EMBEDDING_MODEL_DIR
-    ):
-        raise ValueError("Environment variables not properly initialized.")
-
     checker = PCIComplianceChecker(
-        base_model_path=settings.BASE_MODEL_PATH,
-        chroma_dir=settings.CHROMA_DIR,
         collection_name="PCI-DSS-v4.0.1",
-        embedding_model=settings.EMBEDDING_MODEL_DIR,
-        context_window=131072,
-        n_gpu_layers=-1,
         prompt_template="<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
         stop=["<turn|>"],
         top_k=64,
-        fa=True,
-        swa_full=False,
     )
 
     aggregated_metrics = EvaluationMetrics()
