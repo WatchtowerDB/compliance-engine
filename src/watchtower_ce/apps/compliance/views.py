@@ -11,7 +11,8 @@ from drf_spectacular.utils import (
     extend_schema_view,
     inline_serializer,
 )
-from rest_framework import serializers as rest_framework_serializers, status, viewsets
+from rest_framework import serializers as rest_framework_serializers
+from rest_framework import status, viewsets
 from rest_framework.decorators import (
     action,
     api_view,
@@ -130,8 +131,9 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
     queryset = models.ClientDBSchema.objects.all()
     serializer_class = serializers.ClientDBSchemaSerializer
     filterset_class = ClientDBSchemaFilter
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
-    ordering_fields = ["created_at", "id"]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    search_fields = ["name", "description"]
+    ordering_fields = ["created_at", "id", "name"]
 
     def update(self, request, *args, **kwargs):
         """Updates are not allowed for versioned schemas. Use upload-schema to create a new version."""
