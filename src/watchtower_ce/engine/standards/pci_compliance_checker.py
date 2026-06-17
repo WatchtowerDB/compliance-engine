@@ -1,4 +1,4 @@
-import textwrap
+from textwrap import dedent
 
 from django.conf import settings
 
@@ -28,6 +28,36 @@ class PCIComplianceChecker(ComplianceChecker):
 
     standard: str = "PCI-DSS v4.0.1"
 
+    def _get_system_prompt(self) -> str:
+        """
+        Return the default system prompt for PCI-DSS compliance auditing.
+        """
+        return dedent(
+            f"""
+            You are an expert {self.standard} compliance auditor and database security specialist.
+            Your role is to identify potential security risks and compliance violations within SQL database schemas and assertions.
+
+            Definitions:
+            - Assertion: A `SELECT` SQL statement that returns rows ONLY when a compliance violation is detected. An empty result indicates full compliance.
+            - Failure Result: The output of an assertion that indicates a violation of {self.standard} complaince requirements.
+
+            Core {self.standard} Requirements to Audit:
+            - Requirement 3: Storage and protection of stored cardholder data (e.g., PAN, SAD, hashing, encryption, truncation)
+            - Requirement 4: Protection of cardholder data during transmission (encryption in transit, key management assumptions)
+            - Requirement 7: Restriction of access to cardholder data by business need-to-know
+            - Requirement 8: Identification and authentication of users and administrators accessing system components
+            - Requirement 10: Logging, monitoring, and audit trails for access to cardholder data
+
+            General Instructions:
+            1. Always use precise {self.standard} terminology (e.g., "PAN", "SAD", "Cardholder Data").
+            2. You'll only ever respond either in markdown or JSON.
+            3. When generating lists (questions or assertions), always respond with a valid JSON list of strings.
+            4. Do NOT include any introductory text, comments, or markdown formatting in JSON responses.
+            5. Do NOT respond with more than what is requested. Follow the format requested by the user.
+            6. Ensure all SQL generated is valid and executable against the provided schema with respect to its database dialect (either PostgreSQL or MySQL).
+            """
+        ).strip()
+
     def _build_schema_questions_prompt(self, schema: str) -> str:
         """
         Build a prompt for generating PCI-DSS specific compliance questions.
@@ -45,7 +75,7 @@ class PCIComplianceChecker(ComplianceChecker):
             str: A formatted prompt instructing the LLM to generate 3-6 comprehensive
                  questions as a JSON list of strings.
         """
-        return textwrap.dedent(
+        return dedent(
             # TODO: Refine ALL prompts with respect to the new more powerful model.
             f"""
             You are an expert PCI-DSS compliance auditor and database security specialist.
@@ -99,7 +129,7 @@ class PCIComplianceChecker(ComplianceChecker):
             str: A formatted prompt instructing the LLM to generate 2 comprehensive
                  questions as a JSON list of strings.
         """
-        return textwrap.dedent(
+        return dedent(
             f"""
             You are an expert PCI-DSS compliance auditor and database security specialist.
 
@@ -158,7 +188,7 @@ class PCIComplianceChecker(ComplianceChecker):
         # "- Include descriptive column aliases explaining the violation"
         # to
         # "- Be as simple and direct as possible while still being effective at identifying violations"
-        return textwrap.dedent(
+        return dedent(
             f"""
             You are an expert PCI-DSS compliance auditor and SQL specialist.
 
@@ -220,7 +250,7 @@ class PCIComplianceChecker(ComplianceChecker):
             str: A formatted prompt instructing the LLM to analyze the failure and
                  provide specific remediation steps including SQL fixes.
         """
-        return textwrap.dedent(
+        return dedent(
             f"""
             You are an expert PCI-DSS compliance auditor and database security specialist.
 

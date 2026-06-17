@@ -2,7 +2,7 @@ import json
 import logging
 import random
 import re
-import textwrap
+from textwrap import dedent
 from time import sleep
 from typing import Iterator, Optional
 
@@ -126,7 +126,7 @@ class MockComplianceChecker:
             list[str]: List of extracted table names.
         """
         return re.findall(
-            textwrap.dedent(
+            dedent(
                 r"""
                 CREATE\s+TABLE\s+
                 (?P<name>
@@ -179,7 +179,7 @@ class MockComplianceChecker:
         Returns:
             str: Mock analysis text describing the failure.
         """
-        return textwrap.dedent(
+        return dedent(
             f"""
             ## VIOLATION SUMMARY
             {self.standard} analysis for failed assertion.

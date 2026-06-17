@@ -1,4 +1,4 @@
-import textwrap
+from textwrap import dedent
 
 from django.conf import settings
 
@@ -30,6 +30,38 @@ class GDPRComplianceChecker(ComplianceChecker):
 
     standard: str = "GDPR"
 
+    def _get_system_prompt(self) -> str:
+        """
+        Return the default system prompt for GDPR compliance auditing.
+        """
+        return dedent(
+            # Will verify and change later
+            f"""
+            You are an expert {self.standard} compliance auditor and database security specialist.
+            Your role is to identify potential privacy risks and compliance violations within SQL database schemas and assertions.
+
+            Definitions:
+            - Assertion: A `SELECT` SQL statement that returns rows ONLY when a compliance violation is detected. An empty result indicates full compliance.
+            - Failure Result: The output of an assertion that indicates a violation of {self.standard} complaince requirements.
+
+            Core {self.standard} Requirements to consider:
+            - Article 5: Principles of lawfulness, purpose limitation, data minimisation, accuracy, storage limitation, and integrity & confidentiality.
+            - Article 9: Prohibition and conditions for processing special categories of personal data (health, biometric, racial/ethnic origin, etc.).
+            - Article 10: Processing of personal data relating to criminal convictions and offences.
+            - Article 17: Right to erasure ("right to be forgotten") — ability to delete a data subject's personal data on request.
+            - Article 25: Data protection by design and by default — pseudonymisation, minimisation built into schema design.
+            - Article 32: Security of processing — encryption, pseudonymisation, resilience, and ongoing evaluation of measures.
+
+            General Instructions:
+            1. Always use precise {self.standard} terminology (e.g., "data subject", "personal data", "special category data").
+            2. You'll only ever respond either in markdown or JSON.
+            3. When generating lists (questions or assertions), always respond with a valid JSON list of strings.
+            4. Do NOT include any introductory text, comments, or markdown formatting in JSON responses.
+            5. Do NOT respond with more than what is requested. Follow the format requested by the user.
+            6. Ensure all SQL generated is valid and executable against the provided schema with respect to its database dialect (either PostgreSQL or MySQL).
+            """
+        ).strip()
+
     def _build_schema_questions_prompt(self, schema: str) -> str:
         """
         Build a prompt for generating GDPR specific compliance questions.
@@ -47,7 +79,7 @@ class GDPRComplianceChecker(ComplianceChecker):
             str: A formatted prompt instructing the LLM to generate 3-6 comprehensive
                  questions as a JSON list of strings.
         """
-        return textwrap.dedent(
+        return dedent(
             # TODO: Refine ALL prompts with respect to the new more powerful model.
             f"""
             You are an expert GDPR compliance auditor and database security specialist.
@@ -102,7 +134,7 @@ class GDPRComplianceChecker(ComplianceChecker):
             str: A formatted prompt instructing the LLM to generate 4 comprehensive
                  questions as a JSON list of strings.
         """
-        return textwrap.dedent(
+        return dedent(
             f"""
             You are an expert GDPR compliance auditor and database security specialist.
 
@@ -162,7 +194,7 @@ class GDPRComplianceChecker(ComplianceChecker):
         # "- Include descriptive column aliases explaining the violation"
         # to
         # "- Be as simple and direct as possible while still being effective at identifying violations"
-        return textwrap.dedent(
+        return dedent(
             f"""
             You are an expert GDPR compliance auditor and SQL specialist.
 
@@ -224,7 +256,7 @@ class GDPRComplianceChecker(ComplianceChecker):
             str: A formatted prompt instructing the LLM to analyze the failure and
                  provide specific remediation steps including SQL fixes.
         """
-        return textwrap.dedent(
+        return dedent(
             f"""
             You are an expert GDPR compliance auditor and database security specialist.
 

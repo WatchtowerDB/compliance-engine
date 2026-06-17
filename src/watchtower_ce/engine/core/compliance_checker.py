@@ -50,13 +50,13 @@ class ComplianceChecker(ABC):
             retrieval_k=retrieval_k,
         )
         self._llm = LLMInference(
-            system_prompt=self._get_default_system_prompt(),
+            system_prompt=self._get_system_prompt(),
             stop=stop,
             top_k=top_k,
         )
 
     @abstractmethod
-    def _get_default_system_prompt(self) -> str:
+    def _get_system_prompt(self) -> str:
         """
         Return the default system prompt for the specific compliance standard.
 
