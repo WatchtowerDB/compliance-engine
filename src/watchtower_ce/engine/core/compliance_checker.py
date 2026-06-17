@@ -1,9 +1,9 @@
-import json
 import logging
 from abc import ABC, abstractmethod
 from typing import Iterator, Optional
 
 from ..clients import ContextRetriever, LLMInference
+from ..utils import parse_list_response
 
 logger = logging.getLogger(__name__)
 
@@ -161,74 +161,6 @@ class ComplianceChecker(ABC):
         """
         pass
 
-    def _parse_list_response(
-        self, response: str, fallback_item_limit: int = 6
-    ) -> list[str]:
-        """
-        Parse a response string that should contain a JSON list of strings.
-
-        Args:
-            response (str): The response string to parse, potentially containing markdown formatting
-            fallback_item_limit (int): Maximum number of items to return when using fallback parsing
-
-        Returns:
-            list[str]: A list of strings extracted from the response
-        """
-        logger.debug("Raw list response: %s", repr(response))
-
-        try:
-            # Clean up potential markdown formatting
-            cleaned_response = response.strip()
-            cleaned_response = cleaned_response.replace("\n", " ")
-            if cleaned_response.startswith("```python3"):
-                cleaned_response = cleaned_response[10:]
-            elif cleaned_response.startswith("```python"):
-                cleaned_response = cleaned_response[9:]
-            elif cleaned_response.startswith("```py"):
-                cleaned_response = cleaned_response[5:]
-            elif cleaned_response.startswith("```json"):
-                cleaned_response = cleaned_response[7:]
-            elif cleaned_response.startswith("```sql"):
-                cleaned_response = cleaned_response[6:]
-            elif cleaned_response.startswith("```"):
-                cleaned_response = cleaned_response[3:]
-
-            if cleaned_response.endswith("```"):
-                cleaned_response = cleaned_response[:-3]
-
-            cleaned_response = cleaned_response.strip()
-
-            items = json.loads(cleaned_response)
-
-            if not isinstance(items, list):
-                raise ValueError("Response is not a valid list.")
-
-            logger.debug("Successfully parsed %s items from JSON", len(items))
-            return items
-
-        except (json.JSONDecodeError, ValueError) as e:
-            logger.warning("Failed to parse response as JSON: %s", e)
-            logger.warning("Raw response: %s", repr(response))
-
-            # Fallback: extract items from text (one per line)
-            lines = response.strip().split("\n")
-            items = []
-
-            for line in lines:
-                cleaned_line = line.strip(" -\"[]'")
-                # Only include non-empty lines with reasonable content
-                if cleaned_line and len(cleaned_line) > 10:
-                    items.append(cleaned_line)
-
-            # Limit to fallback_item_limit if we have too many items
-            if len(items) > fallback_item_limit:
-                items = items[:fallback_item_limit]
-                logger.debug("Extracted and limited to %s items from text", len(items))
-            else:
-                logger.debug("Extracted %s items from text", len(items))
-
-            return items
-
     def _generate_schema_questions(self, schema: str) -> list[str]:
         """
         Generate targeted compliance questions from the schema using the LLM.
@@ -267,7 +199,7 @@ class ComplianceChecker(ABC):
             prompt, max_tokens=1024, temperature=0.3, stream=False
         )
 
-        return self._parse_list_response(response)
+        return parse_list_response(response)
 
     def _generate_assertion_questions(self, assertion: str) -> list[str]:
         """
@@ -300,7 +232,7 @@ class ComplianceChecker(ABC):
             prompt, max_tokens=2048, temperature=0.1, stream=False
         )
 
-        return self._parse_list_response(response, 4)
+        return parse_list_response(response, 4)
 
     def _retrieve_context_for_questions(
         self, questions: list[str], retrieval_k: int | None = None
@@ -381,7 +313,7 @@ class ComplianceChecker(ABC):
             prompt, max_tokens=2048, temperature=0.1, stream=False
         )
 
-        assertions = self._parse_list_response(response, fallback_item_limit=10)
+        assertions = parse_list_response(response, fallback_item_limit=10)
         logger.info("Successfully generated %s SQL assertions", len(assertions))
 
         return assertions
