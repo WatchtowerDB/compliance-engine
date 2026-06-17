@@ -58,8 +58,7 @@ class ContextRetriever:
                 sleep(5 * (2**retries))
         else:
             raise ConnectionError(
-                "Failed to connect to retrieval server at %s after 5 attempts.",
-                self._client.base_url,
+                f"Failed to connect to retrieval server at {self._client.base_url} after 5 attempts."
             )
 
         self.collection_name = collection_name

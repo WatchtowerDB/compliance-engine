@@ -169,10 +169,6 @@ run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 
-# TODO: REMOVE THESE 2 LINES AND TEST THIS TASK AFTER YOUSSEF UNPRIVATES THE PACKAGE
-gum log -l warn "NOT RUNNING WTVS AS THE REGISTRY IS CURRENTLY INACCESSIBLE. Clone the repository and run locally instead."
-exit 0
-
 EMBEDDING_MODEL=${usage_embedding_model:-${WTVS_EMBEDDING_MODEL:-}}
 
 if [ -z "$EMBEDDING_MODEL" ]; then
@@ -221,10 +217,12 @@ fi
 description = "Run llama.cpp inference server"
 tools = { docker-cli = "29" }
 usage = '''
-flag "-m --model <model>" help="Path to GGUF model"
+flag "-m --base-model <base-model>" help="Path to base GGUF model (optional, overrides LLM_BASE_MODEL_PATH)"
+flag "-d --draft-model <draft-model>" help="Path to MTP draft model (optional, overrides LLM_DRAFT_MODEL_PATH) (FOR FUTURE SUPPORT)"
 flag "-n --gpu-layers <gpu-layers>" help="GPU layers to offload" default="-1"
 flag "-c --ctx-size <ctx-size>" help="Context size" default="131072"
 flag "-f --flash-attn <flash-attn>" help="Use flash attention ('on', 'off', or 'auto')" default="on"
+flag "-r --reasoning <reasoning>" help="Use reasoning ('on', 'off', 'auto')" default="off"
 flag "-p --parallel <parallel>" help="Parallel request slots"
 flag "-l --log-level <log-level>" help="Log level (0: generic output, 1: error, 2: warning, 3: info, 4:trace, 5: debug)" default="2"
 flag "-H --host <host>" help="Host to bind to" default="0.0.0.0"
@@ -235,11 +233,11 @@ run = '''
 set -euo pipefail
 
 gum log -l info "Starting llama.cpp server"
-MODEL_PATH="${usage_model:-$LLM_BASE_MODEL_PATH}"
+BASE_MODEL_PATH="${usage_base_model:-$LLM_BASE_MODEL_PATH}"
 PARALLEL="${usage_parallel:-${LLM_INSTANCE_POOL_SIZE:-1}}"
 
-if [ ! -f "${MODEL_PATH}" ]; then
-  gum log -l error "Model not found: ${MODEL_PATH}"
+if [ ! -f "${BASE_MODEL_PATH}" ]; then
+  gum log -l error "Model not found: ${BASE_MODEL_PATH}"
   exit 1
 fi
 
@@ -248,22 +246,62 @@ if [ -n "$(docker container ls -q -f name=wtce-llm-server-dev)" ]; then
   docker stop wtce-llm-server-dev
 fi
 
-docker run --rm \
-  --gpus all \
-  --name wtce-llm-server-dev \
-  -p "${usage_port}:${usage_port}" \
-  -v "$(dirname "${MODEL_PATH}"):/models:ro" \
+# Determine models root (parent of 'base' and 'draft')
+MODELS_DIR="$(realpath "$(dirname "$(dirname "$(dirname "${BASE_MODEL_PATH}")")")")"
+gum log -l info "Using models from: ${MODELS_DIR}"
+
+REL_MODEL_PATH="$(realpath --relative-to="${MODELS_DIR}" "${BASE_MODEL_PATH}")"
+gum log -l info "Base model path: ${REL_MODEL_PATH}"
+
+# Docker options
+DOCKER_OPTS=(
+  --rm
+  --gpus all
+  --name wtce-llm-server-dev
+  -p "${usage_port}:${usage_port}"
+  -v "${MODELS_DIR}:/models:ro"
+  -e "LLAMA_ARG_HOST=${usage_host}"
+)
+
+# Server arguments
+SERVER_ARGS=(
+  -m "/models/${REL_MODEL_PATH}"
+  --gpu-layers "${usage_gpu_layers}"
+  --ctx-size "${usage_ctx_size}"
+  --flash-attn "${usage_flash_attn}"
+  --reasoning "${usage_reasoning}"
+  --parallel "${PARALLEL}"
+  --verbosity "${usage_log_level}"
+  --no-log-timestamps
+  --port "${usage_port}"
+  --kv-unified
+  --offline
+)
+
+# Handle draft model
+DRAFT_PATH="${usage_draft_model:-${LLM_DRAFT_MODEL_PATH:-}}"
+if [ -n "${DRAFT_PATH}" ] && [ -f "${DRAFT_PATH}" ]; then
+  # This code is for future support for draft models after llama.cpp fixes MTP
+  # REL_DRAFT_PATH="$(realpath --relative-to="${MODELS_DIR}" "${DRAFT_PATH}")"
+  # gum log -l info "Enabling speculative decoding with draft model: ${REL_DRAFT_PATH}"
+  # SERVER_ARGS+=(
+  #   --model-draft "/models/${REL_DRAFT_PATH}"
+  #   --spec-type draft-mtp
+  #   --spec-draft-n-max 4
+  # )
+  gum log -l warn "Draft model support is not yet implemented"
+
+else
+  if [ -n "${DRAFT_PATH}" ]; then
+    gum log -l warn "Draft model not found: ${DRAFT_PATH}. Proceeding without speculative decoding"
+  else
+    gum log -l info "No draft model specified; running without speculative decoding"
+  fi
+fi
+
+docker run "${DOCKER_OPTS[@]}" \
   ghcr.io/ggml-org/llama.cpp:server-cuda13 \
-  -m "/models/$(basename "${MODEL_PATH}")" \
-  -ngl "${usage_gpu_layers}" \
-  -c "${usage_ctx_size}" \
-  -fa "${usage_flash_attn}" \
-  -np "${PARALLEL}" \
-  -lv "${usage_log_level}" \
-  --no-log-timestamps \
-  --host "${usage_host}" \
-  --port "${usage_port}" \
-  --offline \
+  "${SERVER_ARGS[@]}" \
   2>&1 | awk '{print "[" strftime("%Y-%m-%d %H:%M:%S") "]", $0}; fflush()'
 '''
 
@@ -501,4 +539,21 @@ if [ -n "${_CONTAINER_IDS}" ]; then
 else
   gum log -l info "No clientdb containers found with prefix: ${usage_prefix}"
 fi
+'''
+
+[tasks.download-recommended-models]
+description = "Download the recommended models for Watchtower from the Hugging Face repository"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+wtce download_model \
+  -n "unsloth/gemma-4-E4B-it-GGUF" \
+  -o "models/base/gemma-4-E4B-it-GGUF" \
+  -r "gemma-4-E4B-it-Q5_K_M.gguf" &
+# Uncomment this when the draft model is supported.
+# wtce download_model \
+#   -n "AtomicChat/gemma-4-E4B-it-assistant-GGUF" \
+#   -o "models/draft/gemma-4-E4B-it-assistant" \
+#   -r "gemma-4-E4B-it-assistant.Q5_K_M.gguf"
 '''

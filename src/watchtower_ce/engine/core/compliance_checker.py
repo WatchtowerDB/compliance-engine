@@ -1,7 +1,7 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Iterator
+from typing import Iterator, Optional
 
 from ..clients import ContextRetriever, LLMInference
 
@@ -28,8 +28,8 @@ class ComplianceChecker(ABC):
         self,
         collection_name: str,
         retrieval_k: int = 4,
-        prompt_template: str = "<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
-        stop: str | list[str] | None = ["<turn|>"],
+        system_prompt: Optional[str] = None,
+        stop: Optional[str | list[str]] = None,
         top_k: int = 64,
     ) -> None:
         """
@@ -40,11 +40,10 @@ class ComplianceChecker(ABC):
                 Name of the Chroma collection with compliance documents.
             retrieval_k (int):
                 Number of similar documents to retrieve per query. Defaults to `4`.
-            prompt_template (str):
-                Template for formatting LLM prompts. Should include `{prompt}`
-                placeholder. Defaults to Gemma 4's format: `"<|turn>user\n{prompt}<turn|>\n<|turn>model\n"`.
-            stop (str | list[str] | None):
-                Stop sequences for generation. Defaults to `["<turn|>"]`.
+            system_prompt (Optional[str]):
+                System prompt for the LLM.
+            stop (Optional[str | list[str]]):
+                Custom stop sequences for generation. Defaults to `None`.
             top_k (int):
                 The number of highest probability tokens to keep for top-k sampling.
                 Higher values increase diversity but may reduce coherence. Defaults to `64`, Gemma 4's default.
@@ -54,7 +53,7 @@ class ComplianceChecker(ABC):
             retrieval_k=retrieval_k,
         )
         self._llm = LLMInference(
-            prompt_template=prompt_template,
+            system_prompt=system_prompt,
             stop=stop,
             top_k=top_k,
         )

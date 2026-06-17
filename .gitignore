@@ -89,5 +89,4 @@ ipython_config.py
 
 # Models
 base/
-embeddings/
-embedding/
+draft/

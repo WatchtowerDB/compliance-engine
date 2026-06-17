@@ -2,7 +2,7 @@ import json
 import logging
 from enum import Enum
 from time import sleep
-from typing import Iterator
+from typing import Iterator, Optional, Union
 
 import httpx
 from django.conf import settings
@@ -42,29 +42,20 @@ class LLMInference:
 
     def __init__(
         self,
-        prompt_template: str = "{prompt}",  # i.e., just the prompt, which is highly unlikely
-        stop: str | list[str] | None = None,
+        system_prompt: Optional[str] = None,
+        stop: Optional[Union[str, list[str]]] = None,
         top_k: int = 64,
     ) -> None:
         """
         Initialize the LLM inference client.
 
         Args:
-            prompt_template (str):
-                Format string for structuring prompts. Should contain
-                `{prompt}` placeholder. For example, Mistral uses `"[INST] {prompt} [/INST]"`.
-                Defaults to `"{prompt}"` (no formatting).
-
-                It's worth noting that this way of formatting prompts, while is the most flexible,
-                is not necessarily the most efficient/robust one. Each model may have its own
-                inference library/api that provides better interfaces for model-specific settings.
-
-                If the project decides to commit to a single model, this way of formatting prompts
-                should be replaced with the model's native way.
-            stop (str | list[str] | None):
-                Stop sequence(s) that signal the model to stop generating. Can be
-                a single string or list of strings. Common examples include special
-                tokens like `"[INST]"`, `"</s>"`, or custom markers. Defaults to `None`.
+            system_prompt (str):
+                The overarching instructions for the model. The server's built-in
+                chat template will automatically wrap this in the model's native
+                tags (like Gemma 4's `<|system|>` and `<|env|>`).
+            stop (Optional[Union[str, list[str]]]):
+                Custom stop sequences.
             top_k (int):
                 The number of highest probability tokens to keep for top-k sampling.
                 Higher values increase diversity but may reduce coherence. Defaults to `64`.
@@ -89,18 +80,17 @@ class LLMInference:
                 sleep(5 * (2**retries))
         else:
             raise ConnectionError(
-                "Failed to connect to the inference server at %s after 5 attempts."
-                % self._client.base_url
+                f"Failed to connect to the inference server at {self._client.base_url} after 5 attempts."
             )
 
-        self.prompt_template = prompt_template
+        self.system_prompt = system_prompt
         self.stop: list[str] = (
             [stop] if isinstance(stop, str) else (list(stop) if stop else [])
         )
         self.top_k = top_k
 
     def stream_chunks(
-        self, prompt: str, max_tokens: int = 2048, temperature: float = 0.4
+        self, user_prompt: str, max_tokens: int = 2048, temperature: float = 0.4
     ) -> Iterator[dict]:
         """
         Stream completion chunks from the inference server.
@@ -112,7 +102,7 @@ class LLMInference:
         >>> chunk["choices"][0]["finish_reason"]    # None until done
 
         Args:
-            prompt (str):
+            user_prompt (str):
                 The input text prompt to generate from.
             max_tokens (int):
                 Maximum number of tokens to generate. Defaults to `2048`.
@@ -129,14 +119,19 @@ class LLMInference:
             httpx.HTTPStatusError: If the server returns a non-2xx response.
             httpx.TimeoutException: If the server does not respond in time.
         """
-        formatted_prompt = self.prompt_template.format(prompt=prompt)
+        # Construct the standard message framework
+        messages = []
+        if self.system_prompt:
+            messages.append({"role": "system", "content": self.system_prompt})
+
+        messages.append({"role": "user", "content": user_prompt})
 
         with self._client.stream(
             "POST",
-            "/v1/completions",
+            "/v1/chat/completions",
             timeout=_TimeoutConfig.STREAMING,
             json={
-                "prompt": formatted_prompt,
+                "messages": messages,
                 "max_tokens": max_tokens,
                 "temperature": temperature,
                 "stop": self.stop,
@@ -150,13 +145,15 @@ class LLMInference:
                     continue
                 if line.startswith("data: "):
                     payload = json.loads(line[6:])
+                    choices = payload.get("choices", [{}])
+                    delta = choices[0].get("delta", {})
+
                     yield {
                         "choices": [
                             {
-                                "text": payload["choices"][0].get("text", ""),
-                                "finish_reason": payload["choices"][0].get(
-                                    "finish_reason"
-                                ),
+                                "text": delta.get("content")
+                                or "",  # handles None and missing key
+                                "finish_reason": choices[0].get("finish_reason"),
                             }
                         ]
                     }
@@ -188,7 +185,7 @@ class LLMInference:
         return "".join(response_tokens).strip()
 
     def _generate_non_stream(
-        self, prompt: str, max_tokens: int, temperature: float
+        self, user_prompt: str, max_tokens: int, temperature: float
     ) -> str:
         """
         Generate text via the server without streaming.
@@ -198,7 +195,7 @@ class LLMInference:
         need real-time feedback.
 
         Args:
-            prompt (str): The input text prompt.
+            user_prompt (str): The input text prompt.
             max_tokens (int): Maximum tokens to generate.
             temperature (float): Sampling temperature.
 
@@ -208,12 +205,17 @@ class LLMInference:
         Raises:
             httpx.HTTPStatusError: If the server returns a non-2xx response.
         """
-        formatted_prompt = self.prompt_template.format(prompt=prompt)
+        messages = []
+        if self.system_prompt:
+            messages.append({"role": "system", "content": self.system_prompt})
+
+        messages.append({"role": "user", "content": user_prompt})
+
         response = self._client.post(
-            "/v1/completions",
+            "/v1/chat/completions",
             timeout=_TimeoutConfig.BATCH,
             json={
-                "prompt": formatted_prompt,
+                "messages": messages,
                 "max_tokens": max_tokens,
                 "temperature": temperature,
                 "stop": self.stop,
@@ -222,11 +224,11 @@ class LLMInference:
             },
         )
         response.raise_for_status()
-        return response.json()["choices"][0]["text"].strip()
+        return response.json()["choices"][0]["message"]["content"].strip()
 
     def generate(
         self,
-        prompt: str,
+        user_prompt: str,
         max_tokens: int = 2048,
         temperature: float = 0.4,
         stream: bool = True,
@@ -238,9 +240,8 @@ class LLMInference:
         to the appropriate internal method based on the streaming preference.
 
         Args:
-            prompt (str):
-                The input text prompt to generate from. Will be formatted
-                using `prompt_template` before being sent to the server.
+            user_prompt (str):
+                The input text prompt to generate from.
             max_tokens (int):
                 Maximum number of tokens to generate. Defaults to `2048`.
             temperature (float):
@@ -262,8 +263,8 @@ class LLMInference:
             >>> print(response)
         """
         if stream:
-            return self._generate_stream(prompt, max_tokens, temperature)
-        return self._generate_non_stream(prompt, max_tokens, temperature)
+            return self._generate_stream(user_prompt, max_tokens, temperature)
+        return self._generate_non_stream(user_prompt, max_tokens, temperature)
 
     def count_tokens(self, text: str) -> int:
         """
