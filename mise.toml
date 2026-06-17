@@ -146,7 +146,7 @@ django-admin runserver
 description = "Run celery worker"
 depends = ["redis"]
 run = '''
-celery -A watchtower_ce worker -P solo -l INFO
+celery -A watchtower_ce worker -l INFO
 '''
 
 [tasks.celery-beat]
