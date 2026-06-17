@@ -28,7 +28,6 @@ class ComplianceChecker(ABC):
         self,
         collection_name: str,
         retrieval_k: int = 4,
-        system_prompt: Optional[str] = None,
         stop: Optional[str | list[str]] = None,
         top_k: int = 64,
     ) -> None:
@@ -40,8 +39,6 @@ class ComplianceChecker(ABC):
                 Name of the Chroma collection with compliance documents.
             retrieval_k (int):
                 Number of similar documents to retrieve per query. Defaults to `4`.
-            system_prompt (Optional[str]):
-                System prompt for the LLM.
             stop (Optional[str | list[str]]):
                 Custom stop sequences for generation. Defaults to `None`.
             top_k (int):
@@ -53,10 +50,23 @@ class ComplianceChecker(ABC):
             retrieval_k=retrieval_k,
         )
         self._llm = LLMInference(
-            system_prompt=system_prompt,
+            system_prompt=self._get_default_system_prompt(),
             stop=stop,
             top_k=top_k,
         )
+
+    @abstractmethod
+    def _get_default_system_prompt(self) -> str:
+        """
+        Return the default system prompt for the specific compliance standard.
+
+        Subclasses must implement this to provide a persistent persona and
+        general instructions for the LLM.
+
+        Returns:
+            str: The standard-specific default system prompt.
+        """
+        pass
 
     @abstractmethod
     def _build_schema_questions_prompt(self, schema: str) -> str:

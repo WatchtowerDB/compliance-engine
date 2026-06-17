@@ -20,7 +20,6 @@ _FRAMEWORK_REGISTRY: dict[str, dict] = {
 }
 _CHECKER_KWARGS: dict = {
     "retrieval_k": 4,
-    "system_prompt": None,
     "stop": None,
     "top_k": 64,  # lower slightly if facing VRAM constraints.
 }
