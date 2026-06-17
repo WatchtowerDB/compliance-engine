@@ -23,7 +23,7 @@ _.python.venv = { create = true, path = ".venv" }
 PYTHONPATH = "{{ config_root }}/src"
 DJANGO_SETTINGS_MODULE = "watchtower_ce.settings"
 DATABASE_URL = "postgresql://wtce:wtce@localhost:5432/wtce"
-CMAKE_ARGS = "-DGGML_CUDA=on"
+WTCE_LLM_INSTANCE_POOL_SIZE = 1
 
 [tasks.install]
 description = "Install project dependencies"
@@ -142,21 +142,206 @@ run = '''
 django-admin runserver
 '''
 
-[tasks.celery]
+[tasks.celery-worker]
 description = "Run celery worker"
 depends = ["redis"]
 run = '''
-celery -A watchtower_ce worker -P solo -l INFO
+celery -A watchtower_ce worker -l INFO
+'''
+
+[tasks.celery-beat]
+description = "Run celery beat"
+depends = ["redis"]
+run = '''
+celery -A watchtower_ce beat -l INFO
+'''
+
+[tasks.wtvs]
+description = "Run Watchtower Vector Store server"
+usage = '''
+flag "-n --container-name <container-name>" help="Name of the Docker container" default="wtce-wtvs-dev"
+flag "-H --host <host>" help="Host to bind to" default="0.0.0.0"
+flag "-P --port <port>" help="Port to bind to" default="7777"
+flag "-m --embedding-model <embedding-model>" help="HuggingFace embedding model identifier or local model directory"
+flag "-l --log-level <log-level>" help="Log level [debug|info|warning|error|critical]" default="info"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+EMBEDDING_MODEL=${usage_embedding_model:-${WTVS_EMBEDDING_MODEL:-}}
+
+if [ -z "$EMBEDDING_MODEL" ]; then
+    gum log -l error "No embedding model specified. Set WTVS_EMBEDDING_MODEL or use --embedding-model."
+    exit 1
+fi
+
+DOCKER_ARGS=(
+    -e "WTVS_HOST=${usage_host}"
+    -e "WTVS_PORT=${usage_port}"
+    -e "WTVS_LOG_LEVEL=${usage_log_level}"
+    -p "${usage_port}:${usage_port}"
+)
+
+# Local model directory
+if [ -d "$EMBEDDING_MODEL" ]; then
+    EMBEDDING_MODEL=$(realpath "$EMBEDDING_MODEL")
+
+    gum log -l info "Using local embedding model: $EMBEDDING_MODEL"
+
+    DOCKER_ARGS+=(
+        -v "${EMBEDDING_MODEL}:/app/model:ro"
+        -e "WTVS_EMBEDDING_MODEL=/app/model"
+    )
+else
+    gum log -l warn "Model not found locally. Will download from HuggingFace inside the container: $EMBEDDING_MODEL"
+
+    DOCKER_ARGS+=(
+        -e "WTVS_EMBEDDING_MODEL=${EMBEDDING_MODEL}"
+    )
+fi
+
+if [ -n "$(docker container ls -qaf "name=${usage_container_name}")" ]; then
+    gum log -l info "Starting WTVS container: ${usage_container_name}"
+    docker container start "${usage_container_name}"
+else
+    gum spin --title "Creating WTVS container" -- \
+        docker container run -d \
+        --name "${usage_container_name}" \
+        "${DOCKER_ARGS[@]}" \
+        ghcr.io/watchtowerdb/vector-store:latest
+fi
+'''
+
+[tasks.llm-server]
+description = "Run llama.cpp inference server"
+tools = { docker-cli = "29" }
+usage = '''
+flag "-m --base-model <base-model>" help="Path to base GGUF model (optional, overrides LLM_BASE_MODEL_PATH)"
+flag "-d --draft-model <draft-model>" help="Path to MTP draft model (optional, overrides LLM_DRAFT_MODEL_PATH) (FOR FUTURE SUPPORT)"
+flag "-n --gpu-layers <gpu-layers>" help="GPU layers to offload" default="-1"
+flag "-c --ctx-size <ctx-size>" help="Context size" default="131072"
+flag "-f --flash-attn <flash-attn>" help="Use flash attention ('on', 'off', or 'auto')" default="on"
+flag "-r --reasoning <reasoning>" help="Use reasoning ('on', 'off', 'auto')" default="off"
+flag "-p --parallel <parallel>" help="Parallel request slots"
+flag "-l --log-level <log-level>" help="Log level (0: generic output, 1: error, 2: warning, 3: info, 4:trace, 5: debug)" default="2"
+flag "-H --host <host>" help="Host to bind to" default="0.0.0.0"
+flag "-P --port <port>" help="Port to bind to" default="6767"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+gum log -l info "Starting llama.cpp server"
+BASE_MODEL_PATH="${usage_base_model:-$LLM_BASE_MODEL_PATH}"
+PARALLEL="${usage_parallel:-${LLM_INSTANCE_POOL_SIZE:-1}}"
+
+if [ ! -f "${BASE_MODEL_PATH}" ]; then
+  gum log -l error "Model not found: ${BASE_MODEL_PATH}"
+  exit 1
+fi
+
+if [ -n "$(docker container ls -q -f name=wtce-llm-server-dev)" ]; then
+  gum log -l info "Stopping existing LLM server"
+  docker stop wtce-llm-server-dev
+fi
+
+# Determine models root (parent of 'base' and 'draft')
+MODELS_DIR="$(realpath "$(dirname "$(dirname "$(dirname "${BASE_MODEL_PATH}")")")")"
+gum log -l info "Using models from: ${MODELS_DIR}"
+
+REL_MODEL_PATH="$(realpath --relative-to="${MODELS_DIR}" "${BASE_MODEL_PATH}")"
+gum log -l info "Base model path: ${REL_MODEL_PATH}"
+
+# Docker options
+DOCKER_OPTS=(
+  --rm
+  --gpus all
+  --name wtce-llm-server-dev
+  -p "${usage_port}:${usage_port}"
+  -v "${MODELS_DIR}:/models:ro"
+  -e "LLAMA_ARG_HOST=${usage_host}"
+)
+
+# Server arguments
+SERVER_ARGS=(
+  -m "/models/${REL_MODEL_PATH}"
+  --gpu-layers "${usage_gpu_layers}"
+  --ctx-size "${usage_ctx_size}"
+  --flash-attn "${usage_flash_attn}"
+  --reasoning "${usage_reasoning}"
+  --parallel "${PARALLEL}"
+  --verbosity "${usage_log_level}"
+  --no-log-timestamps
+  --port "${usage_port}"
+  --kv-unified
+  --offline
+)
+
+# Handle draft model
+DRAFT_PATH="${usage_draft_model:-${LLM_DRAFT_MODEL_PATH:-}}"
+if [ -n "${DRAFT_PATH}" ] && [ -f "${DRAFT_PATH}" ]; then
+  # This code is for future support for draft models after llama.cpp fixes MTP
+  # REL_DRAFT_PATH="$(realpath --relative-to="${MODELS_DIR}" "${DRAFT_PATH}")"
+  # gum log -l info "Enabling speculative decoding with draft model: ${REL_DRAFT_PATH}"
+  # SERVER_ARGS+=(
+  #   --model-draft "/models/${REL_DRAFT_PATH}"
+  #   --spec-type draft-mtp
+  #   --spec-draft-n-max 4
+  # )
+  gum log -l warn "Draft model support is not yet implemented"
+
+else
+  if [ -n "${DRAFT_PATH}" ]; then
+    gum log -l warn "Draft model not found: ${DRAFT_PATH}. Proceeding without speculative decoding"
+  else
+    gum log -l info "No draft model specified; running without speculative decoding"
+  fi
+fi
+
+docker run "${DOCKER_OPTS[@]}" \
+  ghcr.io/ggml-org/llama.cpp:server-cuda13 \
+  "${SERVER_ARGS[@]}" \
+  2>&1 | awk '{print "[" strftime("%Y-%m-%d %H:%M:%S") "]", $0}; fflush()'
 '''
 
 [tasks.backend]
-description = "Starts the entire backend application"
-depends = ["devserver", "celery"]
+description = "Start all backend services"
+depends_post = ["stop-dev"]
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+cleanup() {
+  gum log -l info "Backend stopped, running cleanup"
+  exit 0
+}
+trap cleanup EXIT
+
+gum log -l info "Launching all backend services"
+
+if [ "${WTCE_USE_MOCK_COMPLIANCE_CHECKER:-}" = "true" ]; then
+    gum log -l warn "Using mock compliance checker; no real LLM or WTVS servers"
+    mise run -o prefix devserver &
+    mise run -o prefix celery-worker &
+    mise run -o prefix celery-beat &
+    wait
+else
+    mise run -o prefix devserver &
+    mise run -o prefix celery-worker &
+    mise run -o prefix celery-beat &
+    mise run -o prefix llm-server &
+    mise run -o prefix wtvs &
+    wait
+fi
+
+wait
+'''
 
 [tasks.stop-dev]
 description = "Stop all running dev containers (requires containers to have the defined prefix)"
-alias="stop"
-wait_for = ["devserver", "celery"]
+alias = "stop"
+wait_for = ["devserver", "celery-worker", "celery-beat", "llm-server", "wtvs"]
 tools = { docker-cli = "29" }
 usage = '''
 flag "-p --prefix <prefix>" help="Prefix used for all project containers" default="wtce-"
@@ -179,7 +364,7 @@ fi
 [tasks.clean-dev]
 description = "Remove all development containers and volumes (requires containers to have the defined prefix)"
 depends = ["stop-dev"]
-alias="clean"
+alias = "clean"
 tools = { docker-cli = "29" }
 usage = '''
 flag "-p --prefix <prefix>" help="Prefix used for all project containers" default="wtce-"
@@ -354,4 +539,21 @@ if [ -n "${_CONTAINER_IDS}" ]; then
 else
   gum log -l info "No clientdb containers found with prefix: ${usage_prefix}"
 fi
+'''
+
+[tasks.download-recommended-models]
+description = "Download the recommended models for Watchtower from the Hugging Face repository"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+wtce download_model \
+  -n "unsloth/gemma-4-E4B-it-GGUF" \
+  -o "models/base/gemma-4-E4B-it-GGUF" \
+  -r "gemma-4-E4B-it-Q5_K_M.gguf" &
+# Uncomment this when the draft model is supported.
+# wtce download_model \
+#   -n "AtomicChat/gemma-4-E4B-it-assistant-GGUF" \
+#   -o "models/draft/gemma-4-E4B-it-assistant" \
+#   -r "gemma-4-E4B-it-assistant.Q5_K_M.gguf"
 '''

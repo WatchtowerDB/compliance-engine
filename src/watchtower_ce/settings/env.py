@@ -1,5 +1,4 @@
 import os
-import typing as t
 from pathlib import Path
 
 import dj_database_url
@@ -45,25 +44,25 @@ DATABASES: dict[str, dj_database_url.DBConfig] = {
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
+CELERY_STALE_PROCESS_TIMEOUT: int = int(os.getenv("CELERY_STALE_PROCESS_TIMEOUT", "15"))
+CELERY_STALE_PENDING_PROCESS_TIMEOUT: int = int(
+    os.getenv("CELERY_STALE_PENDING_PROCESS_TIMEOUT", "120")
+)
 
+# Mock compliance checker settings
 USE_MOCK_COMPLIANCE_CHECKER: bool = (
-    os.getenv("USE_MOCK_COMPLIANCE_CHECKER", "false").lower() == "true"
+    os.getenv("WTCE_USE_MOCK_COMPLIANCE_CHECKER", "false").lower() == "true"
 )
-
 SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING: bool = (
-    os.getenv("SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING", "false").lower() == "true"
+    os.getenv("WTCE_SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING", "false").lower()
+    == "true"
 )
+MOCK_ARTIFICIAL_STREAMING_DELAY: float = float(
+    os.getenv("WTCE_MOCK_ARTIFICIAL_STREAMING_DELAY", "0.1")
+)
+MOCK_ARTIFICIAL_PROCESSING_DELAY: float = float(
+    os.getenv("WTCE_MOCK_ARTIFICIAL_PROCESSING_DELAY", "7")
+)
+LLM_SERVER_URL: str = os.getenv("WTCE_LLM_SERVER_URL", "http://127.0.0.1:6767")
 
-BASE_MODEL_PATH: t.Optional[Path] = (
-    Path(os.environ["WTCE_BASE_MODEL_PATH"])
-    if os.getenv("WTCE_BASE_MODEL_PATH")
-    else None
-)
-CHROMA_DIR: t.Optional[Path] = (
-    Path(os.environ["WTCE_CHROMA_DIR"]) if os.getenv("WTCE_CHROMA_DIR") else None
-)
-EMBEDDING_MODEL_DIR: t.Optional[Path] = (
-    Path(os.environ["WTCE_EMBEDDING_MODEL_DIR"])
-    if os.getenv("WTCE_EMBEDDING_MODEL_DIR")
-    else None
-)
+WTVS_SERVER_URL: str = os.getenv("WTCE_WTVS_SERVER_URL", "http://localhost:7777")

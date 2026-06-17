@@ -1,9 +1,11 @@
+import json
 import logging
+from datetime import timedelta
 from typing import Optional
 
 from celery import chain, chord, shared_task
-from cloudevents.conversion import to_structured
-from cloudevents.http import CloudEvent
+from celery.signals import worker_process_shutdown, worker_shutdown
+from django.utils import timezone
 
 from . import ml_inference as ml
 from . import models
@@ -17,12 +19,11 @@ def stream_event(
     check_id: int, event_type_suffix: str, data: dict, subject: Optional[str] = None
 ):
     """
-    Writes a CloudEvent (v1.0) into the Redis stream backing SSE delivery.
+    Writes an event following the CloudEvent (v1.0) spec into the Redis stream.
 
     Constructs attributes via build_cloud_event() for consistency with the
-    system events emitted in `sse.py`, then re-serializes through the official
-    CloudEvents SDK for spec-validated structured-mode JSON before writing
-    to Redis.
+    system events emitted in `sse.py`, then serializes the dictionary
+    to JSON before writing to Redis.
 
     Events are appended to the Redis stream via XADD and consumed by
     `RedisSSEStream.stream()`, which handles both backlog replay and live
@@ -31,92 +32,17 @@ def stream_event(
 
     source = "/system/model" if check_id == 0 else f"/compliance/checks/{check_id}"
 
-    event_dict = build_cloud_event(
+    event = build_cloud_event(
         event_type=f"com.watchtower.compliance.{event_type_suffix}",
         source=source,
         data=data,
         subject=subject,
     )
 
-    # Re-validate and serialize through the official SDK.
-    sdk_event = CloudEvent(
-        attributes={k: v for k, v in event_dict.items() if k != "data"},
-        data=event_dict["data"],
-    )
-    _, body = to_structured(sdk_event)
-
     channel = f"check_updates_{check_id}"
     redis_client = get_redis()
-    redis_client.xadd(channel, {"data": body})
+    redis_client.xadd(channel, {"data": json.dumps(event)})
     redis_client.expire(channel, RedisSSEStream.STREAM_TTL)
-
-
-@shared_task
-def initialize_model_task() -> None:
-    """
-    Initializes all registered compliance checker models.
-
-    Iterates over every framework in ``ml._FRAMEWORK_REGISTRY`` and eagerly
-    instantiates its checker so model weights are loaded into VRAM once at
-    worker startup rather than on the first request.
-
-    Uses check_id=0 as the conventional channel for model-init events.
-    """
-    stream_event(
-        0,
-        "phase.update",
-        {
-            "step": "model_initialization",
-            "status": "started",
-            "message": "Initializing compliance models...",
-        },
-    )
-
-    failed_frameworks = []
-
-    for framework_name in ml._FRAMEWORK_REGISTRY:
-        try:
-            logger.info("Initializing checker for framework: %s", framework_name)
-            ml.get_checker_instance(framework_name)
-            logger.info("Successfully initialized checker for: %s", framework_name)
-        except Exception as e:
-            logger.exception(
-                "Failed to initialize checker for framework '%s'", framework_name
-            )
-            failed_frameworks.append(framework_name)
-            stream_event(
-                0,
-                "pipeline.error",
-                {
-                    "step": "model_initialization",
-                    "framework": framework_name,
-                    "error": str(e),
-                },
-            )
-
-    if failed_frameworks:
-        stream_event(
-            0,
-            "phase.update",
-            {
-                "step": "model_initialization",
-                "status": "partial",
-                "message": (
-                    f"Initialization completed with errors. "
-                    f"Failed frameworks: {failed_frameworks}"
-                ),
-            },
-        )
-    else:
-        stream_event(
-            0,
-            "phase.update",
-            {
-                "step": "model_initialization",
-                "status": "completed",
-                "message": "All compliance models initialized successfully.",
-            },
-        )
 
 
 @shared_task
@@ -134,6 +60,9 @@ def infer_sql_assertions_task(
     4. Persistence: Creates ComplianceAssertion records, ensuring each is explicitly linked to the compliance check.
     5. Protocol: Streams a completion 'phase.update' event including the count of generated assertions.
     """
+    models.ComplianceCheck.objects.filter(id=check_id).update(
+        status=models.ComplianceCheck.Status.GENERATING
+    )
 
     stream_event(
         check_id,
@@ -156,6 +85,9 @@ def infer_sql_assertions_task(
             "ClientDBSchema or ComplianceFramework %s not found. Skipping assertion inference.",
             schema_id,
         )
+        models.ComplianceCheck.objects.filter(id=check_id).update(
+            status=models.ComplianceCheck.Status.FAILED
+        )
         stream_event(
             check_id,
             "pipeline.error",
@@ -173,7 +105,8 @@ def infer_sql_assertions_task(
                 compliance_framework=framework,
                 sql_query=sql,
                 compliance_check_id=check_id,
-            ).id  # type: ignore[attr-defined]
+                status=models.ComplianceAssertion.Status.PENDING,
+            ).id  # pyright: ignore[reportAttributeAccessIssue]
             for sql in sql_assertions
         ]
 
@@ -191,6 +124,9 @@ def infer_sql_assertions_task(
 
     except Exception as e:
         logger.exception("Failed to generate assertions")
+        models.ComplianceCheck.objects.filter(id=check_id).update(
+            status=models.ComplianceCheck.Status.FAILED
+        )
         stream_event(
             check_id,
             "pipeline.error",
@@ -220,6 +156,9 @@ def execute_sql_assertion_task(assertion_id: int, check_id: int) -> tuple[int, s
         )
         return assertion_id, ""
 
+    assertion.status = models.ComplianceAssertion.Status.EXECUTING
+    assertion.save(update_fields=["status"])
+
     passed, output_str = ml.execute_sql_assertion(
         assertion.client_db.connection_string,
         assertion.sql_query,
@@ -227,7 +166,16 @@ def execute_sql_assertion_task(assertion_id: int, check_id: int) -> tuple[int, s
 
     assertion.result = passed
     assertion.query_output = output_str
-    assertion.save(update_fields=["result", "query_output"])
+
+    assertion.status = (
+        models.ComplianceAssertion.Status.COMPLETED
+        if passed
+        else models.ComplianceAssertion.Status.EXECUTING
+    )
+    assertion.save(update_fields=["result", "query_output", "status"])
+
+    # Heartbeat for the parent check
+    models.ComplianceCheck.objects.filter(id=check_id).update(updated_at=timezone.now())
 
     stream_event(
         check_id=check_id,
@@ -268,7 +216,17 @@ def generate_compliance_recommendation_task(
         return None
 
     if assertion.result is not False:
+        if assertion.status != models.ComplianceAssertion.Status.COMPLETED:
+            assertion.status = models.ComplianceAssertion.Status.COMPLETED
+            assertion.save(update_fields=["status"])
+
         return assertion_id
+
+    assertion.status = models.ComplianceAssertion.Status.ANALYZING
+    assertion.save(update_fields=["status"])
+
+    # Heartbeat for the parent check
+    models.ComplianceCheck.objects.filter(id=check_id).update(updated_at=timezone.now())
 
     stream_event(
         check_id,
@@ -284,7 +242,7 @@ def generate_compliance_recommendation_task(
         for chunk in ml.analyze_failed_assertion(
             assertion.sql_query, query_output, framework_name
         ):
-            token = chunk["choices"][0]["text"]  # type: ignore (chunk can be str or something else if stream is False, but it isn't)
+            token = chunk["choices"][0]["text"]
             full_recommendation += token
 
             stream_event(
@@ -296,6 +254,8 @@ def generate_compliance_recommendation_task(
 
     except Exception as exc:
         logger.exception("Recommendation generation failed")
+        assertion.status = models.ComplianceAssertion.Status.FAILED
+        assertion.save(update_fields=["status"])
         stream_event(
             check_id,
             "recommendation.stream",
@@ -305,7 +265,8 @@ def generate_compliance_recommendation_task(
         return assertion_id
 
     assertion.recommendation = full_recommendation
-    assertion.save(update_fields=["recommendation"])
+    assertion.status = models.ComplianceAssertion.Status.COMPLETED
+    assertion.save(update_fields=["recommendation", "status"])
 
     stream_event(
         check_id,
@@ -323,6 +284,10 @@ def finalize_analysis_task(results, check_id: int) -> None:
     Final callback for the analysis phase. Streams a completion event
     after all recommendation tasks in the chord have finished.
     """
+    models.ComplianceCheck.objects.filter(id=check_id).update(
+        status=models.ComplianceCheck.Status.COMPLETED
+    )
+
     stream_event(
         check_id,
         "phase.update",
@@ -351,6 +316,9 @@ def generate_recommendations_group(
     stream_event(check_id, "phase.update", {"step": "execution", "status": "completed"})
 
     if not assertion_output:
+        models.ComplianceCheck.objects.filter(id=check_id).update(
+            status=models.ComplianceCheck.Status.COMPLETED
+        )
         return []
 
     failed_ids = [res[0] for res in assertion_output if res[0] is not None]
@@ -366,6 +334,9 @@ def generate_recommendations_group(
     ]
 
     if filtered_results:
+        models.ComplianceCheck.objects.filter(id=check_id).update(
+            status=models.ComplianceCheck.Status.ANALYZING
+        )
         stream_event(
             check_id,
             "phase.update",
@@ -378,13 +349,16 @@ def generate_recommendations_group(
 
         chord(
             header=[
-                generate_compliance_recommendation_task.s(aid, out, check_id)  # type: ignore[attr-defined]
+                generate_compliance_recommendation_task.s(aid, out, check_id)  # pyright: ignore[reportFunctionMemberAccess]
                 for aid, out in filtered_results
             ],
-            body=finalize_analysis_task.s(check_id),  # type: ignore[attr-defined]
+            body=finalize_analysis_task.s(check_id),  # pyright: ignore[reportFunctionMemberAccess]
         ).apply_async()
     else:
         # If no failures exist, the analysis phase is effectively complete immediately
+        models.ComplianceCheck.objects.filter(id=check_id).update(
+            status=models.ComplianceCheck.Status.COMPLETED
+        )
         stream_event(
             check_id, "phase.update", {"step": "analysis", "status": "completed"}
         )
@@ -404,8 +378,14 @@ def execute_then_recommendations(
        - Body: Triggers `generate_recommendations_group` once all executions complete.
     """
     if not assertion_ids:
+        models.ComplianceCheck.objects.filter(id=check_id).update(
+            status=models.ComplianceCheck.Status.COMPLETED
+        )
         return []
 
+    models.ComplianceCheck.objects.filter(id=check_id).update(
+        status=models.ComplianceCheck.Status.EXECUTING
+    )
     stream_event(
         check_id,
         "phase.update",
@@ -418,10 +398,10 @@ def execute_then_recommendations(
 
     chord(
         header=[
-            execute_sql_assertion_task.s(assertion_id, check_id)  # type: ignore[attr-defined]
+            execute_sql_assertion_task.s(assertion_id, check_id)  # pyright: ignore[reportFunctionMemberAccess]
             for assertion_id in assertion_ids
         ],
-        body=generate_recommendations_group.s(check_id),  # type: ignore[attr-defined]
+        body=generate_recommendations_group.s(check_id),  # pyright: ignore[reportFunctionMemberAccess]
     ).apply_async()
 
 
@@ -439,11 +419,98 @@ def schedule_sql_assertion_pipeline(
     3. Analyze failures and stream recommendations (generate_recommendations_group → chord)
     """
     chain(
-        infer_sql_assertions_task.s(  # type: ignore[attr-defined]
+        infer_sql_assertions_task.s(  # pyright: ignore[reportFunctionMemberAccess]
             schema_id,
             client_db_id,
             framework_id,
             check_id,
         ),
-        execute_then_recommendations.s(check_id),  # type: ignore[attr-defined]
+        execute_then_recommendations.s(check_id),  # pyright: ignore[reportFunctionMemberAccess]
     ).apply_async()
+
+
+@shared_task
+def cleanup_stale_processes(
+    timeout_minutes: int = 15, pending_timeout_minutes: int = 120
+) -> None:
+    """
+    Finds and fails compliance checks and assertions that have become stale.
+
+    A process is considered "stale" if it is in an active state (not COMPLETED, or FAILED)
+    but has not seen an update to its `updated_at` timestamp within the specified timeout.
+
+    Pending processes are considered stale after the pending timeout, which ideally should
+    be a lot longer than the normal timeout.
+
+    This handles abrupt failures like SIGKILL (not directly ofc lol), or unhandled crashes
+    where the worker couldn't perform a graceful cleanup.
+    """
+    logger.info("Cleaning up stale assertions and checks")
+
+    threshold = timezone.now() - timedelta(minutes=timeout_minutes)
+    pending_threshold = timezone.now() - timedelta(minutes=pending_timeout_minutes)
+
+    # Fail stale assertions
+    active_assertions_statuses = [
+        models.ComplianceAssertion.Status.EXECUTING,
+        models.ComplianceAssertion.Status.ANALYZING,
+    ]
+    stale_assertions_count = models.ComplianceAssertion.objects.filter(
+        status__in=active_assertions_statuses, updated_at__lt=threshold
+    ).update(status=models.ComplianceAssertion.Status.FAILED)
+
+    # Fail orphaned pending assertions
+    pending_assertions_count = models.ComplianceAssertion.objects.filter(
+        status=models.ComplianceAssertion.Status.PENDING,
+        updated_at__lt=pending_threshold,
+    ).update(status=models.ComplianceAssertion.Status.FAILED)
+
+    # Fail stale checks
+    active_checks_statuses = [
+        models.ComplianceCheck.Status.GENERATING,
+        models.ComplianceCheck.Status.EXECUTING,
+        models.ComplianceCheck.Status.ANALYZING,
+    ]
+    stale_checks_count = models.ComplianceCheck.objects.filter(
+        status__in=active_checks_statuses, updated_at__lt=threshold
+    ).update(status=models.ComplianceCheck.Status.FAILED)
+
+    # Fail stale pending checks
+    pending_checks_count = models.ComplianceCheck.objects.filter(
+        status=models.ComplianceCheck.Status.PENDING,
+        updated_at__lt=pending_threshold,
+    ).update(status=models.ComplianceCheck.Status.FAILED)
+
+    total_assertions = stale_assertions_count + pending_assertions_count
+    total_checks = stale_checks_count + pending_checks_count
+
+    if total_assertions or total_checks:
+        logger.info(
+            "Cleaned up %d stale assertions and %d stale checks.",
+            total_assertions,
+            total_checks,
+        )
+
+
+@worker_shutdown.connect
+def on_worker_shutdown(sender, signal, **kwargs):
+    """
+    Handle graceful SIGTERM by triggering an immediate cleanup
+    of stale processes.
+    """
+    logger.warning(
+        "Worker shutting down. Triggering checks and assertions status cleanup."
+    )
+
+    # On graceful shutdown, we can be aggressive and cleanup anything currently "active"
+    # since workers are about to stop processing them anyway.
+    cleanup_stale_processes(timeout_minutes=0)
+
+
+@worker_process_shutdown.connect
+def on_worker_process_shutdown(sender, pid, exitcode, **kwargs):
+    """Fires in each worker child process before it exits."""
+    from ...engine.clients import ContextRetriever, LLMInference
+
+    LLMInference.close()
+    ContextRetriever.close()

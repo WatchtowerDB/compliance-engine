@@ -3,8 +3,6 @@
 import logging
 import sys
 
-from django.conf import settings
-
 from .standards.pci_compliance_checker import PCIComplianceChecker
 
 # Configure logging to output to stdout
@@ -13,10 +11,6 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     stream=sys.stdout,
 )
-
-
-if not settings.BASE_MODEL_PATH.exists():
-    raise FileNotFoundError("Base model path not found.")
 
 
 # Example schema with multiple PCI-DSS violations
@@ -64,12 +58,7 @@ CREATE TABLE payment_methods (
 
 # Initialize the PCI compliance checker
 checker = PCIComplianceChecker(
-    base_model_path=settings.BASE_MODEL_PATH,
-    chroma_dir=settings.CHROMA_DIR,
     collection_name="PCI-DSS-v4.0.1",
-    embedding_model=settings.EMBEDDING_MODEL_DIR,
-    context_window=8192,
-    n_gpu_layers=31,
 )
 
 print("=" * 80)
@@ -119,6 +108,4 @@ for i, (assertion, result) in enumerate(failed_assertions.items(), 1):
 
     print("\n" + "=" * 80)
 
-# Clean up
-checker.close()
 print("\n[INFO] Compliance checker closed successfully.")

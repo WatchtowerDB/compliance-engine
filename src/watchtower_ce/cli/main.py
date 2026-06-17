@@ -1,7 +1,6 @@
 import click
 
-from .ccdb import ccdb
-from .download import download
+from .download_model import download_model
 from .server import server
 from .test import test
 
@@ -12,7 +11,6 @@ def main():
     pass
 
 
-main.add_command(ccdb)
-main.add_command(download)
+main.add_command(download_model)
 main.add_command(server)
 main.add_command(test)
