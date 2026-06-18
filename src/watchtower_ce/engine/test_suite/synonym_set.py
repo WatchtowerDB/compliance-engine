@@ -79,6 +79,22 @@ class SynonymSet:
         """
         return f"Any of {sorted(self._synonyms)}"
 
+    def appears_in(self, text: str) -> bool:
+        """
+        Check whether any synonym appears inside a larger text.
+
+        Matching is case-insensitive and substring-based, which is useful for
+        benchmark evaluation against model output.
+
+        Args:
+            text (str): The text to search within.
+
+        Returns:
+            bool: True if any synonym appears in the text, False otherwise.
+        """
+        text_lower = text.lower()
+        return any(s.lower() in text_lower for s in self._synonyms)
+
 
 # Type alias used throughout the benchmark suite.
 Phrase = str | SynonymSet

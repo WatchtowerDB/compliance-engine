@@ -14,14 +14,14 @@ class AssertionGenerationGroundTruth:
         expected_violation_keywords (list[Phrase]):
             `Phrases`/`SynonymSets` that should appear in at least one generated
             assertion, proving the checker spotted the relevant violation.
-        schemas_covered (list[str]):
+        expected_tables (list[str]):
             Table names that must appear in at least one assertion, ensuring the
             checker did not silently skip a table.
     """
 
     violation_description: str
     expected_violation_keywords: list[Phrase] = field(default_factory=list)
-    schemas_covered: list[str] = field(default_factory=list)
+    expected_tables: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
