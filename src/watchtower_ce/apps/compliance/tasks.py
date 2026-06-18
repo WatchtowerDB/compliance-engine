@@ -430,6 +430,14 @@ def schedule_sql_assertion_pipeline(
 
 
 @shared_task
+def initialize_model_task() -> None:
+    # TODO: expand once singleton model-state tracking is implemented
+    from ...engine.clients import LLMInference
+
+    LLMInference()
+
+
+@shared_task
 def cleanup_stale_processes(
     timeout_minutes: int = 15, pending_timeout_minutes: int = 120
 ) -> None:
