@@ -2,10 +2,8 @@ class SynonymSet:
     """
     A set of synonymous strings used for flexible text matching.
 
-    This class holds a collection of strings that are considered equivalent (synonyms).
-    It allows checking if a given word exists in the set in a case-insensitive manner.
-    This is useful for validating analysis outputs where multiple terms might refer
-    to the same concept (e.g., "CVV", "CVC", "Card Verification Value").
+    Holds a collection of strings considered equivalent (e.g. "CVV", "CVC",
+    "Card Verification Value"). Matching is always case-insensitive.
     """
 
     def __init__(self, *words: str):
@@ -13,24 +11,25 @@ class SynonymSet:
         Initialize a set of synonyms.
 
         Args:
-            *words: Variable length argument list of synonym strings.
+            *words: Synonym strings. Duplicates (case-insensitive) are deduplicated,
+                    keeping the first occurrence's casing.
 
         Raises:
-            TypeError: If any of the provided words are not strings.
+            TypeError: If any argument is not a string.
         """
-        temp: dict[str, str] = {}
+        seen: dict[str, str] = {}
 
         for word in words:
             if not isinstance(word, str):
-                raise TypeError(f"Synonyms must be strings. Got {type(word).__name__}.")
+                raise TypeError(f"Synonyms must be strings, got {type(word).__name__}.")
 
             lw = word.lower()
-            if lw not in temp:
-                temp[lw] = word
+            if lw not in seen:
+                seen[lw] = word
 
-        self._synonyms: frozenset[str] = frozenset(temp.values())
+        self._synonyms: frozenset[str] = frozenset(seen.values())
 
-    def __contains__(self, word):
+    def __contains__(self, word: object) -> bool:
         """
         Check if a word is in the synonym set (case-insensitive).
 
@@ -40,7 +39,9 @@ class SynonymSet:
         Returns:
             True if the word matches any synonym in the set (ignoring case), False otherwise.
         """
-        return any(word.lower() == syn.lower() for syn in self._synonyms)
+        if not isinstance(word, str):
+            return False
+        return any(word.lower() == s.lower() for s in self._synonyms)
 
     def __iter__(self):
         """
@@ -51,7 +52,7 @@ class SynonymSet:
         """
         return iter(self._synonyms)
 
-    def __len__(self):
+    def __len__(self) -> int:
         """
         Return the number of unique synonyms in the set.
 
@@ -60,7 +61,7 @@ class SynonymSet:
         """
         return len(self._synonyms)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Return a string representation of the SynonymSet for debugging.
 
@@ -69,7 +70,7 @@ class SynonymSet:
         """
         return f"SynonymSet({', '.join(sorted(self._synonyms))})"
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Return a human-readable string description of the synonyms.
 
