@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Iterator, Optional
 
 from ..clients import ContextRetriever, LLMInference
-from ..utils import parse_list_response
+from ..utils import parse_list_response, retrieve_context_for_questions
 
 logger = logging.getLogger(__name__)
 
@@ -196,20 +196,16 @@ class ComplianceChecker(ABC):
             handling for malformed responses, including stripping markdown code blocks.
         """
         prompt = self._build_schema_questions_prompt(schema)
-
-        # Use lower temperature for more consistent, focused question generation
-        # TODO: Change the temperature to what works best with Gemma 4 in all of the code base.
-        # It should be 1.0, but testing is adequate to confirm for our use case and prompt style.
-        #
-        # Refer to:
-        # - https://arxiv.org/html/2506.07295v1
-        # - https://unsloth.ai/docs/models/gemma-4
-        # - https://ollama.com/library/gemma4:latest
-        response = self._llm.generate(
-            prompt, max_tokens=1024, temperature=0.3, stream=False
+        # TODO: Remove these debug warnings
+        logger.warning(
+            "Schema questions prompt token count: %d", self._llm.count_tokens(prompt)
         )
 
-        return parse_list_response(response)
+        response = self._llm.generate(
+            prompt, max_tokens=1024, temperature=1, stream=False
+        )
+
+        return parse_list_response(response, 6)
 
     def _generate_assertion_questions(self, assertion: str) -> list[str]:
         """
@@ -225,7 +221,7 @@ class ComplianceChecker(ABC):
                 The SQL assertion to analyze.
 
         Returns:
-            list[str]: A list of compliance question strings. Returns up to 2 questions,
+            list[str]: A list of compliance question strings. Returns up to 3 questions,
                        even if JSON parsing fails (fallback to text extraction).
 
         Raises:
@@ -236,57 +232,15 @@ class ComplianceChecker(ABC):
             handling for malformed responses, including stripping markdown code blocks.
         """
         prompt = self._build_assertion_questions_prompt(assertion)
-
-        # Use lower temperature for more consistent, focused question generation
-        response = self._llm.generate(
-            prompt, max_tokens=2048, temperature=0.1, stream=False
+        logger.warning(
+            "Assertion questions prompt token count: %d", self._llm.count_tokens(prompt)
         )
 
-        return parse_list_response(response, 4)
+        response = self._llm.generate(
+            prompt, max_tokens=2048, temperature=1, stream=False
+        )
 
-    def _retrieve_context_for_questions(
-        self, questions: list[str], retrieval_k: int | None = None
-    ) -> str:
-        """
-        Retrieve relevant compliance documentation for multiple questions.
-
-        This method queries the vector store with each generated question and
-        combines all retrieved contexts into a single comprehensive context string.
-        Uses a set to automatically deduplicate retrieved document chunks.
-
-        Args:
-            questions (list[str]):
-                List of compliance-related questions to search for.
-            retrieval_k (int | None):
-                Optional override for the number of context chunks to retrieve per question.
-                When provided, this value is passed directly to `ContextRetriever.context`.
-                When ``None`` (the default), the retriever's own default retrieval configuration is used.
-
-        Returns:
-            str: Combined context from all retrievals, with double-newline separators
-                 between unique document chunks.
-        """
-        logger.info("Retrieving context for %s questions", len(questions))
-        all_contexts = set()  # Using sets for automatic de-duplication of contexts
-
-        for i, question in enumerate(questions, 1):
-            logger.debug(
-                'Retrieving context for question (%s/%s): "%s"',
-                i,
-                len(questions),
-                question,
-            )
-            if retrieval_k:
-                for context in self._context_retriever.context(question, retrieval_k):
-                    all_contexts.add(context.page_content)
-            else:
-                for context in self._context_retriever.context(question):
-                    all_contexts.add(context.page_content)
-
-        combined_context = "\n\n--- Context chunks seperator ---\n\n".join(all_contexts)
-
-        logger.info("Successfully retrieved context for %s questions", len(questions))
-        return combined_context
+        return parse_list_response(response, 3)
 
     def generate_assertions(self, schema: str) -> list[str]:
         """
@@ -314,16 +268,19 @@ class ComplianceChecker(ABC):
         """
         logger.info("Generating compliance questions from schema")
         questions = self._generate_schema_questions(schema)
-        context = self._retrieve_context_for_questions(questions)
+        context = retrieve_context_for_questions(self._context_retriever, questions, 2)
 
         prompt = self._build_assertions_prompt(context, schema)
+        logger.warning(
+            "Assertions prompt token count: %s", self._llm.count_tokens(prompt)
+        )
 
         logger.info("Generating SQL assertions")
         response = self._llm.generate(
-            prompt, max_tokens=2048, temperature=0.1, stream=False
+            prompt, max_tokens=2048, temperature=0.6, stream=False
         )
 
-        assertions = parse_list_response(response, fallback_item_limit=10)
+        assertions = parse_list_response(response, 20)
         logger.info("Successfully generated %s SQL assertions", len(assertions))
 
         return assertions
@@ -356,18 +313,21 @@ class ComplianceChecker(ABC):
             ...     token = chunk["choices"][0]["text"]
             ...     print(token, end="", flush=True)
         """
-        # Generate a question to retrieve relevant context for this specific violation
         logger.info("Generating questions from failed assertion: %s", assertion)
         questions = self._generate_assertion_questions(assertion)
-        context = self._retrieve_context_for_questions(questions, 3)
+        context = retrieve_context_for_questions(self._context_retriever, questions, 2)
 
         logger.debug("Retrieved context: %s", context)
 
         prompt = self._build_assertion_analysis_prompt(
             context, assertion, failure_result
         )
+        logger.warning(
+            "Assertion analysis prompt token count: %s", self._llm.count_tokens(prompt)
+        )
+        logger.warning("FINAL Prompt: %s", prompt)
 
-        yield from self._llm.stream_chunks(prompt, max_tokens=2048, temperature=0.9)
+        yield from self._llm.stream_chunks(prompt, max_tokens=2048, temperature=1.3)
 
     def analyze_failed_assertion_stdout(
         self, assertion: str, failure_result: str
@@ -388,17 +348,21 @@ class ComplianceChecker(ABC):
         """
         logger.info("Generating questions from failed assertion: %s", assertion)
         questions = self._generate_assertion_questions(assertion)
-        context = self._retrieve_context_for_questions(questions, 4)
+        context = retrieve_context_for_questions(self._context_retriever, questions, 2)
 
         logger.debug("Retrieved context: %s", context)
 
         prompt = self._build_assertion_analysis_prompt(
             context, assertion, failure_result
         )
+        logger.warning(
+            "Assertion analysis prompt token count: %s", self._llm.count_tokens(prompt)
+        )
+        logger.warning("FINAL Prompt: %s", prompt)
 
         logger.info("Analyzing failed assertion")
         response = self._llm.generate(
-            prompt, max_tokens=2048, temperature=0.9, stream=True
+            prompt, max_tokens=2048, temperature=1, stream=True
         )
         logger.info("Successfully analyzed failed assertion")
 
