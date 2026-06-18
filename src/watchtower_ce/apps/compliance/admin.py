@@ -30,8 +30,15 @@ class ClientDBAdmin(BaseAdmin):
 
 @admin.register(ClientDBSchema)
 class ClientDBSchemaAdmin(BaseAdmin):
-    list_display = ("id", "client_db", "created_at")
-    list_filter = ("client_db", "created_at")
+    list_display = (
+        "id",
+        "client_db",
+        "name",
+        "description",
+        "created_at",
+        "internal_version",
+    )
+    list_filter = ("client_db", "name", "created_at", "internal_version")
 
 
 @admin.register(ComplianceAssertion)

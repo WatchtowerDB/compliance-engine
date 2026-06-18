@@ -4,7 +4,7 @@ import random
 import re
 import textwrap
 from time import sleep
-from typing import Iterator
+from typing import Iterator, Optional
 
 from django.conf import settings
 
@@ -43,8 +43,8 @@ class MockComplianceChecker:
         self,
         collection_name: str = "Mock-v1.0.0",
         retrieval_k: int = 4,
-        prompt_template: str = "<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
-        stop: str | list[str] | None = ["<turn|>"],
+        system_prompt: Optional[str] = "",
+        stop: Optional[list[str]] = None,
         top_k: int = 64,
     ) -> None:
         """
