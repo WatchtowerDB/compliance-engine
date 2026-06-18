@@ -78,3 +78,7 @@ class SynonymSet:
             str: A string in the format "Any of ['word1', 'word2', ...]"
         """
         return f"Any of {sorted(self._synonyms)}"
+
+
+# Type alias used throughout the benchmark suite.
+Phrase = str | SynonymSet
