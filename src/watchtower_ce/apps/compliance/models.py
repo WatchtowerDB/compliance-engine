@@ -29,12 +29,14 @@ class ClientDBSchema(models.Model):
     client_db: models.ForeignKey = models.ForeignKey(
         "ClientDB", on_delete=models.CASCADE, related_name="schemas"
     )
-
+    name = models.CharField(max_length=200, default="")
+    description = models.TextField(null=True, blank=True)
     sql_definition = models.TextField(null=True, blank=True)
-
+    internal_version = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        unique_together = ["client_db", "name", "internal_version"]
         ordering: tuple[str, ...] = ("id",)
 
 

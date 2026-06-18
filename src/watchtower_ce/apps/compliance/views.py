@@ -5,7 +5,13 @@ from django.conf import settings
 from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+    inline_serializer,
+)
+from rest_framework import serializers as rest_framework_serializers
 from rest_framework import status, viewsets
 from rest_framework.decorators import (
     action,
@@ -125,23 +131,31 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
     queryset = models.ClientDBSchema.objects.all()
     serializer_class = serializers.ClientDBSchemaSerializer
     filterset_class = ClientDBSchemaFilter
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
-    ordering_fields = ["created_at", "id"]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    search_fields = ["name", "description"]
+    ordering_fields = ["created_at", "id", "name"]
 
     def update(self, request, *args, **kwargs):
+        """Updates are not allowed for versioned schemas. Use upload-schema to create a new version."""
         return Response(
-            {"detail": "Update not allowed."}, status=status.HTTP_405_METHOD_NOT_ALLOWED
+            {"detail": "Update not allowed. Create a new version via upload-schema."},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
 
     def partial_update(self, request, *args, **kwargs):
+        """Partial updates are not allowed for versioned schemas."""
         return Response(
-            {"detail": "Partial update not allowed."},
+            {
+                "detail": "Partial update not allowed. Create a new version via upload-schema."
+            },
             status=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
 
     def destroy(self, request, *args, **kwargs):
+        """Deletion is not allowed to maintain version history integrity."""
         return Response(
-            {"detail": "Delete not allowed."}, status=status.HTTP_405_METHOD_NOT_ALLOWED
+            {"detail": "Deletion not allowed. Schemas are versioned and immutable."},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
 
     @extend_schema(
@@ -154,9 +168,15 @@ class ClientDBSchemaViewSet(viewsets.ModelViewSet):
         },
         summary="Upload a SQL schema file",
         description=(
-            "Upload a `.sql` file to create a new `ClientDBSchema` record. "
-            "Expects multipart form data with a `sql_file` field and a `client_db` ID. "
-            "All validation is handled by `ClientDBSchemaUploadSerializer`."
+            "Upload a `.sql` file to create a new version of a `ClientDBSchema`. "
+            "If a schema with the same `name` and `client_db` exists, the `internal_version` "
+            "is automatically incremented. Otherwise, version 1 is created.\n\n"
+            "Expects multipart form data with a `sql_file` field, a `client_db` ID, "
+            "and a `name`. All validation is handled by `ClientDBSchemaUploadSerializer`.\n\n"
+            "**Versioning behavior:**\n"
+            "- Same `name` + `client_db` -> new version (internal_version + 1)\n"
+            "- Different `name` or `client_db` -> new version 1\n"
+            "- Updates and deletes are not allowed to maintain audit integrity."
         ),
     )
     @action(
@@ -222,17 +242,24 @@ class ComplianceAssertionViewSet(viewsets.ReadOnlyModelViewSet):
     create=extend_schema(
         summary="Submit a compliance check",
         description=(
-            "Submit a new compliance check. Saves the record and immediately triggers "
-            "an asynchronous Celery pipeline to evaluate assertions against the selected "
-            "schema, client database, and compliance framework. "
-            "Returns a confirmation message and the ID of the created check. "
+            "Submit a new compliance check. Pass `client_db`, `framework`, and `schema_name` — "
+            "the system resolves the latest uploaded version of that schema automatically. "
+            "Saves the record and immediately triggers an asynchronous Celery pipeline to "
+            "evaluate compliance assertions. "
             "Track processing progress via the `stream-check-updates` SSE endpoint."
         ),
+        request=serializers.ComplianceCheckSerializer,
         responses={
-            201: OpenApiResponse(
-                description="Compliance check created. Returns message and check ID."
+            201: inline_serializer(
+                name="ComplianceCheckCreatedResponse",
+                fields={
+                    "message": rest_framework_serializers.CharField(),
+                    "id": rest_framework_serializers.IntegerField(),
+                },
             ),
-            400: OpenApiResponse(description="Validation error."),
+            400: OpenApiResponse(
+                description="Validation error — invalid IDs or unknown schema name."
+            ),
         },
     ),
 )
