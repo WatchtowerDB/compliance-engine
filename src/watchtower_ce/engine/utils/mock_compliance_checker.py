@@ -3,10 +3,10 @@ import logging
 import random
 import re
 import textwrap
-import threading
-from pathlib import Path
 from time import sleep
 from typing import Iterator
+
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ class MockComplianceChecker:
     A lightweight mock compliance checker for development workflows.
 
     This class mirrors the public interface of the real `ComplianceChecker`s
-    while avoiding any heavy AI or vector retrieval imports at runtime.
+    while avoiding using the LLM or vector retrieval clients at runtime.
 
     The responses are intentionally labeled as mock output for "Mock v1.0.0"
     so the app behavior is obvious during development.
@@ -25,58 +25,27 @@ class MockComplianceChecker:
     ```python
     from django.conf import settings
 
+    # Put this at the bottom of the definition of the standard compliance checker
     if settings.USE_MOCK_COMPLIANCE_CHECKER:
-        from watchtower_ce.engine.utils.mock_compliance_checker import MockComplianceChecker as PCIComplianceChecker
-    else:
-        from watchtower_ce.engine.standards.pci_compliance_checker import PCIComplianceChecker
+        from watchtower_ce.engine.utils import MockComplianceChecker
+
+        PCIComplianceChecker = MockComplianceChecker # pyright: ignore[reportAssignmentType]
     ```
     """
 
-    _instances: dict[str, "MockComplianceChecker"] = {}
-    _lock: threading.Lock = threading.Lock()
-    artificial_streaming_delay: float = 0.1  # in seconds
-    artificial_processing_delay: float = 7  # in seconds
-    suppress_mock_warning: bool = False
+    # delay in seconds
+    artificial_streaming_delay: float = settings.MOCK_ARTIFICIAL_STREAMING_DELAY
+    artificial_processing_delay: float = settings.MOCK_ARTIFICIAL_PROCESSING_DELAY
 
-    def __new__(cls, *args, collection_name: str = "Mock-v1.0.0", **kwargs):
-        """
-        Create a new instance of MockComplianceChecker, using a registry pattern.
-
-        This method implements a registry pattern with thread-safe per-collection-name instances.
-        One instance is created and reused per unique collection_name, ensuring efficiency
-        while allowing framework-specific differentiation.
-
-        Args:
-            cls: The class being instantiated.
-            collection_name (str): The collection/framework name to retrieve or create an instance for.
-                Defaults to "Mock-v1.0.0".
-            *args: Variable length argument list passed to the constructor.
-            **kwargs: Arbitrary keyword arguments passed to the constructor.
-
-        Returns:
-            MockComplianceChecker: The registered instance for the given collection_name.
-        """
-        if collection_name not in cls._instances:
-            with cls._lock:
-                if collection_name not in cls._instances:
-                    instance = super(MockComplianceChecker, cls).__new__(cls)
-                    cls._instances[collection_name] = instance
-        return cls._instances[collection_name]
+    suppress_mock_warning: bool = settings.SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING
 
     def __init__(
         self,
-        base_model_path: Path | str,
-        chroma_dir: Path | str,
         collection_name: str = "Mock-v1.0.0",
-        embedding_model: Path | str = "sentence-transformers/all-MiniLM-L12-v2",
-        retrieval_k: int = 2,
-        context_window: int = 8192,
-        n_gpu_layers: int = -1,
+        retrieval_k: int = 4,
         prompt_template: str = "<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
         stop: str | list[str] | None = ["<turn|>"],
         top_k: int = 64,
-        fa: bool = True,
-        swa_full: bool | None = None,
     ) -> None:
         """
         Initialize the MockComplianceChecker.
@@ -86,24 +55,11 @@ class MockComplianceChecker:
         mock responses for development and testing purposes.
 
         Args:
-            base_model_path (Path | str):
-                Mock parameter - not used in mock implementation.
-            chroma_dir (Path | str):
-                Mock parameter - not used in mock implementation.
             collection_name (str):
                 Name of the mock collection. Will be used as the key for the instance registry. Defaults to `"Mock-v1.0.0"`.
-            embedding_model (Path | str):
-                Mock parameter - not used in mock implementation.
-                Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`.
             retrieval_k (int):
                 Mock parameter - not used in mock implementation.
-                Defaults to `2`.
-            context_window (int):
-                Mock parameter - not used in mock implementation.
-                Defaults to `8192`.
-            n_gpu_layers (int):
-                Mock parameter - not used in mock implementation.
-                Defaults to `-1`.
+                Defaults to `4`.
             prompt_template (str):
                 Mock parameter - not used in mock implementation.
                 Defaults to Gemma 4's format: `"<|turn>user\n{prompt}<turn|>\n<|turn>model\n"`.
@@ -113,12 +69,6 @@ class MockComplianceChecker:
             top_k (int):
                 Mock parameter - not used in mock implementation.
                 Defaults to `64`.
-            fa (bool):
-                Mock parameter - not used in mock implementation.
-                Defaults to `True`.
-            swa_full (bool | None):
-                Mock parameter - not used in mock implementation.
-                Defaults to `None`.
         """
         if hasattr(self, "_initialized") and self._initialized:
             return
@@ -130,8 +80,8 @@ class MockComplianceChecker:
         if not self.suppress_mock_warning:
             logger.warning(
                 "Using MockComplianceChecker for '%s' instead of a real compliance checker. "
-                "Set USE_MOCK_COMPLIANCE_CHECKER=false in settings to disable the mock, "
-                "or set MockComplianceChecker.suppress_mock_warning=True to silence this warning.",
+                "Set WTCE_USE_MOCK_COMPLIANCE_CHECKER=false in to disable the mock, "
+                "or set WTCE_SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING=True to silence this warning.",
                 collection_name,
             )
 
@@ -236,7 +186,7 @@ class MockComplianceChecker:
             Failed assertion: `{assertion}`
 
             ## STANDARD REFERENCE
-            This violates {self.standard} control 1.1: "Mock controls are not real controls." 
+            This violates {self.standard} control 1.1: "Mock controls are not real controls."
 
             ## SECURITY IMPACT
             Non-compliance with {self.standard} may lead to undetected mock violations and a false sense of security during development.
@@ -255,7 +205,7 @@ class MockComplianceChecker:
                 SELECT AVG(mock_column2) FROM mock_table
             );
             ```
-            
+
             4. Turn off mock compliance checker in production.
 
             The rest of the text here is to generate more tokens for testing streaming behaviour. Lorem ipsum dolor sit amet,
@@ -265,7 +215,7 @@ class MockComplianceChecker:
             non. Cras fringilla est eu arcu tempus, quis elementum ipsum semper. Pellentesque efficitur mauris sed nulla
             ornaresagittis. Vestibulum suscipit turpis sit amet malesuada pharetra. Proin ac dolor ac orci egestas interdum
             nec vel ipsum. Curabitur id mi velit. Vestibulum a metus in neque placerat pellentesque id sit amet magna.
-            
+
             Fusce faucibus consectetur semper. Aenean aliquet semper lorem, vitae luctus ipsum. Phasellus semper, ipsum nec
             hendrerit cursus, augue nulla ultricies ipsum, eu faucibus quam odio eu diam. Maecenas mattis elementum massa imperdiet
             pulvinar. Etiam quis tortor auctor, ullamcorper risus eu, consectetur sapien. Aenean ex turpis, pharetra vitae iaculis

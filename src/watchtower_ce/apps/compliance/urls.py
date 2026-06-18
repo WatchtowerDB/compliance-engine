@@ -23,4 +23,5 @@ urlpatterns: list[URLPattern | URLResolver] = [
         views.schema_iteration_chart,
         name="analytics-schema-iterations",
     ),
+    path("model/status/", views.model_status, name="model-status"),
 ]

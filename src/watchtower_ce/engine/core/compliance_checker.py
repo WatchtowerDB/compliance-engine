@@ -1,13 +1,9 @@
-import json
 import logging
 from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import Iterator
+from typing import Iterator, Optional
 
-from llama_cpp import CreateCompletionStreamResponse
-
-from .context_retriever import ContextRetriever
-from .llm_inference import LLMInference
+from ..clients import ContextRetriever, LLMInference
+from ..utils import parse_list_response
 
 logger = logging.getLogger(__name__)
 
@@ -26,77 +22,40 @@ class ComplianceChecker(ABC):
     3. Provide specific remediation recommendations
 
     Subclasses must implement standard-specific prompt engineering and analysis logic.
-
-    Attributes:
-        context_retriever (ContextRetriever):
-            Vector store interface for document retrieval.
-        llm (LLMInference):
-            Language model interface for generation tasks.
     """
 
     def __init__(
         self,
-        base_model_path: Path | str,
-        chroma_dir: Path | str,
         collection_name: str,
-        embedding_model: Path | str = "sentence-transformers/all-MiniLM-L12-v2",
         retrieval_k: int = 4,
-        context_window: int = 8192,
-        n_gpu_layers: int = -1,
-        prompt_template: str = "<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
-        stop: str | list[str] | None = ["<turn|>"],
+        system_prompt: Optional[str] = None,
+        stop: Optional[str | list[str]] = None,
         top_k: int = 64,
-        fa: bool = True,
-        swa_full: bool | None = None,
     ) -> None:
         """
         Initialize the compliance checker with RAG components.
 
         Args:
-            base_model_path (Path | str):
-                Path to the GGUF model file for LLM inference.
-            chroma_dir (Path | str):
-                Directory containing the Chroma vector database.
             collection_name (str):
                 Name of the Chroma collection with compliance documents.
-            embedding_model (Path | str):
-                HuggingFace model identifier or local path for text embeddings.
-                Defaults to `"sentence-transformers/all-MiniLM-L12-v2"`.
             retrieval_k (int):
                 Number of similar documents to retrieve per query. Defaults to `4`.
-            context_window (int):
-                Maximum context length for the LLM in tokens. Defaults to `8192`.
-            n_gpu_layers (int):
-                GPU layers to offload. `-1` for all, `0` for CPU only. Defaults to `-1`.
-            prompt_template (str):
-                Template for formatting LLM prompts. Should include `{prompt}`
-                placeholder. Defaults to Gemma 4's format: `"<|turn>user\n{prompt}<turn|>\n<|turn>model\n"`.
-            stop (str | list[str] | None):
-                Stop sequences for generation. Defaults to `["<turn|>"]`.
+            system_prompt (Optional[str]):
+                System prompt for the LLM.
+            stop (Optional[str | list[str]]):
+                Custom stop sequences for generation. Defaults to `None`.
             top_k (int):
                 The number of highest probability tokens to keep for top-k sampling.
                 Higher values increase diversity but may reduce coherence. Defaults to `64`, Gemma 4's default.
-            fa (bool):
-                Whether to use flash attention (if supported by the model and hardware). Defaults to `True`.
-            swa_full (bool | None):
-                Whether to use SWA-Full attention (if supported by the model and hardware).
-                Defaults to `None`, and leave it like that if you don't know what it is.
         """
-        self.context_retriever = ContextRetriever(
-            chroma_dir=chroma_dir,
+        self._context_retriever = ContextRetriever(
             collection_name=collection_name,
-            embedding_model=embedding_model,
             retrieval_k=retrieval_k,
         )
-        self.llm = LLMInference(
-            model_path=base_model_path,
-            context_window=context_window,
-            n_gpu_layers=n_gpu_layers,
-            prompt_template=prompt_template,
+        self._llm = LLMInference(
+            system_prompt=system_prompt,
             stop=stop,
             top_k=top_k,
-            fa=fa,
-            swa_full=swa_full,
         )
 
     @abstractmethod
@@ -202,74 +161,6 @@ class ComplianceChecker(ABC):
         """
         pass
 
-    def _parse_list_response(
-        self, response: str, fallback_item_limit: int = 6
-    ) -> list[str]:
-        """
-        Parse a response string that should contain a JSON list of strings.
-
-        Args:
-            response (str): The response string to parse, potentially containing markdown formatting
-            fallback_item_limit (int): Maximum number of items to return when using fallback parsing
-
-        Returns:
-            list[str]: A list of strings extracted from the response
-        """
-        logger.debug("Raw list response: %s", repr(response))
-
-        try:
-            # Clean up potential markdown formatting
-            cleaned_response = response.strip()
-            cleaned_response = cleaned_response.replace("\n", " ")
-            if cleaned_response.startswith("```python3"):
-                cleaned_response = cleaned_response[10:]
-            elif cleaned_response.startswith("```python"):
-                cleaned_response = cleaned_response[9:]
-            elif cleaned_response.startswith("```py"):
-                cleaned_response = cleaned_response[5:]
-            elif cleaned_response.startswith("```json"):
-                cleaned_response = cleaned_response[7:]
-            elif cleaned_response.startswith("```sql"):
-                cleaned_response = cleaned_response[6:]
-            elif cleaned_response.startswith("```"):
-                cleaned_response = cleaned_response[3:]
-
-            if cleaned_response.endswith("```"):
-                cleaned_response = cleaned_response[:-3]
-
-            cleaned_response = cleaned_response.strip()
-
-            items = json.loads(cleaned_response)
-
-            if not isinstance(items, list):
-                raise ValueError("Response is not a valid list.")
-
-            logger.debug("Successfully parsed %s items from JSON", len(items))
-            return items
-
-        except (json.JSONDecodeError, ValueError) as e:
-            logger.warning("Failed to parse response as JSON: %s", e)
-            logger.warning("Raw response: %s", repr(response))
-
-            # Fallback: extract items from text (one per line)
-            lines = response.strip().split("\n")
-            items = []
-
-            for line in lines:
-                cleaned_line = line.strip(" -\"[]'")
-                # Only include non-empty lines with reasonable content
-                if cleaned_line and len(cleaned_line) > 10:
-                    items.append(cleaned_line)
-
-            # Limit to fallback_item_limit if we have too many items
-            if len(items) > fallback_item_limit:
-                items = items[:fallback_item_limit]
-                logger.debug("Extracted and limited to %s items from text", len(items))
-            else:
-                logger.debug("Extracted %s items from text", len(items))
-
-            return items
-
     def _generate_schema_questions(self, schema: str) -> list[str]:
         """
         Generate targeted compliance questions from the schema using the LLM.
@@ -304,11 +195,11 @@ class ComplianceChecker(ABC):
         # - https://arxiv.org/html/2506.07295v1
         # - https://unsloth.ai/docs/models/gemma-4
         # - https://ollama.com/library/gemma4:latest
-        response = self.llm.generate(
+        response = self._llm.generate(
             prompt, max_tokens=1024, temperature=0.3, stream=False
         )
 
-        return self._parse_list_response(response)
+        return parse_list_response(response)
 
     def _generate_assertion_questions(self, assertion: str) -> list[str]:
         """
@@ -337,11 +228,11 @@ class ComplianceChecker(ABC):
         prompt = self._build_assertion_questions_prompt(assertion)
 
         # Use lower temperature for more consistent, focused question generation
-        response = self.llm.generate(
+        response = self._llm.generate(
             prompt, max_tokens=2048, temperature=0.1, stream=False
         )
 
-        return self._parse_list_response(response, 4)
+        return parse_list_response(response, 4)
 
     def _retrieve_context_for_questions(
         self, questions: list[str], retrieval_k: int | None = None
@@ -376,10 +267,10 @@ class ComplianceChecker(ABC):
                 question,
             )
             if retrieval_k:
-                for context in self.context_retriever.context(question, retrieval_k):
+                for context in self._context_retriever.context(question, retrieval_k):
                     all_contexts.add(context.page_content)
             else:
-                for context in self.context_retriever.context(question):
+                for context in self._context_retriever.context(question):
                     all_contexts.add(context.page_content)
 
         combined_context = "\n\n--- Context chunks seperator ---\n\n".join(all_contexts)
@@ -405,7 +296,7 @@ class ComplianceChecker(ABC):
                       rows only when violations exist (empty = compliant).
 
         Example:
-            >>> checker = PCIComplianceChecker(base_model_path, chroma_dir)
+            >>> checker = PCIComplianceChecker(collection_name="PCI-DSS-v4.0.1")
             >>> assertions = checker.generate_assertions(schema)
             >>> # Execute assertions externally
             >>> for assertion in assertions:
@@ -418,18 +309,18 @@ class ComplianceChecker(ABC):
         prompt = self._build_assertions_prompt(context, schema)
 
         logger.info("Generating SQL assertions")
-        response = self.llm.generate(
+        response = self._llm.generate(
             prompt, max_tokens=2048, temperature=0.1, stream=False
         )
 
-        assertions = self._parse_list_response(response, fallback_item_limit=10)
+        assertions = parse_list_response(response, fallback_item_limit=10)
         logger.info("Successfully generated %s SQL assertions", len(assertions))
 
         return assertions
 
     def analyze_failed_assertion(
         self, assertion: str, failure_result: str
-    ) -> Iterator[CreateCompletionStreamResponse]:
+    ) -> Iterator[dict]:
         """
         Analyze a failed assertion and provide remediation recommendations.
 
@@ -443,11 +334,11 @@ class ComplianceChecker(ABC):
                 The result returned by the failed assertion (violating rows/data).
 
         Returns:
-            Iterator[CreateCompletionStreamResponse]: An iterator yielding chunks of the
+            Iterator[dict]: An iterator yielding chunks of the
                 generated analysis. This is used for streaming output.
 
         Example:
-            >>> checker = PCIComplianceChecker(base_model_path, chroma_dir)
+            >>> checker = PCIComplianceChecker(collection_name="PCI-DSS-v4.0.1")
             >>> assertion = "SELECT * FROM customers WHERE cvv IS NOT NULL"
             >>> result = "id: 1, cvv: 123\\nid: 2, cvv: 456"
             >>> stream_chunks = checker.analyze_failed_assertion(assertion, result)
@@ -466,9 +357,7 @@ class ComplianceChecker(ABC):
             context, assertion, failure_result
         )
 
-        stream_chunks = self.llm.stream_chunks(prompt, max_tokens=2048, temperature=0.9)
-
-        return stream_chunks
+        yield from self._llm.stream_chunks(prompt, max_tokens=2048, temperature=0.9)
 
     def analyze_failed_assertion_stdout(
         self, assertion: str, failure_result: str
@@ -498,7 +387,7 @@ class ComplianceChecker(ABC):
         )
 
         logger.info("Analyzing failed assertion")
-        response = self.llm.generate(
+        response = self._llm.generate(
             prompt, max_tokens=2048, temperature=0.9, stream=True
         )
         logger.info("Successfully analyzed failed assertion")
@@ -521,20 +410,4 @@ class ComplianceChecker(ABC):
         Returns:
             int: The token count.
         """
-        return self.llm.count_tokens(text)
-
-    def close(self):
-        """
-        Clean up resources used by the compliance checker.
-
-        Releases LLM model resources and frees associated memory (GPU/CPU).
-        Should be called when the compliance checker is no longer needed.
-
-        Example:
-            >>> checker = PCIComplianceChecker(base_model_path, chroma_dir)
-            >>> try:
-            ...     assertions = checker.generate_assertions(schema)
-            ... finally:
-            ...     checker.close()
-        """
-        self.llm.close()
+        return self._llm.count_tokens(text)

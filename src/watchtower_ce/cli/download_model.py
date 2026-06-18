@@ -1,11 +1,10 @@
 from pathlib import Path
 
 import click
-from huggingface_hub import snapshot_download
 
 
 @click.command(
-    "base",
+    "download_model",
     short_help="Download a base GGUF LLM model",
     help="Download a base GGUF LLM model from HuggingFace.",
 )
@@ -32,7 +31,7 @@ from huggingface_hub import snapshot_download
     default=[],
     multiple=True,
 )
-def base(name: str, output_dir: str, required_files: tuple[str, ...]) -> None:
+def download_model(name: str, output_dir: str, required_files: tuple[str, ...]) -> None:
     """
     Downloads a base GGUF LLM model from HuggingFace.
 
@@ -49,6 +48,10 @@ def base(name: str, output_dir: str, required_files: tuple[str, ...]) -> None:
         If `required_files` is not specified, the function will always
         download the entire model.
     """
+    from huggingface_hub import (
+        snapshot_download,  # lazy import to make it an optional dependency
+    )
+
     if not output_dir:
         # Default to a 'base' directory in the current working directory
         absolute_path = Path.cwd() / "base" / name
