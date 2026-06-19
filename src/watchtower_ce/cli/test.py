@@ -4,13 +4,13 @@ from pathlib import Path
 
 import click
 
-from ..engine.standards import PCIComplianceChecker
-from ..engine.test_suite import (
+from ..engine.benchmark_suite import (
     PCI_DSS_STAGE_2_CASES,
     PCI_DSS_STAGE_4_CASES,
     BenchmarkReport,
     BenchmarkRunner,
 )
+from ..engine.standards import PCIComplianceChecker
 
 
 @click.command(
