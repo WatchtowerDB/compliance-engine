@@ -27,7 +27,7 @@ class ComplianceChecker(ABC):
     def __init__(
         self,
         collection_name: str,
-        retrieval_k: int = 4,
+        retrieval_k: int = 2,
         stop: Optional[str | list[str]] = None,
         top_k: int = 64,
     ) -> None:
@@ -38,7 +38,7 @@ class ComplianceChecker(ABC):
             collection_name (str):
                 Name of the Chroma collection with compliance documents.
             retrieval_k (int):
-                Number of similar documents to retrieve per query. Defaults to `4`.
+                Number of similar documents to retrieve per query. Defaults to `2`.
             stop (Optional[str | list[str]]):
                 Custom stop sequences for generation. Defaults to `None`.
             top_k (int):
@@ -268,7 +268,7 @@ class ComplianceChecker(ABC):
         """
         logger.info("Generating compliance questions from schema")
         questions = self._generate_schema_questions(schema)
-        context = retrieve_context_for_questions(self._context_retriever, questions, 2)
+        context = retrieve_context_for_questions(self._context_retriever, questions)
 
         prompt = self._build_assertions_prompt(context, schema)
         logger.warning(
@@ -315,7 +315,7 @@ class ComplianceChecker(ABC):
         """
         logger.info("Generating questions from failed assertion: %s", assertion)
         questions = self._generate_assertion_questions(assertion)
-        context = retrieve_context_for_questions(self._context_retriever, questions, 2)
+        context = retrieve_context_for_questions(self._context_retriever, questions)
 
         logger.debug("Retrieved context: %s", context)
 
@@ -348,7 +348,7 @@ class ComplianceChecker(ABC):
         """
         logger.info("Generating questions from failed assertion: %s", assertion)
         questions = self._generate_assertion_questions(assertion)
-        context = retrieve_context_for_questions(self._context_retriever, questions, 2)
+        context = retrieve_context_for_questions(self._context_retriever, questions)
 
         logger.debug("Retrieved context: %s", context)
 

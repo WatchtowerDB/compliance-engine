@@ -19,8 +19,8 @@ _FRAMEWORK_REGISTRY: dict[str, dict] = {
     },
 }
 _CHECKER_KWARGS: dict = {
-    "retrieval_k": 4,
-    "stop": None,
+    # "retrieval_k": 2,
+    # "stop": None,
     "top_k": 64,  # lower slightly if facing VRAM constraints.
 }
 
