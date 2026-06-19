@@ -237,7 +237,7 @@ class ComplianceChecker(ABC):
         )
 
         response = self._llm.generate(
-            prompt, max_tokens=2048, temperature=1, stream=False
+            prompt, max_tokens=2048, temperature=1.2, stream=False
         )
 
         return parse_list_response(response, 3)
@@ -277,7 +277,7 @@ class ComplianceChecker(ABC):
 
         logger.info("Generating SQL assertions")
         response = self._llm.generate(
-            prompt, max_tokens=2048, temperature=0.6, stream=False
+            prompt, max_tokens=2048, temperature=1.4, stream=True
         )
 
         assertions = parse_list_response(response, 20)
@@ -327,7 +327,7 @@ class ComplianceChecker(ABC):
         )
         logger.warning("FINAL Prompt: %s", prompt)
 
-        yield from self._llm.stream_chunks(prompt, max_tokens=2048, temperature=1.3)
+        yield from self._llm.stream_chunks(prompt, max_tokens=2048, temperature=1.4)
 
     def analyze_failed_assertion_stdout(
         self, assertion: str, failure_result: str
