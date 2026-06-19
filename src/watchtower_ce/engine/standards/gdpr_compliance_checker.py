@@ -58,7 +58,8 @@ class GDPRComplianceChecker(ComplianceChecker):
             4. Do NOT include any introductory text, comments, or markdown formatting in JSON responses.
             5. Do NOT respond with more than what is requested. Follow the format requested by the user.
             6. Do NOT wrap your whole response in ```json``` or ```markdown``` code blocks when responding in JSON or markdown format, respectively. You may use them only for code snippets or when explicitly requested by the user.
-            7. Ensure all SQL generated is valid and executable against the provided schema with respect to its database dialect (either PostgreSQL or MySQL).
+            7. Ensure your responses are friendly to text searching.
+            8. Ensure all SQL generated is valid and executable against the provided schema with respect to its database dialect (either PostgreSQL or MySQL).
             """
         ).strip()
 
@@ -185,7 +186,7 @@ class GDPRComplianceChecker(ComplianceChecker):
             Instructions:
             - Each assertion must be a valid SELECT query. Assertions should not be generic examples; they should be runnable against the provided schema.
             - Include descriptive column aliases explaining the potential violation.
-            - Generate as many assertions as you need against the provided schema. Focus on one specific compliance check per assertion.
+            - Generate as many assertions as you need against the provided schema. Aim for the highest coverage of the schema against the highest coverage of compliance requirements using the highest amount of assertions possible.
             - Do NOT generate one assertion that covers multiple compliance requirements. One big assertion that covers many compliance requirements is not acceptable.
             - Make sure to cover all relevant compliance requirements, and all relevant parts of the database schema.
 
@@ -254,7 +255,7 @@ class GDPRComplianceChecker(ComplianceChecker):
             A high-level summary of the violation.
 
             ## Standard Reference
-            Cite the exact {self.standard} Article(s) and clause(s) that apply.
+            Cite the exact {self.standard} Article(s) and clause(s) that apply as granularly as reasonably possible (e.g., Article 5(1)(b), not Article 5). Multiple articles and clauses maybe applicable.
 
             ## Detailed Analysis
             Explain why the assertion failed from a compliance perspective and what was observed.

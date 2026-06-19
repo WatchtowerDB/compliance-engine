@@ -55,7 +55,8 @@ class PCIComplianceChecker(ComplianceChecker):
             4. Do NOT include any introductory text, comments, or markdown formatting in JSON responses.
             5. Do NOT respond with more than what is requested. Follow the format requested by the user.
             6. Do NOT wrap your whole response in ```json``` or ```markdown``` code blocks when responding in JSON or markdown format, respectively. You may use them only for code snippets or when explicitly requested by the user.
-            7. Ensure all SQL generated is valid and executable against the provided schema with respect to its database dialect (either PostgreSQL or MySQL).
+            7. Ensure your responses are friendly to text searching.
+            8. Ensure all SQL generated is valid and executable against the provided schema with respect to its database dialect (either PostgreSQL or MySQL).
             """
         ).strip()
 
@@ -252,7 +253,7 @@ class PCIComplianceChecker(ComplianceChecker):
             A high-level summary of the violation.
 
             ## Standard Reference
-            Cite the exact {self.standard} requirement(s) and clause(s) that apply.
+            Cite the exact {self.standard} requirement(s) and clause(s) that apply as granularly as reasonably possible (e.g., Requirement 3.3.1, not Requirement 3). Multiple requirements and clauses maybe applicable.
 
             ## Detailed Analysis
             Explain why the assertion failed from a compliance perspective and what was observed.
