@@ -21,6 +21,8 @@ def _extract_citation_from_line(line: str) -> str | None:
     - "9 1"
     - "5 1 e"
     - "3 5"
+
+    ! Written by AI. I don't understand a single line, but it works.
     """
     match = _CITATION_START_RE.search(line)
     if match is None:
