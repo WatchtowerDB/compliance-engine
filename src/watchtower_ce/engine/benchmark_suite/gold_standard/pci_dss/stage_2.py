@@ -5,7 +5,7 @@ from ...synonym_set import SynonymSet
 PCI_DSS_STAGE_2_CASES: list[BenchmarkCase] = [
     # Requirement 3 — Protect stored account data
     BenchmarkCase(
-        name="ST2_TC001_Req3_Stored_Account_Data",
+        name="PCI_DSS_ST2_TC001_Req3_Stored_Account_Data",
         description="Stage 2: generate assertions for prohibited CVV/PAN storage",
         schema="""
             CREATE TABLE customers (
@@ -58,7 +58,7 @@ PCI_DSS_STAGE_2_CASES: list[BenchmarkCase] = [
     ),
     # Requirement 4 — Protect cardholder data during transmission
     BenchmarkCase(
-        name="ST2_TC002_Req4_Transmission",
+        name="PCI_DSS_ST2_TC002_Req4_Transmission",
         description="Stage 2: generate assertions for insecure transmission endpoints",
         schema="""
             CREATE TABLE api_configs (
@@ -100,7 +100,7 @@ PCI_DSS_STAGE_2_CASES: list[BenchmarkCase] = [
     ),
     # Requirement 7 — Restrict access by business need-to-know
     BenchmarkCase(
-        name="ST2_TC003_Req7_Access_Control",
+        name="PCI_DSS_ST2_TC003_Req7_Access_Control",
         description="Stage 2: generate assertions for missing least-privilege controls",
         schema="""
             CREATE TABLE users (
@@ -157,7 +157,7 @@ PCI_DSS_STAGE_2_CASES: list[BenchmarkCase] = [
     ),
     # Requirement 8 — Identify and authenticate access
     BenchmarkCase(
-        name="ST2_TC004_Req8_Authentication",
+        name="PCI_DSS_ST2_TC004_Req8_Authentication",
         description="Stage 2: generate assertions for weak/default credentials and auth controls",
         schema="""
             CREATE TABLE users (
@@ -200,7 +200,7 @@ PCI_DSS_STAGE_2_CASES: list[BenchmarkCase] = [
     ),
     # Requirement 10 — Logging and monitoring
     BenchmarkCase(
-        name="ST2_TC005_Req10_Logging_Monitoring",
+        name="PCI_DSS_ST2_TC005_Req10_Logging_Monitoring",
         description="Stage 2: generate assertions for missing audit logging coverage",
         schema="""
             CREATE TABLE payments (
@@ -241,7 +241,7 @@ PCI_DSS_STAGE_2_CASES: list[BenchmarkCase] = [
     ),
     # Multi-violation case 1 — Req 3 + Req 7 + Req 10
     BenchmarkCase(
-        name="ST2_TC006_Multi_Stored_Data_Access_Logging",
+        name="PCI_DSS_ST2_TC006_Multi_Stored_Data_Access_Logging",
         description=(
             "Stage 2: generate assertions for combined PAN/CVV storage, broad access, and weak audit trails"
         ),
@@ -297,7 +297,7 @@ PCI_DSS_STAGE_2_CASES: list[BenchmarkCase] = [
     ),
     # Multi-violation case 2 — Req 4 + Req 8 + Req 10
     BenchmarkCase(
-        name="ST2_TC007_Multi_Transmission_Auth_Logging",
+        name="PCI_DSS_ST2_TC007_Multi_Transmission_Auth_Logging",
         description=(
             "Stage 2: generate assertions for insecure transport, weak authentication controls, and insufficient event logging"
         ),
@@ -352,7 +352,7 @@ PCI_DSS_STAGE_2_CASES: list[BenchmarkCase] = [
     ),
     # Multi-violation case 3 — Req 3 + Req 4 + Req 7 + Req 8
     BenchmarkCase(
-        name="ST2_TC008_Multi_Core_Control_Gaps",
+        name="PCI_DSS_ST2_TC008_Multi_Core_Control_Gaps",
         description=(
             "Stage 2: generate assertions for combined card-data storage, transmission, access, and authentication control gaps"
         ),

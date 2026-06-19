@@ -4,7 +4,7 @@ from ...synonym_set import SynonymSet
 
 PCI_DSS_STAGE_4_CASES: list[BenchmarkCase] = [
     BenchmarkCase(
-        name="TC001_CVV_Storage_Analysis",
+        name="PCI_DSS_ST4_TC001_CVV_Storage_Analysis",
         description="Stage 4: analysis quality for CVV storage violation",
         schema="""
             CREATE TABLE customers (
@@ -56,7 +56,7 @@ PCI_DSS_STAGE_4_CASES: list[BenchmarkCase] = [
     ),
     # TC002 — Stage 4: Unencrypted PAN analysis
     BenchmarkCase(
-        name="TC002_Unencrypted_PAN_Analysis",
+        name="PCI_DSS_ST4_TC002_Unencrypted_PAN_Analysis",
         description="Stage 4: analysis quality for unencrypted PAN storage",
         schema="""
             CREATE TABLE transactions (
@@ -124,7 +124,7 @@ PCI_DSS_STAGE_4_CASES: list[BenchmarkCase] = [
     ),
     # TC003 — Stage 4: Track data analysis
     BenchmarkCase(
-        name="TC003_Track_Data_Analysis",
+        name="PCI_DSS_ST4_TC003_Track_Data_Analysis",
         description="Stage 4: analysis quality for track data violation",
         schema="""
             CREATE TABLE card_swipes (
@@ -192,7 +192,7 @@ PCI_DSS_STAGE_4_CASES: list[BenchmarkCase] = [
     # ==========================================================================
     # TC004 — Stage 4: Unencrypted transmission analysis
     BenchmarkCase(
-        name="TC004_Unencrypted_Transmission_Analysis",
+        name="PCI_DSS_ST4_TC004_Unencrypted_Transmission_Analysis",
         description="Stage 4: analysis quality for unencrypted data transmission indicators",
         schema="""
             CREATE TABLE api_configs (
@@ -275,7 +275,7 @@ PCI_DSS_STAGE_4_CASES: list[BenchmarkCase] = [
     # ==========================================================================
     # TC005 — Stage 4: Missing access controls analysis
     BenchmarkCase(
-        name="TC005_Missing_Access_Controls_Analysis",
+        name="PCI_DSS_ST4_TC005_Missing_Access_Controls_Analysis",
         description="Stage 4: analysis quality for missing access control mechanisms",
         schema="""
             CREATE TABLE payments (
@@ -373,7 +373,7 @@ PCI_DSS_STAGE_4_CASES: list[BenchmarkCase] = [
     ),
     # TC006 — Stage 4: Overly permissive access analysis
     BenchmarkCase(
-        name="TC006_Overly_Permissive_Access_Analysis",
+        name="PCI_DSS_ST4_TC006_Overly_Permissive_Access_Analysis",
         description="Stage 4: analysis quality for overly broad access permissions",
         schema="""
             CREATE TABLE user_privileges (
@@ -474,7 +474,7 @@ PCI_DSS_STAGE_4_CASES: list[BenchmarkCase] = [
     ),
     # TC007 — Stage 4: Weak password storage analysis
     BenchmarkCase(
-        name="TC007_Weak_Password_Storage_Analysis",
+        name="PCI_DSS_ST4_TC007_Weak_Password_Storage_Analysis",
         description="Stage 4: analysis quality for weak password hashing",
         schema="""
                 CREATE TABLE users (
@@ -533,7 +533,7 @@ PCI_DSS_STAGE_4_CASES: list[BenchmarkCase] = [
     ),
     # TC008 — Stage 4: Missing MFA tracking analysis
     BenchmarkCase(
-        name="TC008_Missing_MFA_Tracking_Analysis",
+        name="PCI_DSS_ST4_TC008_Missing_MFA_Tracking_Analysis",
         description="Stage 4: analysis quality for missing MFA implementation tracking",
         schema="""
                 CREATE TABLE users (
@@ -603,7 +603,7 @@ PCI_DSS_STAGE_4_CASES: list[BenchmarkCase] = [
     # ==========================================================================
     # TC009 — Stage 4: Missing/weak security logging analysis
     BenchmarkCase(
-        name="TC009_Inadequate_Audit_Logging_Analysis",
+        name="PCI_DSS_ST4_TC009_Inadequate_Audit_Logging_Analysis",
         description="Stage 4: analysis quality for missing or weak audit logging controls",
         schema="""
                 CREATE TABLE system_access_events (
