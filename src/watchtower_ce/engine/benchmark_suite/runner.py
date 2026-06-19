@@ -52,9 +52,9 @@ class BenchmarkReport:
                 "-" * 72,
                 f"  Overall score                    : {am.overall_score:.4f}  ({am.overall_score * 100:.1f}%)",
                 f"  Requirement identification  0.35 : {am.requirement_identification_rate:.4f}  ({am.requirement_identification_rate * 100:.1f}%)",
-                f"  Required phrases coverage   0.25 : {am.required_phrases_coverage_rate:.4f}  ({am.required_phrases_coverage_rate * 100:.1f}%)",
+                f"  Required phrases coverage   0.30 : {am.required_phrases_coverage_rate:.4f}  ({am.required_phrases_coverage_rate * 100:.1f}%)",
                 f"  Remediation completeness    0.25 : {am.remediation_completeness_rate:.4f}  ({am.remediation_completeness_rate * 100:.1f}%)",
-                f"  Preferred phrases coverage  0.15 : {am.preferred_phrases_coverage_rate:.4f}  ({am.preferred_phrases_coverage_rate * 100:.1f}%)",
+                f"  Preferred phrases coverage  0.10 : {am.preferred_phrases_coverage_rate:.4f}  ({am.preferred_phrases_coverage_rate * 100:.1f}%)",
                 "",
             ]
 

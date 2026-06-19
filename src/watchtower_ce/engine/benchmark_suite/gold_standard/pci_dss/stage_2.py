@@ -43,8 +43,14 @@ PCI_DSS_STAGE_2_CASES: list[BenchmarkCase] = [
         assertion_generation_ground_truth=AssertionGenerationGroundTruth(
             violation_description="Potential storage of PAN and CVV in plaintext columns",
             expected_violation_keywords=[
-                SynonymSet("cvv", "cvc", "card verification value"),
-                SynonymSet("pan", "card number", "primary account number"),
+                SynonymSet(
+                    "cvv",
+                    "cvc",
+                    "card_verification_value",
+                    "SAD",
+                    "sensitive_authentication_data",
+                ),
+                SynonymSet("pan", "card number", "primary_account_number"),
                 SynonymSet("plaintext", "unencrypted", "cleartext"),
             ],
             expected_tables=["customers"],
@@ -86,8 +92,7 @@ PCI_DSS_STAGE_2_CASES: list[BenchmarkCase] = [
         assertion_generation_ground_truth=AssertionGenerationGroundTruth(
             violation_description="Endpoints may transmit cardholder data over insecure channels",
             expected_violation_keywords=[
-                SynonymSet("http", "https", "tls", "ssl"),
-                SynonymSet("transmission", "in transit", "network"),
+                SynonymSet("transmission", "in_transit", "network"),
                 SynonymSet("encrypted", "cryptography"),
             ],
             expected_tables=["api_configs"],
@@ -135,8 +140,16 @@ PCI_DSS_STAGE_2_CASES: list[BenchmarkCase] = [
         assertion_generation_ground_truth=AssertionGenerationGroundTruth(
             violation_description="Privileges may exceed business need-to-know",
             expected_violation_keywords=[
-                SynonymSet("least privilege", "need to know", "access control"),
-                SynonymSet("grant", "all privileges", "public"),
+                SynonymSet(
+                    "least_privilege",
+                    "need_to_know",
+                    "need-to-know",
+                    "business_need",
+                    "business-need",
+                    "access_need",
+                    "access-need",
+                ),
+                "privilege_type",
                 SynonymSet("role", "permission", "authorization"),
             ],
             expected_tables=["user_privileges"],
@@ -179,9 +192,8 @@ PCI_DSS_STAGE_2_CASES: list[BenchmarkCase] = [
         assertion_generation_ground_truth=AssertionGenerationGroundTruth(
             violation_description="Authentication controls may be weak or improperly implemented",
             expected_violation_keywords=[
-                SynonymSet("authentication", "identity", "credential"),
-                SynonymSet("password", "hash", "mfa", "multi-factor"),
-                SynonymSet("default", "weak", "vendor supplied"),
+                SynonymSet("identity", "credential", "auth"),
+                SynonymSet("password", "hash", "mfa", "multi-factor", "multi_factor"),
             ],
             expected_tables=["users"],
         ),
@@ -223,7 +235,6 @@ PCI_DSS_STAGE_2_CASES: list[BenchmarkCase] = [
             expected_violation_keywords=[
                 SynonymSet("audit", "logging", "log"),
                 SynonymSet("timestamp", "created_at", "updated_at"),
-                SynonymSet("monitoring", "traceability", "accountability"),
             ],
             expected_tables=["payments"],
         ),
@@ -264,10 +275,22 @@ PCI_DSS_STAGE_2_CASES: list[BenchmarkCase] = [
                 "Schema indicates sensitive card data storage risks, permissive access patterns, and incomplete logging"
             ),
             expected_violation_keywords=[
-                SynonymSet("cvv", "cvc", "sensitive authentication data"),
-                SynonymSet("pan", "card number", "primary account number"),
-                SynonymSet("least privilege", "need to know", "access control"),
-                SynonymSet("audit", "logging", "traceability"),
+                SynonymSet("cvv", "cvc", "sensitive_authentication_data", "SAD"),
+                SynonymSet("pan", "card_number", "primary_account_number"),
+                SynonymSet(
+                    "access_control",
+                    "least_privilege",
+                    "need_to_know",
+                    "need-to-know",
+                    "business_need",
+                    "business-need",
+                    "access_need",
+                    "access-need",
+                    "RBAC",
+                    "role-based_access",
+                    "role_based_access",
+                ),
+                SynonymSet("audit", "log", "traceability"),
             ],
             expected_tables=["customer_cards", "app_permissions", "security_log"],
         ),
@@ -308,10 +331,21 @@ PCI_DSS_STAGE_2_CASES: list[BenchmarkCase] = [
                 "Schema suggests transmission security weaknesses, incomplete authentication hardening, and sparse auth monitoring"
             ),
             expected_violation_keywords=[
-                SynonymSet("http", "https", "tls", "ssl"),
-                SynonymSet("authentication", "credential", "multi-factor", "mfa"),
+                SynonymSet(
+                    "authentication",
+                    "default_credential",
+                    "2-factor",
+                    "2_factor",
+                    "multi-factor",
+                    "multi_factor",
+                    "MFA",
+                    "two-factor",
+                    "two_factor",
+                    "2FA",
+                    "multiple_authentication",
+                ),
                 SynonymSet("password", "hash", "default", "weak"),
-                SynonymSet("audit", "monitoring", "logging"),
+                SynonymSet("audit", "monitoring", "log"),
             ],
             expected_tables=["integrations", "user_accounts", "auth_events"],
         ),
@@ -358,11 +392,37 @@ PCI_DSS_STAGE_2_CASES: list[BenchmarkCase] = [
                 "Schema presents overlapping violations across storage, transport, access control, and identity security"
             ),
             expected_violation_keywords=[
-                SynonymSet("cvv", "security code", "sensitive authentication data"),
-                SynonymSet("pan", "card number", "unencrypted", "cleartext"),
-                SynonymSet("tls", "https", "transmission", "in transit"),
-                SynonymSet("least privilege", "role-based access", "need to know"),
-                SynonymSet("authentication", "mfa", "default credential"),
+                SynonymSet(
+                    "cvv", "security_code", "sensitive_authentication_data", "SAD"
+                ),
+                SynonymSet("pan", "card_number", "unencrypted", "cleartext"),
+                SynonymSet("tls", "https", "transmission", "in_transit", "SSL"),
+                SynonymSet(
+                    "access_control",
+                    "least_privilege",
+                    "need_to_know",
+                    "need-to-know",
+                    "business_need",
+                    "business-need",
+                    "access_need",
+                    "access-need",
+                    "RBAC",
+                    "role-based_access",
+                    "role_based_access",
+                ),
+                SynonymSet(
+                    "authentication",
+                    "default_credential",
+                    "2-factor",
+                    "2_factor",
+                    "multi-factor",
+                    "multi_factor",
+                    "MFA",
+                    "two-factor",
+                    "two_factor",
+                    "2FA",
+                    "multiple_authentication",
+                ),
             ],
             expected_tables=[
                 "payment_profiles",

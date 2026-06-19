@@ -17,8 +17,8 @@ class GenerationMetrics:
     keyword_hits: int = 0
     keyword_total: int = 0
 
-    schema_hits: int = 0
-    schema_total: int = 0
+    table_hits: int = 0
+    table_total: int = 0
 
     def __add__(self, other: "GenerationMetrics") -> "GenerationMetrics":
         """
@@ -28,8 +28,8 @@ class GenerationMetrics:
             total_cases=self.total_cases + other.total_cases,
             keyword_hits=self.keyword_hits + other.keyword_hits,
             keyword_total=self.keyword_total + other.keyword_total,
-            schema_hits=self.schema_hits + other.schema_hits,
-            schema_total=self.schema_total + other.schema_total,
+            table_hits=self.table_hits + other.table_hits,
+            table_total=self.table_total + other.table_total,
         )
 
     @property
@@ -38,7 +38,7 @@ class GenerationMetrics:
 
     @property
     def schema_coverage_rate(self) -> float:
-        return self.schema_hits / self.schema_total if self.schema_total > 0 else 0.0
+        return self.table_hits / self.table_total if self.table_total > 0 else 0.0
 
     @property
     def overall_score(self) -> float:
@@ -52,7 +52,7 @@ class GenerationMetrics:
             "overall_score": round(self.overall_score, 4),
             "raw_counts": {
                 "keywords": f"{self.keyword_hits}/{self.keyword_total}",
-                "schemas_covered": f"{self.schema_hits}/{self.schema_total}",
+                "tables_covered": f"{self.table_hits}/{self.table_total}",
             },
         }
 
@@ -68,9 +68,9 @@ class AnalysisMetrics:
 
     Dimensions and theirs weights:
     - Requirement identification:   0.35
-    - Required phrases coverage:    0.25
+    - Required phrases coverage:    0.30
     - Remediation completeness:     0.25
-    - Preferred phrases coverage:   0.15
+    - Preferred phrases coverage:   0.10
     """
 
     total_cases: int = 0
@@ -146,9 +146,9 @@ class AnalysisMetrics:
     def overall_score(self) -> float:
         return (
             0.35 * self.requirement_identification_rate
-            + 0.25 * self.required_phrases_coverage_rate
+            + 0.30 * self.required_phrases_coverage_rate
             + 0.25 * self.remediation_completeness_rate
-            + 0.15 * self.preferred_phrases_coverage_rate
+            + 0.10 * self.preferred_phrases_coverage_rate
         )
 
     def to_dict(self) -> dict:

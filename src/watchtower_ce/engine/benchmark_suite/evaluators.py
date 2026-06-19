@@ -60,7 +60,7 @@ class GenerationEvaluator:
                 "total": len(gt.expected_violation_keywords),
                 "details": keywords_found,
             },
-            "schemas_covered": {
+            "tables_covered": {
                 "found": len(tables_found),
                 "total": len(gt.expected_tables),
                 "details": tables_found,
@@ -78,8 +78,8 @@ class GenerationEvaluator:
         """
         metrics.keyword_hits += result["keywords"]["found"]
         metrics.keyword_total += result["keywords"]["total"]
-        metrics.schema_hits += result["schemas_covered"]["found"]
-        metrics.schema_total += result["schemas_covered"]["total"]
+        metrics.table_hits += result["tables_covered"]["found"]
+        metrics.table_total += result["tables_covered"]["total"]
 
 
 class AnalysisEvaluator:
