@@ -23,7 +23,7 @@ _.python.venv = { create = true, path = ".venv" }
 PYTHONPATH = "{{ config_root }}/src"
 DJANGO_SETTINGS_MODULE = "watchtower_ce.settings"
 DATABASE_URL = "postgresql://wtce:wtce@localhost:5432/wtce"
-WTCE_LLM_INSTANCE_POOL_SIZE = 1
+LLM_INSTANCE_POOL_SIZE = 1
 
 [tasks.install]
 description = "Install project dependencies"

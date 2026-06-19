@@ -4,16 +4,19 @@ from pathlib import Path
 
 import click
 
-from ..engine.standards.pci_compliance_checker import PCIComplianceChecker
-from ..engine.test_suite.analysis_quality_evaluator import AnalysisQualityEvaluator
-from ..engine.test_suite.evaluation_metrics import EvaluationMetrics
-from ..engine.test_suite.gold_standard import create_analysis_quality_test_dataset
+from ..engine.standards import PCIComplianceChecker
+from ..engine.test_suite import (
+    PCI_DSS_STAGE_2_CASES,
+    PCI_DSS_STAGE_4_CASES,
+    BenchmarkReport,
+    BenchmarkRunner,
+)
 
 
 @click.command(
     "test",
-    short_help="Run the test suite against a certain standard",
-    help="Run the quality analysis test suite against a certain standard.",
+    short_help="Run benchmark suite against a standard",
+    help="Run the benchmark suite (stage 2 generation + stage 4 analysis).",
 )
 @click.help_option("-h", "--help")
 @click.option(
@@ -30,21 +33,17 @@ def test(
     if debug:
         logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 
-    print("Creating analysis quality test dataset...")
-    test_cases = create_analysis_quality_test_dataset()
+    print("Loading benchmark dataset...")
+    test_cases = [*PCI_DSS_STAGE_2_CASES, *PCI_DSS_STAGE_4_CASES]
     print(f"Created {len(test_cases)} test cases\n")
-
-    evaluator = AnalysisQualityEvaluator(test_cases)
 
     checker = PCIComplianceChecker(
         collection_name="PCI-DSS-v4.0.1",
-        prompt_template="<|turn>user\n{prompt}<turn|>\n<|turn>model\n",
         stop=["<turn|>"],
         top_k=64,
     )
 
-    aggregated_metrics = EvaluationMetrics()
-    all_detailed_results = []
+    aggregated_report = BenchmarkReport()
 
     for i in range(iterations):
         if iterations > 1:
@@ -52,21 +51,17 @@ def test(
             print(f"ITERATION {i + 1}/{iterations}")
             print(f"{'=' * 40}\n")
 
-        metrics = evaluator.evaluate_all(checker, verbose=True)
-        aggregated_metrics += metrics
-
-        current_results = evaluator.results
+        report = BenchmarkRunner(test_cases, checker=checker, verbose=True).run()
         if iterations > 1:
-            for res in current_results:
-                res["iteration"] = i + 1
-        all_detailed_results.extend(current_results)
+            for result in report.analysis_results:
+                result["iteration"] = i + 1
+            for result in report.generation_results:
+                result["iteration"] = i + 1
 
-    report = evaluator.generate_detailed_report(
-        aggregated_metrics, detailed_results=all_detailed_results
-    )
-    print(report)
-    evaluator.save_results(
-        Path("evaluation_results.json"),
-        aggregated_metrics,
-        detailed_results=all_detailed_results,
-    )
+        aggregated_report.analysis_metrics += report.analysis_metrics
+        aggregated_report.generation_metrics += report.generation_metrics
+        aggregated_report.analysis_results.extend(report.analysis_results)
+        aggregated_report.generation_results.extend(report.generation_results)
+
+    print(aggregated_report.summary())
+    aggregated_report.save(Path("benchmark_results.json"))

@@ -46,9 +46,6 @@ class AssertionAnalysisGroundTruth:
         remediation_steps (list[Phrase]):
             Expected remediation actions. Matched with keyword-overlap logic so
             minor wording differences are tolerated.
-        detailed_analysis_phrases (list[Phrase]):
-            Phrases that should appear specifically in the "Detailed Analysis"
-            section. Used to ensure the model goes beyond a surface summary.
     """
 
     violation_description: str
@@ -56,4 +53,3 @@ class AssertionAnalysisGroundTruth:
     required_phrases: set[Phrase] = field(default_factory=set)
     preferred_phrases: list[Phrase] = field(default_factory=list)
     remediation_steps: list[Phrase] = field(default_factory=list)
-    detailed_analysis_phrases: list[Phrase] = field(default_factory=list)

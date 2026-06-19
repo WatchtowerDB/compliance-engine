@@ -4,7 +4,6 @@ from typing import Protocol, runtime_checkable
 from .benchmark_case import BenchmarkCase
 from .helpers import (
     _check_requirement_identified,
-    _extract_section,
     _matches_phrase,
     _matches_step,
 )
@@ -119,14 +118,6 @@ class AnalysisEvaluator:
             str(s) for s in gt.remediation_steps if _matches_step(text_lower, s)
         ]
 
-        # Scoped match so generic mentions elsewhere do not inflate the score.
-        detailed_section = _extract_section(analysis, "Detailed Analysis").lower()
-        detailed_found = [
-            str(p)
-            for p in gt.detailed_analysis_phrases
-            if _matches_phrase(detailed_section, p)
-        ]
-
         return {
             "case": case.name,
             "description": case.description,
@@ -145,11 +136,6 @@ class AnalysisEvaluator:
                 "found": len(steps_found),
                 "total": len(gt.remediation_steps),
                 "details": steps_found,
-            },
-            "detailed_analysis_phrases": {
-                "found": len(detailed_found),
-                "total": len(gt.detailed_analysis_phrases),
-                "details": detailed_found,
             },
             # Truncated for reports — full text is too large.
             "analysis_excerpt": (
@@ -174,9 +160,3 @@ class AnalysisEvaluator:
         metrics.preferred_phrases_total += result["preferred_phrases"]["total"]
         metrics.remediation_steps_found += result["remediation_steps"]["found"]
         metrics.remediation_steps_total += result["remediation_steps"]["total"]
-        metrics.detailed_analysis_phrases_found += result["detailed_analysis_phrases"][
-            "found"
-        ]
-        metrics.detailed_analysis_phrases_total += result["detailed_analysis_phrases"][
-            "total"
-        ]

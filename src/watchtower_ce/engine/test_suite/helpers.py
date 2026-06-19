@@ -1,5 +1,3 @@
-import re
-
 from .synonym_set import Phrase, SynonymSet
 
 
@@ -56,15 +54,3 @@ def _check_requirement_identified(text: str, requirements: list[str]) -> bool:
         if any(v in text_lower for v in variants):
             return True
     return False
-
-
-def _extract_section(analysis: str, heading: str) -> str:
-    """
-    Extract the text content of a markdown section identified by *heading*.
-
-    Matches `## Detailed Analysis` (and similar) and returns everything up to
-    the next `##` heading (or end of string).  Returns `""` if not found.
-    """
-    pattern = rf"##\s+{re.escape(heading)}\s*\n(.*?)(?=\n##\s|\Z)"
-    match = re.search(pattern, analysis, re.IGNORECASE | re.DOTALL)
-    return match.group(1) if match else ""

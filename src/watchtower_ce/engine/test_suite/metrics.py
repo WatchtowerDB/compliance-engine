@@ -69,9 +69,8 @@ class AnalysisMetrics:
     Dimensions and theirs weights:
     - Requirement identification:   0.35
     - Required phrases coverage:    0.25
-    - Remediation completeness:     0.20
-    - Detailed analysis coverage:   0.10
-    - Preferred phrases coverage:   0.10
+    - Remediation completeness:     0.25
+    - Preferred phrases coverage:   0.15
     """
 
     total_cases: int = 0
@@ -86,9 +85,6 @@ class AnalysisMetrics:
 
     remediation_steps_found: int = 0
     remediation_steps_total: int = 0
-
-    detailed_analysis_phrases_found: int = 0
-    detailed_analysis_phrases_total: int = 0
 
     def __add__(self, other: "AnalysisMetrics") -> "AnalysisMetrics":
         """
@@ -112,14 +108,6 @@ class AnalysisMetrics:
             + other.remediation_steps_found,
             remediation_steps_total=self.remediation_steps_total
             + other.remediation_steps_total,
-            detailed_analysis_phrases_found=(
-                self.detailed_analysis_phrases_found
-                + other.detailed_analysis_phrases_found
-            ),
-            detailed_analysis_phrases_total=(
-                self.detailed_analysis_phrases_total
-                + other.detailed_analysis_phrases_total
-            ),
         )
 
     @property
@@ -155,21 +143,12 @@ class AnalysisMetrics:
         )
 
     @property
-    def detailed_analysis_coverage_rate(self) -> float:
-        return (
-            self.detailed_analysis_phrases_found / self.detailed_analysis_phrases_total
-            if self.detailed_analysis_phrases_total > 0
-            else 0.0
-        )
-
-    @property
     def overall_score(self) -> float:
         return (
             0.35 * self.requirement_identification_rate
             + 0.25 * self.required_phrases_coverage_rate
-            + 0.20 * self.remediation_completeness_rate
-            + 0.10 * self.detailed_analysis_coverage_rate
-            + 0.10 * self.preferred_phrases_coverage_rate
+            + 0.25 * self.remediation_completeness_rate
+            + 0.15 * self.preferred_phrases_coverage_rate
         )
 
     def to_dict(self) -> dict:
@@ -187,18 +166,11 @@ class AnalysisMetrics:
             "remediation_completeness_rate": round(
                 self.remediation_completeness_rate, 4
             ),
-            "detailed_analysis_coverage_rate": round(
-                self.detailed_analysis_coverage_rate, 4
-            ),
             "overall_score": round(self.overall_score, 4),
             "raw_counts": {
                 "requirement_correctly_identified": self.requirement_correctly_identified,
                 "required_phrases": f"{self.required_phrases_found}/{self.required_phrases_total}",
                 "preferred_phrases": f"{self.preferred_phrases_found}/{self.preferred_phrases_total}",
                 "remediation_steps": f"{self.remediation_steps_found}/{self.remediation_steps_total}",
-                "detailed_analysis_phrases": (
-                    f"{self.detailed_analysis_phrases_found}"
-                    f"/{self.detailed_analysis_phrases_total}"
-                ),
             },
         }
