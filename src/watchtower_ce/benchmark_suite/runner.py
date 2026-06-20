@@ -1,19 +1,3 @@
-"""
-BenchmarkRunner — orchestrates a full benchmark run.
-
-Usage
------
-::
-
-    from watchtower_ce.engine.test_suite.runner import BenchmarkRunner
-    from watchtower_ce.engine.test_suite.pci_dss import PCI_DSS_CASES
-
-    runner = BenchmarkRunner(cases=PCI_DSS_CASES, checker=checker)
-    report = runner.run()
-    print(report.summary())
-    report.save("results/pci_dss_run.json")
-"""
-
 import json
 import logging
 from dataclasses import dataclass, field
