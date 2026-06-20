@@ -109,7 +109,9 @@ class ClientDBViewSet(viewsets.ModelViewSet):
         summary="List database schemas",
         description=(
             "Return a list of all client database schemas. Results default to newest first. "
-            "Supports ordering by created_at and id."
+            "Supports ordering by created_at and id. "
+            "Pass `latest=true` to return only the latest `internal_version` per "
+            "`client_db` + `name` schema group."
         ),
     ),
     retrieve=extend_schema(
