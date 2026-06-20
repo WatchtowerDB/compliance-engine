@@ -266,7 +266,9 @@ class ComplianceAssertionViewSet(viewsets.ReadOnlyModelViewSet):
     ),
 )
 class ComplianceCheckViewSet(viewsets.ModelViewSet):
-    queryset = models.ComplianceCheck.objects.all()
+    queryset = models.ComplianceCheck.objects.select_related(
+        "framework", "client_db", "schema", "user"
+    )
     serializer_class = serializers.ComplianceCheckSerializer
     http_method_names = ["get", "post", "head", "options"]
     filterset_class = ComplianceCheckFilter
