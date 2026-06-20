@@ -151,7 +151,6 @@ celery -A watchtower_ce worker -l INFO
 
 [tasks.celery-beat]
 description = "Run celery beat"
-depends = ["redis"]
 run = '''
 celery -A watchtower_ce beat -l INFO
 '''
