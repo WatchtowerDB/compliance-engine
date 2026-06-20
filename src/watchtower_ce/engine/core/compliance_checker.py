@@ -196,10 +196,6 @@ class ComplianceChecker(ABC):
             handling for malformed responses, including stripping markdown code blocks.
         """
         prompt = self._build_schema_questions_prompt(schema)
-        # TODO: Remove these debug warnings
-        logger.warning(
-            "Schema questions prompt token count: %d", self._llm.count_tokens(prompt)
-        )
 
         response = self._llm.generate(
             prompt, max_tokens=2048, temperature=1, stream=False
@@ -232,9 +228,6 @@ class ComplianceChecker(ABC):
             handling for malformed responses, including stripping markdown code blocks.
         """
         prompt = self._build_assertion_questions_prompt(assertion)
-        logger.warning(
-            "Assertion questions prompt token count: %d", self._llm.count_tokens(prompt)
-        )
 
         response = self._llm.generate(
             prompt, max_tokens=2048, temperature=1.2, stream=False
@@ -271,13 +264,10 @@ class ComplianceChecker(ABC):
         context = retrieve_context_for_questions(self._context_retriever, questions)
 
         prompt = self._build_assertions_prompt(context, schema)
-        logger.warning(
-            "Assertions prompt token count: %s", self._llm.count_tokens(prompt)
-        )
 
         logger.info("Generating SQL assertions")
         response = self._llm.generate(
-            prompt, max_tokens=4096, temperature=1.4, stream=True
+            prompt, max_tokens=4096, temperature=1.4, stream=False
         )
 
         assertions = parse_list_response(response, 20)
@@ -322,10 +312,6 @@ class ComplianceChecker(ABC):
         prompt = self._build_assertion_analysis_prompt(
             context, assertion, failure_result
         )
-        logger.warning(
-            "Assertion analysis prompt token count: %s", self._llm.count_tokens(prompt)
-        )
-        logger.warning("FINAL Prompt: %s", prompt)
 
         yield from self._llm.stream_chunks(prompt, max_tokens=4096, temperature=1.4)
 
@@ -355,10 +341,6 @@ class ComplianceChecker(ABC):
         prompt = self._build_assertion_analysis_prompt(
             context, assertion, failure_result
         )
-        logger.warning(
-            "Assertion analysis prompt token count: %s", self._llm.count_tokens(prompt)
-        )
-        logger.warning("FINAL Prompt: %s", prompt)
 
         logger.info("Analyzing failed assertion")
         response = self._llm.generate(
