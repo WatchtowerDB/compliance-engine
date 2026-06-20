@@ -42,36 +42,61 @@ GDPR_STAGE_4_CASES: list[BenchmarkCase] = [
             ],
             required_phrases={
                 SynonymSet("data minimisation", "data minimization", "necessary"),
-                SynonymSet("purpose limitation", "specified purposes", "incompatible"),
-                SynonymSet("storage limitation", "retention", "kept no longer"),
+                SynonymSet(
+                    "purpose limitation",
+                    "specified purpose",
+                    "legitimate purpose",
+                    "explicit purpose",
+                    "incompatible with",
+                    "business justification",
+                    "lawful basis",
+                ),
+                SynonymSet(
+                    "storage limitation",
+                    "permit identification",
+                    "permits identification",
+                    "retention",
+                    "archive",
+                    "archiving",
+                    "no longer than",
+                ),
             },
             preferred_phrases=[
-                SynonymSet("sensitive data", "special category", "excessive"),
+                "Article 89(1)",
                 SynonymSet(
-                    "lawful basis", "legitimate purpose", "business justification"
+                    "disclosure",
+                    "data breach",
+                    "attack surface",
+                    "unauthorized access",
                 ),
                 SynonymSet(
-                    "retention policy", "retention schedule", "automatic deletion"
-                ),
-                SynonymSet(
-                    "data controller",
+                    "technical measure",
+                    "organisational measure",
                     "controller responsibility",
                     "demonstrate compliance",
+                ),
+                SynonymSet(
+                    "data concerning health",
+                    "health data",
+                    "medical_history",
+                    "medical diagnosis",
+                    "management of health",
                 ),
             ],
             remediation_steps=[
                 SynonymSet(
                     "Audit and remove data not necessary for stated purposes",
+                    "Enforce data minimisation at schema level",
                     "Delete unnecessary personal data",
-                    "Implement data classification to identify excess data",
                 ),
                 SynonymSet(
                     "Define and enforce retention schedules",
                     "Implement automatic data deletion after retention period",
-                    "Establish data retention policy",
+                    "Implement data retention policy / policies",
                 ),
                 SynonymSet(
                     "Document legitimate purposes for each data category",
+                    "Review sensitive data handling purposes and methods",
                     "Define business justification for data collection",
                     "Establish purpose limitation controls",
                 ),
@@ -92,7 +117,6 @@ GDPR_STAGE_4_CASES: list[BenchmarkCase] = [
                 doctor_name VARCHAR(100),
                 assessment_date TIMESTAMP,
                 is_encrypted BOOLEAN,
-                explicit_consent_obtained BOOLEAN,
                 legal_basis_documented BOOLEAN,
                 created_at TIMESTAMP
             );
@@ -100,10 +124,10 @@ GDPR_STAGE_4_CASES: list[BenchmarkCase] = [
         failed_assertion=(
             "SELECT record_id FROM employee_health_records "
             "WHERE health_condition IS NOT NULL "
-            "AND (is_encrypted = FALSE OR explicit_consent_obtained = FALSE OR legal_basis_documented = FALSE)"
+            "AND (is_encrypted = FALSE OR legal_basis_documented = FALSE)"
         ),
         failure_result=(
-            "record_id: 1001, is_encrypted: false, explicit_consent_obtained: false\n"
+            "record_id: 1001, is_encrypted: false, legal_basis_documented: false\n"
             "record_id: 1002, legal_basis_documented: false, is_encrypted: false"
         ),
         assertion_analysis_ground_truth=AssertionAnalysisGroundTruth(
@@ -115,43 +139,55 @@ GDPR_STAGE_4_CASES: list[BenchmarkCase] = [
                     "special categories",
                     "sensitive data",
                     "health data",
+                    "data concerning health",
                 ),
                 SynonymSet(
-                    "explicit consent",
+                    "consent",
                     "opt-in",
-                    "informed consent",
-                    "consent mechanism",
                 ),
                 SynonymSet(
-                    "prohibited", "processing shall be prohibited", "legal basis"
+                    "prohibited",
+                    "legal basis",
+                    "legal grounds",
                 ),
             },
             preferred_phrases=[
-                SynonymSet("processing purpose", "legitimate purposes", "safeguards"),
-                SynonymSet("data subject", "individual", "employee rights"),
+                SynonymSet("Data Protection Impact Assessment", "DPIA"),
                 SynonymSet(
-                    "occupational medicine", "health care", "medical professional"
+                    "purpose limitation",
+                    "specified purpose",
+                    "legitimate purpose",
+                    "explicit purpose",
+                    "business justification",
+                ),
+                SynonymSet(
+                    "disclosure",
+                    "unauthorized access",
+                    "data breach",
+                    "attack surface",
                 ),
                 SynonymSet("confidentiality", "encryption", "data protection"),
             ],
             remediation_steps=[
                 SynonymSet(
+                    "Consent and basis verification",
+                    "Verify consent and basis for processing",
                     "Obtain explicit, informed consent from data subjects",
                     "Implement consent management system",
                     "Document consent mechanism and retention",
                 ),
                 SynonymSet(
-                    "Encrypt special category data in transit and at rest",
-                    "Implement end-to-end encryption for health records",
+                    "Encrypt special category data",
+                    "Implement end-to-end encryption / pseudonymisation for health records",
                     "Secure storage of sensitive data",
                 ),
                 SynonymSet(
                     "Document legal basis for processing",
                     "Identify applicable exception under Article 9(2)",
-                    "Establish Data Processing Agreement with third parties if needed",
+                    "Establish Data Processing Agreement with third parties",
                 ),
                 SynonymSet(
-                    "Restrict access to authorised personnel only",
+                    "Restrict access to authorised / authorized personnel only",
                     "Implement role-based access control for health data",
                     "Define professional secrecy obligations",
                 ),
@@ -204,24 +240,35 @@ GDPR_STAGE_4_CASES: list[BenchmarkCase] = [
         ),
         assertion_analysis_ground_truth=AssertionAnalysisGroundTruth(
             violation_description="Erasure requests not processed without undue delay; personal data remains accessible",
-            standard_requirements=["Article 17(1)", "Article 17(2)", "Article 17(3)"],
+            standard_requirements=["Article 17"],
             required_phrases={
-                SynonymSet(
-                    "erasure", "erase", "delete", "forgotten", "right to be forgotten"
-                ),
+                SynonymSet("erasure", "erase", "delete", "forgotten"),
                 SynonymSet("without undue delay", "promptly", "timely basis"),
-                SynonymSet("right to erasure", "data subject", "obligation"),
+                SynonymSet(
+                    "no longer necessary",
+                    "data subject",
+                    "purpose limitation",
+                    "specified purpose",
+                    "legitimate purpose",
+                    "explicit purpose",
+                    "business justification",
+                ),
             },
             preferred_phrases=[
+                SynonymSet("Article 6(1)", "Article 9(2)", "Article 9(3)"),
+                "Article 21(1)",
+                SynonymSet("Union State law", "Member State law"),
                 SynonymSet(
-                    "lawfully processed", "no longer necessary", "purpose limitation"
+                    "storage limitation",
+                    "permit identification",
+                    "permits identification",
+                    "retention",
+                    "archive",
+                    "archiving",
+                    "no longer than",
                 ),
-                SynonymSet("controller", "processor", "data subject request"),
-                SynonymSet("linked data", "copies", "replications"),
-                SynonymSet(
-                    "technical measures", "implementation", "available technology"
-                ),
-                SynonymSet("cost", "effort", "reasonable steps"),
+                "request",
+                SynonymSet("linked", "links", "copies", "replication"),
             ],
             remediation_steps=[
                 SynonymSet(
@@ -233,16 +280,13 @@ GDPR_STAGE_4_CASES: list[BenchmarkCase] = [
                     "Delete personal data within legally mandated timeframe",
                     "Remove data without undue delay upon verified request",
                     "Cascade deletion across all systems and backups",
+                    "Implement automated enforcement auditing",
+                    "Update data retention policy / policies",
                 ),
                 SynonymSet(
                     "Notify third-party processors and data recipients",
                     "Inform controllers processing linked data",
                     "Document erasure completion",
-                ),
-                SynonymSet(
-                    "Purge backups containing personal data",
-                    "Remove from archive and recovery systems",
-                    "Verify complete deletion",
                 ),
             ],
         ),
@@ -269,7 +313,6 @@ GDPR_STAGE_4_CASES: list[BenchmarkCase] = [
                 data_categories TEXT,
                 default_share BOOLEAN,
                 consent_required BOOLEAN,
-                user_consent_obtained BOOLEAN
             );
 
             CREATE TABLE default_settings (
@@ -288,8 +331,10 @@ GDPR_STAGE_4_CASES: list[BenchmarkCase] = [
             "WHERE default_share = TRUE AND consent_required = FALSE"
         ),
         failure_result=(
-            "Tracking enabled by default: 450 records\n"
-            "Data sharing enabled by default without consent: 12 third parties"
+            "tracking_id: 5001, user_id: 1050, tracking_enabled_by_default: true, cookies_accepted: false\n"
+            "tracking_id: 5002, user_id: 1051, tracking_enabled_by_default: true, cookies_accepted: false\n"
+            "config_id: 12, third_party_name: AdPartner Inc, default_share: true, consent_required: false\n"
+            "config_id: 15, third_party_name: AnalyticsVendor Ltd, default_share: true, consent_required: false"
         ),
         assertion_analysis_ground_truth=AssertionAnalysisGroundTruth(
             violation_description="Data processing enabled by default without privacy safeguards; insufficient privacy controls",
@@ -297,9 +342,9 @@ GDPR_STAGE_4_CASES: list[BenchmarkCase] = [
             required_phrases={
                 SynonymSet("privacy by design", "privacy-by-design", "by default"),
                 SynonymSet(
-                    "appropriate technical",
-                    "organisational measures",
-                    "organizational measures",
+                    "technical measure",
+                    "organisational measure",
+                    "organizational measure",
                 ),
                 SynonymSet(
                     "data minimisation",
@@ -309,16 +354,28 @@ GDPR_STAGE_4_CASES: list[BenchmarkCase] = [
                 ),
             },
             preferred_phrases=[
-                SynonymSet("state of the art", "best practices", "risk assessment"),
+                SynonymSet(
+                    "state of the art", "best practices", "risk assessment", "latest"
+                ),
                 SynonymSet("processing purpose", "nature and scope", "context"),
-                SynonymSet("safeguards", "protect rights", "data subject"),
-                SynonymSet("processing systems", "services", "resilience"),
+                SynonymSet(
+                    "breach",
+                    "regulatory fine",
+                    "reputational damage",
+                    "loss of user trust",
+                ),
             ],
             remediation_steps=[
                 SynonymSet(
                     "Implement privacy-by-design in system architecture",
                     "Integrate privacy considerations from design phase",
                     "Conduct privacy impact assessment",
+                    "Apply pseudonymisation to reduce personal data exposure",
+                    "Implement data minimisation at the system level",
+                    "Limit data visibility to necessary personnel",
+                ),
+                SynonymSet(
+                    "Correct tracking defaults", "Correct data sharing defaults"
                 ),
                 SynonymSet(
                     "Disable data processing by default unless explicitly consented",
@@ -326,12 +383,8 @@ GDPR_STAGE_4_CASES: list[BenchmarkCase] = [
                     "Require opt-in for tracking and data sharing",
                 ),
                 SynonymSet(
-                    "Apply pseudonymisation to reduce personal data exposure",
-                    "Implement data minimisation at the system level",
-                    "Limit data visibility to necessary personnel",
-                ),
-                SynonymSet(
-                    "Test and evaluate security and privacy controls regularly",
+                    "Audit and evaluate security and privacy controls",
+                    "Verify security and privacy controls",
                     "Perform penetration testing and privacy audits",
                     "Document compliance measures",
                 ),
@@ -359,7 +412,6 @@ GDPR_STAGE_4_CASES: list[BenchmarkCase] = [
             CREATE TABLE system_security_controls (
                 control_id INT PRIMARY KEY,
                 control_name VARCHAR(100),
-                implemented BOOLEAN,
                 last_tested_at TIMESTAMP,
                 test_frequency VARCHAR(50)
             );
@@ -379,43 +431,48 @@ GDPR_STAGE_4_CASES: list[BenchmarkCase] = [
             "OR (backup_created = TRUE AND backup_encrypted = FALSE) "
             "UNION "
             "SELECT control_id FROM system_security_controls "
-            "WHERE implemented = FALSE OR last_tested_at IS NULL"
+            "WHERE last_tested_at IS NULL"
         ),
         failure_result=(
-            "Unencrypted personal data: 2845 records\n"
-            "Unencrypted backups: 15 backup sets\n"
-            "Security controls not tested: 8 controls"
+            "data_id: 3001, subject_id: 2010, encrypted: false, encryption_algorithm: NULL\n"
+            "data_id: 3002, subject_id: 2011, encrypted: false, encryption_algorithm: NULL\n"
+            "data_id: 3045, subject_id: 2050, backup_created: true, backup_encrypted: false\n"
+            "control_id: 101, control_name: TLS_Version_Check, last_tested_at: NULL\n"
+            "control_id: 105, control_name: Access_Log_Review, last_tested_at: NULL"
         ),
         assertion_analysis_ground_truth=AssertionAnalysisGroundTruth(
             violation_description="Personal data stored without encryption; security controls not regularly tested",
-            standard_requirements=[
-                "Article 32(1)",
-                "Article 32(1)(a)",
-                "Article 32(1)(d)",
-            ],
+            standard_requirements=["Article 32(1)"],
             required_phrases={
-                SynonymSet("security of processing", "appropriate security", "risk"),
+                "security of processing",
                 SynonymSet(
                     "encryption", "encrypted", "pseudonymisation", "pseudonymization"
                 ),
-                SynonymSet("confidentiality", "integrity", "availability"),
+                SynonymSet(
+                    "confidentiality", "integrity", "availability", "resilience"
+                ),
             },
             preferred_phrases=[
-                SynonymSet("resilience", "restore availability", "timely manner"),
-                SynonymSet("incident response", "detection", "response measures"),
+                SynonymSet("incident", "restore availability", "timely manner"),
+                SynonymSet(
+                    "unauthorised disclosure",
+                    "unauthorized disclosure",
+                    "unauthorized access",
+                    "unauthorised access",
+                ),
                 SynonymSet("access control", "authentication", "authorization"),
-                SynonymSet("monitoring", "audit logs", "security testing"),
+                SynonymSet(
+                    "technical measure",
+                    "organisational measure",
+                    "organizational measure",
+                ),
             ],
             remediation_steps=[
                 SynonymSet(
-                    "Encrypt all personal data in transit and at rest",
+                    "Enforce encryption for personal data",
+                    "Enctrypt personal data",
                     "Implement AES-256 or equivalent encryption",
                     "Enable encryption by default for all systems",
-                ),
-                SynonymSet(
-                    "Implement strict access controls and role-based permissions",
-                    "Enforce least privilege principle",
-                    "Use multi-factor authentication",
                 ),
                 SynonymSet(
                     "Encrypt backups and test recovery procedures",
@@ -426,11 +483,125 @@ GDPR_STAGE_4_CASES: list[BenchmarkCase] = [
                     "Establish regular security testing and assessments",
                     "Conduct penetration testing and vulnerability scans",
                     "Implement continuous security monitoring",
-                ),
-                SynonymSet(
                     "Develop incident response and notification procedures",
                     "Create incident response plan",
                     "Establish notification timelines for breaches",
+                ),
+            ],
+        ),
+    ),
+    # Article 10 — Processing of criminal convictions and offences
+    BenchmarkCase(
+        name="GDPR_ST4_TC006_Article10_Criminal_Conviction_Data",
+        description="Stage 4: analysis quality for improper handling of criminal conviction data without official authority",
+        schema="""
+            CREATE TABLE criminal_records (
+                record_id INT PRIMARY KEY,
+                subject_id INT,
+                conviction_type VARCHAR(100),
+                offence_description TEXT,
+                conviction_date DATE,
+                sentence_length INT,
+                authorized_processor BOOLEAN,
+                official_authority_oversight BOOLEAN,
+                legal_basis_documented BOOLEAN,
+                access_control_applied BOOLEAN,
+                created_at TIMESTAMP
+            );
+
+            CREATE TABLE conviction_register (
+                register_id INT PRIMARY KEY,
+                maintained_by VARCHAR(100),
+                is_official_authority BOOLEAN,
+                record_count INT,
+                last_audited TIMESTAMP
+            );
+        """,
+        failed_assertion=(
+            "SELECT record_id FROM criminal_records "
+            "WHERE conviction_type IS NOT NULL "
+            "AND (authorized_processor = FALSE OR official_authority_oversight = FALSE OR legal_basis_documented = FALSE) "
+            "UNION "
+            "SELECT register_id FROM conviction_register "
+            "WHERE is_official_authority = FALSE"
+        ),
+        failure_result=(
+            "record_id: 5001, subject_id: 3100, conviction_type: Felony, authorized_processor: false, official_authority_oversight: false\n"
+            "record_id: 5002, subject_id: 3101, conviction_type: Misdemeanor, legal_basis_documented: false, authorized_processor: false\n"
+            "register_id: 201, maintained_by: Private Security Corp, is_official_authority: false, record_count: 12847\n"
+            "register_id: 202, maintained_by: HR Analytics Inc, is_official_authority: false, record_count: 5432"
+        ),
+        assertion_analysis_ground_truth=AssertionAnalysisGroundTruth(
+            violation_description="Criminal conviction data processed without official authority oversight or documented legal basis; comprehensive register not maintained by official authority",
+            standard_requirements=["Article 10"],
+            required_phrases={
+                SynonymSet(
+                    "criminal conviction",
+                    "criminal convictions",
+                    "offence",
+                    "offense",
+                    "offences",
+                    "offenses",
+                ),
+                SynonymSet(
+                    "official authority",
+                    "government authority",
+                    "state authority",
+                    "public authority",
+                ),
+                SynonymSet(
+                    "legal basis",
+                    "authorization",
+                    "authorised",
+                    "authorized",
+                    "Union or Member State law",
+                ),
+            },
+            preferred_phrases=[
+                SynonymSet(
+                    "safeguards",
+                    "appropriate safeguards",
+                    "rights and freedoms",
+                    "data subject rights",
+                ),
+                SynonymSet(
+                    "security measures",
+                    "data protection",
+                    "confidentiality",
+                    "integrity",
+                ),
+                SynonymSet(
+                    "access control",
+                    "role-based access",
+                    "restricted access",
+                    "need-to-know basis",
+                ),
+            ],
+            remediation_steps=[
+                SynonymSet(
+                    "Restrict criminal conviction data processing to official authorities only",
+                    "Ensure only government / state authorities process criminal conviction data",
+                    "Implement strict access controls limiting to official authority personnel",
+                    "Transfer criminal conviction register to official authority control",
+                    "Remove non-compliant records from the register",
+                ),
+                SynonymSet(
+                    "Document legal basis for processing under Union or Member State law",
+                    "Verify compliance with applicable legislation for criminal data",
+                    "Establish governance / Data Processing Agreement / DPA with official authority",
+                    "Maintain records of legal authorization and safeguards",
+                ),
+                SynonymSet(
+                    "Implement technical and organisational safeguards",
+                    "Apply encryption and pseudonymisation to sensitive records",
+                    "Establish audit logging and monitoring for criminal records access",
+                    "Conduct regular Data Protection Impact Assessment / DPIA",
+                ),
+                SynonymSet(
+                    "Restrict data retention to statutory minimum",
+                    "Implement automatic deletion upon sentence completion or rehabilitation",
+                    "Define retention schedule aligned with criminal justice requirements",
+                    "Remove criminal records after prescribed rehabilitation period",
                 ),
             ],
         ),

@@ -20,7 +20,9 @@ def _extract_citation_from_line(line: str) -> str | None:
     Returns the citation path as a normalized string, e.g.
     - "9 1"
     - "5 1 e"
-    - "3 5"
+    - "3 3 1"
+
+    Tokenizes dots/punctuation so 3.3.1 becomes "3 3 1".
 
     ! Written by AI. I don't understand a single line, but it works.
     """
@@ -51,7 +53,11 @@ def _extract_citation_from_line(line: str) -> str | None:
 
         break
 
-    return " ".join(tokens)
+    # Normalize tokens by extracting word characters, removing dots/punctuation.
+    normalized_tokens = []
+    for token in tokens:
+        normalized_tokens.extend(_WORD_RE.findall(token.lower()))
+    return " ".join(normalized_tokens)
 
 
 def _citation_signatures(text: str) -> set[str]:

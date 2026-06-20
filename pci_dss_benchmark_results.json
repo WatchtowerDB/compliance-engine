@@ -16,7 +16,7 @@
     },
     "results": [
       {
-        "case": "TC001_CVV_Storage_Analysis",
+        "case": "PCI_DSS_ST4_TC001_CVV_Storage_Analysis",
         "description": "Stage 4: analysis quality for CVV storage violation",
         "requirement_identified": true,
         "required_phrases": {
@@ -50,7 +50,7 @@
         "iteration": 1
       },
       {
-        "case": "TC002_Unencrypted_PAN_Analysis",
+        "case": "PCI_DSS_ST4_TC002_Unencrypted_PAN_Analysis",
         "description": "Stage 4: analysis quality for unencrypted PAN storage",
         "requirement_identified": true,
         "required_phrases": {
@@ -86,7 +86,7 @@
         "iteration": 1
       },
       {
-        "case": "TC003_Track_Data_Analysis",
+        "case": "PCI_DSS_ST4_TC003_Track_Data_Analysis",
         "description": "Stage 4: analysis quality for track data violation",
         "requirement_identified": true,
         "required_phrases": {
@@ -121,7 +121,7 @@
         "iteration": 1
       },
       {
-        "case": "TC004_Unencrypted_Transmission_Analysis",
+        "case": "PCI_DSS_ST4_TC004_Unencrypted_Transmission_Analysis",
         "description": "Stage 4: analysis quality for unencrypted data transmission indicators",
         "requirement_identified": true,
         "required_phrases": {
@@ -159,7 +159,7 @@
         "iteration": 1
       },
       {
-        "case": "TC005_Missing_Access_Controls_Analysis",
+        "case": "PCI_DSS_ST4_TC005_Missing_Access_Controls_Analysis",
         "description": "Stage 4: analysis quality for missing access control mechanisms",
         "requirement_identified": true,
         "required_phrases": {
@@ -194,7 +194,7 @@
         "iteration": 1
       },
       {
-        "case": "TC006_Overly_Permissive_Access_Analysis",
+        "case": "PCI_DSS_ST4_TC006_Overly_Permissive_Access_Analysis",
         "description": "Stage 4: analysis quality for overly broad access permissions",
         "requirement_identified": true,
         "required_phrases": {
@@ -228,7 +228,7 @@
         "iteration": 1
       },
       {
-        "case": "TC007_Weak_Password_Storage_Analysis",
+        "case": "PCI_DSS_ST4_TC007_Weak_Password_Storage_Analysis",
         "description": "Stage 4: analysis quality for weak password hashing",
         "requirement_identified": true,
         "required_phrases": {
@@ -243,11 +243,7 @@
         "preferred_phrases": {
           "found": 3,
           "total": 6,
-          "details": [
-            "factor",
-            "characters",
-            "minimum"
-          ]
+          "details": ["factor", "characters", "minimum"]
         },
         "remediation_steps": {
           "found": 2,
@@ -261,7 +257,7 @@
         "iteration": 1
       },
       {
-        "case": "TC008_Missing_MFA_Tracking_Analysis",
+        "case": "PCI_DSS_ST4_TC008_Missing_MFA_Tracking_Analysis",
         "description": "Stage 4: analysis quality for missing MFA implementation tracking",
         "requirement_identified": true,
         "required_phrases": {
@@ -296,7 +292,7 @@
         "iteration": 1
       },
       {
-        "case": "TC009_Inadequate_Audit_Logging_Analysis",
+        "case": "PCI_DSS_ST4_TC009_Inadequate_Audit_Logging_Analysis",
         "description": "Stage 4: analysis quality for missing or weak audit logging controls",
         "requirement_identified": true,
         "required_phrases": {
@@ -334,7 +330,7 @@
         "iteration": 1
       },
       {
-        "case": "TC001_CVV_Storage_Analysis",
+        "case": "PCI_DSS_ST4_TC001_CVV_Storage_Analysis",
         "description": "Stage 4: analysis quality for CVV storage violation",
         "requirement_identified": true,
         "required_phrases": {
@@ -368,7 +364,7 @@
         "iteration": 2
       },
       {
-        "case": "TC002_Unencrypted_PAN_Analysis",
+        "case": "PCI_DSS_ST4_TC002_Unencrypted_PAN_Analysis",
         "description": "Stage 4: analysis quality for unencrypted PAN storage",
         "requirement_identified": true,
         "required_phrases": {
@@ -402,7 +398,7 @@
         "iteration": 2
       },
       {
-        "case": "TC003_Track_Data_Analysis",
+        "case": "PCI_DSS_ST4_TC003_Track_Data_Analysis",
         "description": "Stage 4: analysis quality for track data violation",
         "requirement_identified": true,
         "required_phrases": {
@@ -436,7 +432,7 @@
         "iteration": 2
       },
       {
-        "case": "TC004_Unencrypted_Transmission_Analysis",
+        "case": "PCI_DSS_ST4_TC004_Unencrypted_Transmission_Analysis",
         "description": "Stage 4: analysis quality for unencrypted data transmission indicators",
         "requirement_identified": true,
         "required_phrases": {
@@ -474,7 +470,7 @@
         "iteration": 2
       },
       {
-        "case": "TC005_Missing_Access_Controls_Analysis",
+        "case": "PCI_DSS_ST4_TC005_Missing_Access_Controls_Analysis",
         "description": "Stage 4: analysis quality for missing access control mechanisms",
         "requirement_identified": true,
         "required_phrases": {
@@ -509,7 +505,7 @@
         "iteration": 2
       },
       {
-        "case": "TC006_Overly_Permissive_Access_Analysis",
+        "case": "PCI_DSS_ST4_TC006_Overly_Permissive_Access_Analysis",
         "description": "Stage 4: analysis quality for overly broad access permissions",
         "requirement_identified": true,
         "required_phrases": {
@@ -543,7 +539,7 @@
         "iteration": 2
       },
       {
-        "case": "TC007_Weak_Password_Storage_Analysis",
+        "case": "PCI_DSS_ST4_TC007_Weak_Password_Storage_Analysis",
         "description": "Stage 4: analysis quality for weak password hashing",
         "requirement_identified": true,
         "required_phrases": {
@@ -580,7 +576,7 @@
         "iteration": 2
       },
       {
-        "case": "TC008_Missing_MFA_Tracking_Analysis",
+        "case": "PCI_DSS_ST4_TC008_Missing_MFA_Tracking_Analysis",
         "description": "Stage 4: analysis quality for missing MFA implementation tracking",
         "requirement_identified": true,
         "required_phrases": {
@@ -614,7 +610,7 @@
         "iteration": 2
       },
       {
-        "case": "TC009_Inadequate_Audit_Logging_Analysis",
+        "case": "PCI_DSS_ST4_TC009_Inadequate_Audit_Logging_Analysis",
         "description": "Stage 4: analysis quality for missing or weak audit logging controls",
         "requirement_identified": false,
         "required_phrases": {
@@ -652,7 +648,7 @@
         "iteration": 2
       },
       {
-        "case": "TC001_CVV_Storage_Analysis",
+        "case": "PCI_DSS_ST4_TC001_CVV_Storage_Analysis",
         "description": "Stage 4: analysis quality for CVV storage violation",
         "requirement_identified": false,
         "required_phrases": {
@@ -684,7 +680,7 @@
         "iteration": 3
       },
       {
-        "case": "TC002_Unencrypted_PAN_Analysis",
+        "case": "PCI_DSS_ST4_TC002_Unencrypted_PAN_Analysis",
         "description": "Stage 4: analysis quality for unencrypted PAN storage",
         "requirement_identified": true,
         "required_phrases": {
@@ -721,7 +717,7 @@
         "iteration": 3
       },
       {
-        "case": "TC003_Track_Data_Analysis",
+        "case": "PCI_DSS_ST4_TC003_Track_Data_Analysis",
         "description": "Stage 4: analysis quality for track data violation",
         "requirement_identified": false,
         "required_phrases": {
@@ -755,7 +751,7 @@
         "iteration": 3
       },
       {
-        "case": "TC004_Unencrypted_Transmission_Analysis",
+        "case": "PCI_DSS_ST4_TC004_Unencrypted_Transmission_Analysis",
         "description": "Stage 4: analysis quality for unencrypted data transmission indicators",
         "requirement_identified": true,
         "required_phrases": {
@@ -793,7 +789,7 @@
         "iteration": 3
       },
       {
-        "case": "TC005_Missing_Access_Controls_Analysis",
+        "case": "PCI_DSS_ST4_TC005_Missing_Access_Controls_Analysis",
         "description": "Stage 4: analysis quality for missing access control mechanisms",
         "requirement_identified": true,
         "required_phrases": {
@@ -828,7 +824,7 @@
         "iteration": 3
       },
       {
-        "case": "TC006_Overly_Permissive_Access_Analysis",
+        "case": "PCI_DSS_ST4_TC006_Overly_Permissive_Access_Analysis",
         "description": "Stage 4: analysis quality for overly broad access permissions",
         "requirement_identified": true,
         "required_phrases": {
@@ -863,7 +859,7 @@
         "iteration": 3
       },
       {
-        "case": "TC007_Weak_Password_Storage_Analysis",
+        "case": "PCI_DSS_ST4_TC007_Weak_Password_Storage_Analysis",
         "description": "Stage 4: analysis quality for weak password hashing",
         "requirement_identified": true,
         "required_phrases": {
@@ -900,7 +896,7 @@
         "iteration": 3
       },
       {
-        "case": "TC008_Missing_MFA_Tracking_Analysis",
+        "case": "PCI_DSS_ST4_TC008_Missing_MFA_Tracking_Analysis",
         "description": "Stage 4: analysis quality for missing MFA implementation tracking",
         "requirement_identified": true,
         "required_phrases": {
@@ -934,7 +930,7 @@
         "iteration": 3
       },
       {
-        "case": "TC009_Inadequate_Audit_Logging_Analysis",
+        "case": "PCI_DSS_ST4_TC009_Inadequate_Audit_Logging_Analysis",
         "description": "Stage 4: analysis quality for missing or weak audit logging controls",
         "requirement_identified": true,
         "required_phrases": {
@@ -971,7 +967,7 @@
         "iteration": 3
       },
       {
-        "case": "TC001_CVV_Storage_Analysis",
+        "case": "PCI_DSS_ST4_TC001_CVV_Storage_Analysis",
         "description": "Stage 4: analysis quality for CVV storage violation",
         "requirement_identified": true,
         "required_phrases": {
@@ -1004,7 +1000,7 @@
         "iteration": 4
       },
       {
-        "case": "TC002_Unencrypted_PAN_Analysis",
+        "case": "PCI_DSS_ST4_TC002_Unencrypted_PAN_Analysis",
         "description": "Stage 4: analysis quality for unencrypted PAN storage",
         "requirement_identified": true,
         "required_phrases": {
@@ -1039,7 +1035,7 @@
         "iteration": 4
       },
       {
-        "case": "TC003_Track_Data_Analysis",
+        "case": "PCI_DSS_ST4_TC003_Track_Data_Analysis",
         "description": "Stage 4: analysis quality for track data violation",
         "requirement_identified": true,
         "required_phrases": {
@@ -1074,7 +1070,7 @@
         "iteration": 4
       },
       {
-        "case": "TC004_Unencrypted_Transmission_Analysis",
+        "case": "PCI_DSS_ST4_TC004_Unencrypted_Transmission_Analysis",
         "description": "Stage 4: analysis quality for unencrypted data transmission indicators",
         "requirement_identified": true,
         "required_phrases": {
@@ -1112,7 +1108,7 @@
         "iteration": 4
       },
       {
-        "case": "TC005_Missing_Access_Controls_Analysis",
+        "case": "PCI_DSS_ST4_TC005_Missing_Access_Controls_Analysis",
         "description": "Stage 4: analysis quality for missing access control mechanisms",
         "requirement_identified": true,
         "required_phrases": {
@@ -1146,7 +1142,7 @@
         "iteration": 4
       },
       {
-        "case": "TC006_Overly_Permissive_Access_Analysis",
+        "case": "PCI_DSS_ST4_TC006_Overly_Permissive_Access_Analysis",
         "description": "Stage 4: analysis quality for overly broad access permissions",
         "requirement_identified": true,
         "required_phrases": {
@@ -1181,24 +1177,18 @@
         "iteration": 4
       },
       {
-        "case": "TC007_Weak_Password_Storage_Analysis",
+        "case": "PCI_DSS_ST4_TC007_Weak_Password_Storage_Analysis",
         "description": "Stage 4: analysis quality for weak password hashing",
         "requirement_identified": true,
         "required_phrases": {
           "found": 2,
           "total": 3,
-          "details": [
-            "Any of ['hash', 'hashing']",
-            "authentication"
-          ]
+          "details": ["Any of ['hash', 'hashing']", "authentication"]
         },
         "preferred_phrases": {
           "found": 2,
           "total": 6,
-          "details": [
-            "factor",
-            "Any of ['salt', 'salted', 'salting']"
-          ]
+          "details": ["factor", "Any of ['salt', 'salted', 'salting']"]
         },
         "remediation_steps": {
           "found": 3,
@@ -1213,7 +1203,7 @@
         "iteration": 4
       },
       {
-        "case": "TC008_Missing_MFA_Tracking_Analysis",
+        "case": "PCI_DSS_ST4_TC008_Missing_MFA_Tracking_Analysis",
         "description": "Stage 4: analysis quality for missing MFA implementation tracking",
         "requirement_identified": true,
         "required_phrases": {
@@ -1248,7 +1238,7 @@
         "iteration": 4
       },
       {
-        "case": "TC009_Inadequate_Audit_Logging_Analysis",
+        "case": "PCI_DSS_ST4_TC009_Inadequate_Audit_Logging_Analysis",
         "description": "Stage 4: analysis quality for missing or weak audit logging controls",
         "requirement_identified": true,
         "required_phrases": {
@@ -1286,7 +1276,7 @@
         "iteration": 4
       },
       {
-        "case": "TC001_CVV_Storage_Analysis",
+        "case": "PCI_DSS_ST4_TC001_CVV_Storage_Analysis",
         "description": "Stage 4: analysis quality for CVV storage violation",
         "requirement_identified": true,
         "required_phrases": {
@@ -1301,9 +1291,7 @@
         "preferred_phrases": {
           "found": 1,
           "total": 4,
-          "details": [
-            "fraudulent transaction"
-          ]
+          "details": ["fraudulent transaction"]
         },
         "remediation_steps": {
           "found": 2,
@@ -1317,7 +1305,7 @@
         "iteration": 5
       },
       {
-        "case": "TC002_Unencrypted_PAN_Analysis",
+        "case": "PCI_DSS_ST4_TC002_Unencrypted_PAN_Analysis",
         "description": "Stage 4: analysis quality for unencrypted PAN storage",
         "requirement_identified": true,
         "required_phrases": {
@@ -1349,7 +1337,7 @@
         "iteration": 5
       },
       {
-        "case": "TC003_Track_Data_Analysis",
+        "case": "PCI_DSS_ST4_TC003_Track_Data_Analysis",
         "description": "Stage 4: analysis quality for track data violation",
         "requirement_identified": true,
         "required_phrases": {
@@ -1383,7 +1371,7 @@
         "iteration": 5
       },
       {
-        "case": "TC004_Unencrypted_Transmission_Analysis",
+        "case": "PCI_DSS_ST4_TC004_Unencrypted_Transmission_Analysis",
         "description": "Stage 4: analysis quality for unencrypted data transmission indicators",
         "requirement_identified": true,
         "required_phrases": {
@@ -1420,7 +1408,7 @@
         "iteration": 5
       },
       {
-        "case": "TC005_Missing_Access_Controls_Analysis",
+        "case": "PCI_DSS_ST4_TC005_Missing_Access_Controls_Analysis",
         "description": "Stage 4: analysis quality for missing access control mechanisms",
         "requirement_identified": false,
         "required_phrases": {
@@ -1455,7 +1443,7 @@
         "iteration": 5
       },
       {
-        "case": "TC006_Overly_Permissive_Access_Analysis",
+        "case": "PCI_DSS_ST4_TC006_Overly_Permissive_Access_Analysis",
         "description": "Stage 4: analysis quality for overly broad access permissions",
         "requirement_identified": true,
         "required_phrases": {
@@ -1487,7 +1475,7 @@
         "iteration": 5
       },
       {
-        "case": "TC007_Weak_Password_Storage_Analysis",
+        "case": "PCI_DSS_ST4_TC007_Weak_Password_Storage_Analysis",
         "description": "Stage 4: analysis quality for weak password hashing",
         "requirement_identified": true,
         "required_phrases": {
@@ -1521,7 +1509,7 @@
         "iteration": 5
       },
       {
-        "case": "TC008_Missing_MFA_Tracking_Analysis",
+        "case": "PCI_DSS_ST4_TC008_Missing_MFA_Tracking_Analysis",
         "description": "Stage 4: analysis quality for missing MFA implementation tracking",
         "requirement_identified": false,
         "required_phrases": {
@@ -1555,7 +1543,7 @@
         "iteration": 5
       },
       {
-        "case": "TC009_Inadequate_Audit_Logging_Analysis",
+        "case": "PCI_DSS_ST4_TC009_Inadequate_Audit_Logging_Analysis",
         "description": "Stage 4: analysis quality for missing or weak audit logging controls",
         "requirement_identified": true,
         "required_phrases": {
@@ -1607,7 +1595,7 @@
     },
     "results": [
       {
-        "case": "ST2_TC001_Req3_Stored_Account_Data",
+        "case": "PCI_DSS_ST2_TC001_Req3_Stored_Account_Data",
         "description": "Stage 2: generate assertions for prohibited CVV/PAN storage",
         "assertion_count": 3,
         "keywords": {
@@ -1631,22 +1619,18 @@
         "iteration": 1
       },
       {
-        "case": "ST2_TC002_Req4_Transmission",
+        "case": "PCI_DSS_ST2_TC002_Req4_Transmission",
         "description": "Stage 2: generate assertions for insecure transmission endpoints",
         "assertion_count": 9,
         "keywords": {
           "found": 1,
           "total": 2,
-          "details": [
-            "Any of ['in_transit', 'network', 'transmission']"
-          ]
+          "details": ["Any of ['in_transit', 'network', 'transmission']"]
         },
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "api_configs"
-          ]
+          "details": ["api_configs"]
         },
         "assertions": [
           "SELECT id AS api_configs_potential_violation FROM api_configs WHERE endpoint LIKE '%card_data%' OR endpoint LIKE '%pan%'",
@@ -1662,7 +1646,7 @@
         "iteration": 1
       },
       {
-        "case": "ST2_TC003_Req7_Access_Control",
+        "case": "PCI_DSS_ST2_TC003_Req7_Access_Control",
         "description": "Stage 2: generate assertions for missing least-privilege controls",
         "assertion_count": 8,
         "keywords": {
@@ -1676,9 +1660,7 @@
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "user_privileges"
-          ]
+          "details": ["user_privileges"]
         },
         "assertions": [
           "SELECT user_id, username FROM users WHERE NOT EXISTS (SELECT 1 FROM protected_assets WHERE protected_assets.table_name = 'users' AND protected_assets.data_classification IN ('CDE', 'Cardholder Data')) AND (department LIKE '%finance%' OR department LIKE '%billing%') -- Checks for high-risk access to users table without explicit asset classification/protection noted against CDE/CHD",
@@ -1693,7 +1675,7 @@
         "iteration": 1
       },
       {
-        "case": "ST2_TC004_Req8_Authentication",
+        "case": "PCI_DSS_ST2_TC004_Req8_Authentication",
         "description": "Stage 2: generate assertions for weak/default credentials and auth controls",
         "assertion_count": 3,
         "keywords": {
@@ -1707,9 +1689,7 @@
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "users"
-          ]
+          "details": ["users"]
         },
         "assertions": [
           "SELECT user_id AS potentially_unprotected_user FROM users WHERE password_hash IS NULL;",
@@ -1719,22 +1699,18 @@
         "iteration": 1
       },
       {
-        "case": "ST2_TC005_Req10_Logging_Monitoring",
+        "case": "PCI_DSS_ST2_TC005_Req10_Logging_Monitoring",
         "description": "Stage 2: generate assertions for missing audit logging coverage",
         "assertion_count": 5,
         "keywords": {
           "found": 1,
           "total": 2,
-          "details": [
-            "Any of ['audit', 'log', 'logging']"
-          ]
+          "details": ["Any of ['audit', 'log', 'logging']"]
         },
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "payments"
-          ]
+          "details": ["payments"]
         },
         "assertions": [
           "SELECT payment_id AS violation_record_id, pan AS potential_plaintext_pan_violation FROM payments WHERE pan IS NOT NULL AND pan REGEXP '[0-9]{13,16}' AND LENGTH(pan) > 10;",
@@ -1746,7 +1722,7 @@
         "iteration": 1
       },
       {
-        "case": "ST2_TC006_Multi_Stored_Data_Access_Logging",
+        "case": "PCI_DSS_ST2_TC006_Multi_Stored_Data_Access_Logging",
         "description": "Stage 2: generate assertions for combined PAN/CVV storage, broad access, and weak audit trails",
         "assertion_count": 10,
         "keywords": {
@@ -1761,11 +1737,7 @@
         "tables_covered": {
           "found": 3,
           "total": 3,
-          "details": [
-            "customer_cards",
-            "app_permissions",
-            "security_log"
-          ]
+          "details": ["customer_cards", "app_permissions", "security_log"]
         },
         "assertions": [
           "SELECT card_id AS violation_record FROM customer_cards WHERE PAN IS NOT NULL AND PAN NOT LIKE 'XXXX%'",
@@ -1782,23 +1754,18 @@
         "iteration": 1
       },
       {
-        "case": "ST2_TC007_Multi_Transmission_Auth_Logging",
+        "case": "PCI_DSS_ST2_TC007_Multi_Transmission_Auth_Logging",
         "description": "Stage 2: generate assertions for insecure transport, weak authentication controls, and insufficient event logging",
         "assertion_count": 2,
         "keywords": {
           "found": 1,
           "total": 3,
-          "details": [
-            "Any of ['default', 'hash', 'password', 'weak']"
-          ]
+          "details": ["Any of ['default', 'hash', 'password', 'weak']"]
         },
         "tables_covered": {
           "found": 2,
           "total": 3,
-          "details": [
-            "integrations",
-            "user_accounts"
-          ]
+          "details": ["integrations", "user_accounts"]
         },
         "assertions": [
           "SELECT user_id AS potentially_unauthorized_access_user FROM user_accounts WHERE password_hash IS NULL;",
@@ -1807,7 +1774,7 @@
         "iteration": 1
       },
       {
-        "case": "ST2_TC008_Multi_Core_Control_Gaps",
+        "case": "PCI_DSS_ST2_TC008_Multi_Core_Control_Gaps",
         "description": "Stage 2: generate assertions for combined card-data storage, transmission, access, and authentication control gaps",
         "assertion_count": 7,
         "keywords": {
@@ -1843,7 +1810,7 @@
         "iteration": 1
       },
       {
-        "case": "ST2_TC001_Req3_Stored_Account_Data",
+        "case": "PCI_DSS_ST2_TC001_Req3_Stored_Account_Data",
         "description": "Stage 2: generate assertions for prohibited CVV/PAN storage",
         "assertion_count": 8,
         "keywords": {
@@ -1873,7 +1840,7 @@
         "iteration": 2
       },
       {
-        "case": "ST2_TC002_Req4_Transmission",
+        "case": "PCI_DSS_ST2_TC002_Req4_Transmission",
         "description": "Stage 2: generate assertions for insecure transmission endpoints",
         "assertion_count": 3,
         "keywords": {
@@ -1884,9 +1851,7 @@
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "api_configs"
-          ]
+          "details": ["api_configs"]
         },
         "assertions": [
           "SELECT * FROM api_configs WHERE protocol = 'HTTP' OR uses_tls = FALSE",
@@ -1896,7 +1861,7 @@
         "iteration": 2
       },
       {
-        "case": "ST2_TC003_Req7_Access_Control",
+        "case": "PCI_DSS_ST2_TC003_Req7_Access_Control",
         "description": "Stage 2: generate assertions for missing least-privilege controls",
         "assertion_count": 6,
         "keywords": {
@@ -1910,9 +1875,7 @@
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "user_privileges"
-          ]
+          "details": ["user_privileges"]
         },
         "assertions": [
           "SELECT user_id AS user_id, username AS username FROM users WHERE created_at IS NULL OR created_at = '0000-00-00 00:00:00' AND department IS NULL UNION SELECT 1",
@@ -1925,7 +1888,7 @@
         "iteration": 2
       },
       {
-        "case": "ST2_TC004_Req8_Authentication",
+        "case": "PCI_DSS_ST2_TC004_Req8_Authentication",
         "description": "Stage 2: generate assertions for weak/default credentials and auth controls",
         "assertion_count": 6,
         "keywords": {
@@ -1939,9 +1902,7 @@
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "users"
-          ]
+          "details": ["users"]
         },
         "assertions": [
           "SELECT user_id, 'Potential cleartext password storage in users table' AS violation_description FROM users WHERE password_hash IS NULL AND access_level NOT IN ('ADMIN', 'SUPER_ADMIN');",
@@ -1954,7 +1915,7 @@
         "iteration": 2
       },
       {
-        "case": "ST2_TC005_Req10_Logging_Monitoring",
+        "case": "PCI_DSS_ST2_TC005_Req10_Logging_Monitoring",
         "description": "Stage 2: generate assertions for missing audit logging coverage",
         "assertion_count": 5,
         "keywords": {
@@ -1968,9 +1929,7 @@
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "payments"
-          ]
+          "details": ["payments"]
         },
         "assertions": [
           "SELECT payment_id, pan AS potentially_unencrypted_pan_violation FROM payments WHERE LENGTH(pan) > 0",
@@ -1982,7 +1941,7 @@
         "iteration": 2
       },
       {
-        "case": "ST2_TC006_Multi_Stored_Data_Access_Logging",
+        "case": "PCI_DSS_ST2_TC006_Multi_Stored_Data_Access_Logging",
         "description": "Stage 2: generate assertions for combined PAN/CVV storage, broad access, and weak audit trails",
         "assertion_count": 6,
         "keywords": {
@@ -1997,11 +1956,7 @@
         "tables_covered": {
           "found": 3,
           "total": 3,
-          "details": [
-            "customer_cards",
-            "app_permissions",
-            "security_log"
-          ]
+          "details": ["customer_cards", "app_permissions", "security_log"]
         },
         "assertions": [
           "SELECT card_id AS PAN_in_plaintext FROM customer_cards WHERE LENGTH(pan) > 0 AND (pan NOT LIKE 'XXXX%' OR pan IS NULL) AND pan NOT LIKE '%[a-zA-Z0-9]%'",
@@ -2014,7 +1969,7 @@
         "iteration": 2
       },
       {
-        "case": "ST2_TC007_Multi_Transmission_Auth_Logging",
+        "case": "PCI_DSS_ST2_TC007_Multi_Transmission_Auth_Logging",
         "description": "Stage 2: generate assertions for insecure transport, weak authentication controls, and insufficient event logging",
         "assertion_count": 7,
         "keywords": {
@@ -2028,11 +1983,7 @@
         "tables_covered": {
           "found": 3,
           "total": 3,
-          "details": [
-            "integrations",
-            "user_accounts",
-            "auth_events"
-          ]
+          "details": ["integrations", "user_accounts", "auth_events"]
         },
         "assertions": [
           "SELECT user_id AS potential_plaintext_credential_violation FROM user_accounts WHERE password_hash IS NULL OR password_hash = ''",
@@ -2046,7 +1997,7 @@
         "iteration": 2
       },
       {
-        "case": "ST2_TC008_Multi_Core_Control_Gaps",
+        "case": "PCI_DSS_ST2_TC008_Multi_Core_Control_Gaps",
         "description": "Stage 2: generate assertions for combined card-data storage, transmission, access, and authentication control gaps",
         "assertion_count": 14,
         "keywords": {
@@ -2089,7 +2040,7 @@
         "iteration": 2
       },
       {
-        "case": "ST2_TC001_Req3_Stored_Account_Data",
+        "case": "PCI_DSS_ST2_TC001_Req3_Stored_Account_Data",
         "description": "Stage 2: generate assertions for prohibited CVV/PAN storage",
         "assertion_count": 10,
         "keywords": {
@@ -2104,9 +2055,7 @@
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "customers"
-          ]
+          "details": ["customers"]
         },
         "assertions": [
           "SELECT payment_method_id AS violation_id, card_number AS potentially_plaintext_pan_violation FROM payment_methods WHERE card_number IS NOT NULL AND card_number NOT LIKE 'XXXX%';",
@@ -2123,22 +2072,18 @@
         "iteration": 3
       },
       {
-        "case": "ST2_TC002_Req4_Transmission",
+        "case": "PCI_DSS_ST2_TC002_Req4_Transmission",
         "description": "Stage 2: generate assertions for insecure transmission endpoints",
         "assertion_count": 4,
         "keywords": {
           "found": 1,
           "total": 2,
-          "details": [
-            "Any of ['in_transit', 'network', 'transmission']"
-          ]
+          "details": ["Any of ['in_transit', 'network', 'transmission']"]
         },
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "api_configs"
-          ]
+          "details": ["api_configs"]
         },
         "assertions": [
           "SELECT * FROM webhook_subscriptions WHERE created_at IS NULL AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'webhook_subscriptions' AND column_name IN ('created_at')) AS MissingTimestampIndicator",
@@ -2149,7 +2094,7 @@
         "iteration": 3
       },
       {
-        "case": "ST2_TC003_Req7_Access_Control",
+        "case": "PCI_DSS_ST2_TC003_Req7_Access_Control",
         "description": "Stage 2: generate assertions for missing least-privilege controls",
         "assertion_count": 6,
         "keywords": {
@@ -2163,9 +2108,7 @@
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "user_privileges"
-          ]
+          "details": ["user_privileges"]
         },
         "assertions": [
           "SELECT user_id, username AS potentially_unrestricted_user FROM users WHERE is_active = TRUE AND created_at IS NULL;",
@@ -2178,7 +2121,7 @@
         "iteration": 3
       },
       {
-        "case": "ST2_TC004_Req8_Authentication",
+        "case": "PCI_DSS_ST2_TC004_Req8_Authentication",
         "description": "Stage 2: generate assertions for weak/default credentials and auth controls",
         "assertion_count": 6,
         "keywords": {
@@ -2192,9 +2135,7 @@
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "users"
-          ]
+          "details": ["users"]
         },
         "assertions": [
           "SELECT user_id, username AS Potential_Unprotected_Account_Identifier FROM users WHERE username LIKE '%card%' OR username LIKE '%payment%'",
@@ -2207,7 +2148,7 @@
         "iteration": 3
       },
       {
-        "case": "ST2_TC005_Req10_Logging_Monitoring",
+        "case": "PCI_DSS_ST2_TC005_Req10_Logging_Monitoring",
         "description": "Stage 2: generate assertions for missing audit logging coverage",
         "assertion_count": 14,
         "keywords": {
@@ -2221,9 +2162,7 @@
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "payments"
-          ]
+          "details": ["payments"]
         },
         "assertions": [
           "SELECT payment_id AS potentially_unencrypted_pan FROM payments WHERE pan IS NOT NULL AND pan NOT LIKE 'XXXX%' AND pan NOT LIKE '****%';",
@@ -2244,7 +2183,7 @@
         "iteration": 3
       },
       {
-        "case": "ST2_TC006_Multi_Stored_Data_Access_Logging",
+        "case": "PCI_DSS_ST2_TC006_Multi_Stored_Data_Access_Logging",
         "description": "Stage 2: generate assertions for combined PAN/CVV storage, broad access, and weak audit trails",
         "assertion_count": 7,
         "keywords": {
@@ -2259,11 +2198,7 @@
         "tables_covered": {
           "found": 3,
           "total": 3,
-          "details": [
-            "customer_cards",
-            "app_permissions",
-            "security_log"
-          ]
+          "details": ["customer_cards", "app_permissions", "security_log"]
         },
         "assertions": [
           "SELECT card_id AS violating_record_id FROM customer_cards WHERE pan IS NOT NULL AND LENGTH(pan) = 16 AND pan NOT RLIKE '^\\x00.*' AND pan NOT REGEXP '^\\x01.*';",
@@ -2277,24 +2212,18 @@
         "iteration": 3
       },
       {
-        "case": "ST2_TC007_Multi_Transmission_Auth_Logging",
+        "case": "PCI_DSS_ST2_TC007_Multi_Transmission_Auth_Logging",
         "description": "Stage 2: generate assertions for insecure transport, weak authentication controls, and insufficient event logging",
         "assertion_count": 3,
         "keywords": {
           "found": 1,
           "total": 3,
-          "details": [
-            "Any of ['default', 'hash', 'password', 'weak']"
-          ]
+          "details": ["Any of ['default', 'hash', 'password', 'weak']"]
         },
         "tables_covered": {
           "found": 3,
           "total": 3,
-          "details": [
-            "integrations",
-            "user_accounts",
-            "auth_events"
-          ]
+          "details": ["integrations", "user_accounts", "auth_events"]
         },
         "assertions": [
           "SELECT user_id, username FROM user_accounts WHERE password_hash IS NULL OR password_hash = '' AS Missing_or_Null_Password_Hash_Violation",
@@ -2304,7 +2233,7 @@
         "iteration": 3
       },
       {
-        "case": "ST2_TC008_Multi_Core_Control_Gaps",
+        "case": "PCI_DSS_ST2_TC008_Multi_Core_Control_Gaps",
         "description": "Stage 2: generate assertions for combined card-data storage, transmission, access, and authentication control gaps",
         "assertion_count": 10,
         "keywords": {
@@ -2342,7 +2271,7 @@
         "iteration": 3
       },
       {
-        "case": "ST2_TC001_Req3_Stored_Account_Data",
+        "case": "PCI_DSS_ST2_TC001_Req3_Stored_Account_Data",
         "description": "Stage 2: generate assertions for prohibited CVV/PAN storage",
         "assertion_count": 11,
         "keywords": {
@@ -2357,9 +2286,7 @@
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "customers"
-          ]
+          "details": ["customers"]
         },
         "assertions": [
           "SELECT payment_method_id, 'PCI Requirement 3 Violation: Card number stored in cleartext' AS violation_reason FROM payment_methods WHERE card_number IS NOT NULL AND card_number NOT LIKE 'XXXX%';",
@@ -2377,22 +2304,18 @@
         "iteration": 4
       },
       {
-        "case": "ST2_TC002_Req4_Transmission",
+        "case": "PCI_DSS_ST2_TC002_Req4_Transmission",
         "description": "Stage 2: generate assertions for insecure transmission endpoints",
         "assertion_count": 3,
         "keywords": {
           "found": 1,
           "total": 2,
-          "details": [
-            "Any of ['in_transit', 'network', 'transmission']"
-          ]
+          "details": ["Any of ['in_transit', 'network', 'transmission']"]
         },
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "api_configs"
-          ]
+          "details": ["api_configs"]
         },
         "assertions": [
           "SELECT * FROM network_integrations WHERE notes ILIKE '%cardholder data%'",
@@ -2402,7 +2325,7 @@
         "iteration": 4
       },
       {
-        "case": "ST2_TC003_Req7_Access_Control",
+        "case": "PCI_DSS_ST2_TC003_Req7_Access_Control",
         "description": "Stage 2: generate assertions for missing least-privilege controls",
         "assertion_count": 4,
         "keywords": {
@@ -2416,9 +2339,7 @@
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "user_privileges"
-          ]
+          "details": ["user_privileges"]
         },
         "assertions": [
           "SELECT user_id AS potentially_unprotected_user_id FROM users WHERE created_at IS NULL",
@@ -2429,7 +2350,7 @@
         "iteration": 4
       },
       {
-        "case": "ST2_TC004_Req8_Authentication",
+        "case": "PCI_DSS_ST2_TC004_Req8_Authentication",
         "description": "Stage 2: generate assertions for weak/default credentials and auth controls",
         "assertion_count": 3,
         "keywords": {
@@ -2440,9 +2361,7 @@
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "users"
-          ]
+          "details": ["users"]
         },
         "assertions": [
           "SELECT user_id AS potentially_unprotected_user_id FROM users WHERE access_level LIKE '%admin%' AND username LIKE '%card%'",
@@ -2452,7 +2371,7 @@
         "iteration": 4
       },
       {
-        "case": "ST2_TC005_Req10_Logging_Monitoring",
+        "case": "PCI_DSS_ST2_TC005_Req10_Logging_Monitoring",
         "description": "Stage 2: generate assertions for missing audit logging coverage",
         "assertion_count": 5,
         "keywords": {
@@ -2466,9 +2385,7 @@
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "payments"
-          ]
+          "details": ["payments"]
         },
         "assertions": [
           "SELECT payment_id AS potential_unencrypted_pan FROM payments WHERE LENGTH(pan) >= 12 AND pan NOT LIKE 'XXXX%'",
@@ -2480,7 +2397,7 @@
         "iteration": 4
       },
       {
-        "case": "ST2_TC006_Multi_Stored_Data_Access_Logging",
+        "case": "PCI_DSS_ST2_TC006_Multi_Stored_Data_Access_Logging",
         "description": "Stage 2: generate assertions for combined PAN/CVV storage, broad access, and weak audit trails",
         "assertion_count": 6,
         "keywords": {
@@ -2495,11 +2412,7 @@
         "tables_covered": {
           "found": 3,
           "total": 3,
-          "details": [
-            "customer_cards",
-            "app_permissions",
-            "security_log"
-          ]
+          "details": ["customer_cards", "app_permissions", "security_log"]
         },
         "assertions": [
           "SELECT card_id, 'PAN Stored in Plaintext' as violation_reason FROM customer_cards WHERE LENGTH(pan) > 0 AND pan NOT RLIKE '^[a-fA-F0-9]+$' AND pan IS NOT NULL;",
@@ -2512,7 +2425,7 @@
         "iteration": 4
       },
       {
-        "case": "ST2_TC007_Multi_Transmission_Auth_Logging",
+        "case": "PCI_DSS_ST2_TC007_Multi_Transmission_Auth_Logging",
         "description": "Stage 2: generate assertions for insecure transport, weak authentication controls, and insufficient event logging",
         "assertion_count": 4,
         "keywords": {
@@ -2526,10 +2439,7 @@
         "tables_covered": {
           "found": 2,
           "total": 3,
-          "details": [
-            "user_accounts",
-            "auth_events"
-          ]
+          "details": ["user_accounts", "auth_events"]
         },
         "assertions": [
           "SELECT user_id AS potentially_unprotected_account_id FROM user_accounts WHERE password_hash IS NULL AND username IS NOT NULL;",
@@ -2540,7 +2450,7 @@
         "iteration": 4
       },
       {
-        "case": "ST2_TC008_Multi_Core_Control_Gaps",
+        "case": "PCI_DSS_ST2_TC008_Multi_Core_Control_Gaps",
         "description": "Stage 2: generate assertions for combined card-data storage, transmission, access, and authentication control gaps",
         "assertion_count": 4,
         "keywords": {
@@ -2554,10 +2464,7 @@
         "tables_covered": {
           "found": 2,
           "total": 4,
-          "details": [
-            "payment_profiles",
-            "admin_credentials"
-          ]
+          "details": ["payment_profiles", "admin_credentials"]
         },
         "assertions": [
           "SELECT profile_id AS potential_plaintext_pan_violation FROM payment_profiles WHERE card_number IS NOT NULL AND tokenized = FALSE",
@@ -2568,7 +2475,7 @@
         "iteration": 4
       },
       {
-        "case": "ST2_TC001_Req3_Stored_Account_Data",
+        "case": "PCI_DSS_ST2_TC001_Req3_Stored_Account_Data",
         "description": "Stage 2: generate assertions for prohibited CVV/PAN storage",
         "assertion_count": 7,
         "keywords": {
@@ -2597,7 +2504,7 @@
         "iteration": 5
       },
       {
-        "case": "ST2_TC002_Req4_Transmission",
+        "case": "PCI_DSS_ST2_TC002_Req4_Transmission",
         "description": "Stage 2: generate assertions for insecure transmission endpoints",
         "assertion_count": 5,
         "keywords": {
@@ -2611,9 +2518,7 @@
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "api_configs"
-          ]
+          "details": ["api_configs"]
         },
         "assertions": [
           "SELECT * FROM api_configs WHERE uses_tls = FALSE OR tls_min_version IN ('', '1.0', '1.1') AS Potential_Insecure_Transmission_Config",
@@ -2625,7 +2530,7 @@
         "iteration": 5
       },
       {
-        "case": "ST2_TC003_Req7_Access_Control",
+        "case": "PCI_DSS_ST2_TC003_Req7_Access_Control",
         "description": "Stage 2: generate assertions for missing least-privilege controls",
         "assertion_count": 9,
         "keywords": {
@@ -2639,9 +2544,7 @@
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "user_privileges"
-          ]
+          "details": ["user_privileges"]
         },
         "assertions": [
           "SELECT user_id, username FROM users WHERE username LIKE '%admin%' OR department = 'System Administration' -- Checking for potentially excessive privileges or naming conventions for access control risk (Req 7, 8)",
@@ -2657,7 +2560,7 @@
         "iteration": 5
       },
       {
-        "case": "ST2_TC004_Req8_Authentication",
+        "case": "PCI_DSS_ST2_TC004_Req8_Authentication",
         "description": "Stage 2: generate assertions for weak/default credentials and auth controls",
         "assertion_count": 9,
         "keywords": {
@@ -2671,9 +2574,7 @@
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "users"
-          ]
+          "details": ["users"]
         },
         "assertions": [
           "SELECT user_id, username, 'Potential cleartext credentials stored without adequate hashing or encryption (Req 8)' AS violation_detail FROM users WHERE password_hash IS NULL OR password_hash = ''",
@@ -2689,7 +2590,7 @@
         "iteration": 5
       },
       {
-        "case": "ST2_TC005_Req10_Logging_Monitoring",
+        "case": "PCI_DSS_ST2_TC005_Req10_Logging_Monitoring",
         "description": "Stage 2: generate assertions for missing audit logging coverage",
         "assertion_count": 12,
         "keywords": {
@@ -2703,9 +2604,7 @@
         "tables_covered": {
           "found": 1,
           "total": 1,
-          "details": [
-            "payments"
-          ]
+          "details": ["payments"]
         },
         "assertions": [
           "SELECT payment_id, pan AS unencrypted_pan_violation FROM payments WHERE pan IS NOT NULL AND pan NOT RLIKE '^[A-Za-z0-9_]{16,19}$' OR pan IS NULL;",
@@ -2724,7 +2623,7 @@
         "iteration": 5
       },
       {
-        "case": "ST2_TC006_Multi_Stored_Data_Access_Logging",
+        "case": "PCI_DSS_ST2_TC006_Multi_Stored_Data_Access_Logging",
         "description": "Stage 2: generate assertions for combined PAN/CVV storage, broad access, and weak audit trails",
         "assertion_count": 9,
         "keywords": {
@@ -2740,11 +2639,7 @@
         "tables_covered": {
           "found": 3,
           "total": 3,
-          "details": [
-            "customer_cards",
-            "app_permissions",
-            "security_log"
-          ]
+          "details": ["customer_cards", "app_permissions", "security_log"]
         },
         "assertions": [
           "SELECT card_id AS unencrypted_pan_violation FROM customer_cards WHERE LENGTH(pan) > 0 AND pan NOT LIKE BINARY 'XXXXXXXXXXXX%' AND pan NOT LIKE BINARY '0000000000000000';",
@@ -2760,7 +2655,7 @@
         "iteration": 5
       },
       {
-        "case": "ST2_TC007_Multi_Transmission_Auth_Logging",
+        "case": "PCI_DSS_ST2_TC007_Multi_Transmission_Auth_Logging",
         "description": "Stage 2: generate assertions for insecure transport, weak authentication controls, and insufficient event logging",
         "assertion_count": 4,
         "keywords": {
@@ -2775,11 +2670,7 @@
         "tables_covered": {
           "found": 3,
           "total": 3,
-          "details": [
-            "integrations",
-            "user_accounts",
-            "auth_events"
-          ]
+          "details": ["integrations", "user_accounts", "auth_events"]
         },
         "assertions": [
           "SELECT user_id, username, 'Potential plain text password storage - Check Requirement 8.3' AS violation_reason FROM user_accounts WHERE password_hash IS NULL OR password_hash = ''",
@@ -2790,7 +2681,7 @@
         "iteration": 5
       },
       {
-        "case": "ST2_TC008_Multi_Core_Control_Gaps",
+        "case": "PCI_DSS_ST2_TC008_Multi_Core_Control_Gaps",
         "description": "Stage 2: generate assertions for combined card-data storage, transmission, access, and authentication control gaps",
         "assertion_count": 6,
         "keywords": {
