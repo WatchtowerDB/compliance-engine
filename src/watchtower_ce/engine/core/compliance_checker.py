@@ -2,9 +2,12 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Iterator, Optional
 
+from django.conf import settings
+
 from ..clients import ContextRetriever, LLMInference
 from ..utils import parse_list_response, retrieve_context_for_questions
 
+_LLM_MAX_PARSE_RETRIES: int = settings.LLM_MAX_PARSE_RETRIES
 logger = logging.getLogger(__name__)
 
 
@@ -171,6 +174,67 @@ class ComplianceChecker(ABC):
         """
         pass
 
+    def _generate_and_parse_list(
+        self,
+        prompt: str,
+        max_tokens: int,
+        temperature: float,
+        response_kind: str,
+    ) -> list[str]:
+        """
+        Generate an LLM response expected to be a list and parse it with retries.
+
+        Args:
+            prompt (str): The prompt to send to the LLM.
+            max_tokens (int): The maximum number of tokens to generate.
+            temperature (float): The temperature to use for generation.
+            response_kind (str): The kind of response to parse (e.g., "schema questions").
+
+        Returns:
+            list[str]: The parsed list response from the LLM.
+
+        Raises:
+            ValueError: If the response cannot be parsed after all retries.
+        """
+        if _LLM_MAX_PARSE_RETRIES < 0:
+            raise ValueError(f"Invalid retry limit: {_LLM_MAX_PARSE_RETRIES}")
+
+        # Initial attempt
+        response = self._llm.generate(
+            prompt, max_tokens=max_tokens, temperature=temperature, stream=False
+        )
+        try:
+            return parse_list_response(response)
+        except ValueError as first_error:
+            last_error = first_error
+
+        # Subsequent retry attempts
+        for attempt in range(1, _LLM_MAX_PARSE_RETRIES + 1):
+            logger.warning(
+                "Failed to parse %s on attempt %s/%s. Retrying LLM generation.",
+                response_kind,
+                attempt,
+                _LLM_MAX_PARSE_RETRIES + 1,  # Total attempts is retries + 1
+            )
+
+            response = self._llm.generate(
+                prompt, max_tokens=max_tokens, temperature=temperature, stream=False
+            )
+            try:
+                return parse_list_response(response)
+            except ValueError as retry_error:
+                last_error = retry_error
+
+        # Exhausted all attempts
+        logger.error(
+            "Failed to parse %s after %s retries",
+            response_kind,
+            _LLM_MAX_PARSE_RETRIES,
+        )
+        raise ValueError(
+            f"Failed to parse {response_kind} after {_LLM_MAX_PARSE_RETRIES} retries"
+        ) from last_error
+
     def _generate_schema_questions(self, schema: str) -> list[str]:
         """
         Generate targeted compliance questions from the schema using the LLM.
@@ -185,23 +249,22 @@ class ComplianceChecker(ABC):
                 The SQL schema to analyze.
 
         Returns:
-            list[str]: A list of compliance question strings. Returns up to 6 questions,
-                       even if JSON parsing fails (fallback to text extraction).
+            list[str]: A list of compliance question strings.
 
         Raises:
-            No exceptions are raised - parsing failures trigger fallback logic.
+            ValueError: If list parsing fails for all configured retry attempts.
 
         Note:
-            The method expects JSON output from the LLM but has robust fallback
-            handling for malformed responses, including stripping markdown code blocks.
+            The method expects JSON list-shaped output from the LLM. It retries generation
+            up to `LLM_MAX_PARSE_RETRIES` additional times if parsing fails.
         """
         prompt = self._build_schema_questions_prompt(schema)
-
-        response = self._llm.generate(
-            prompt, max_tokens=2048, temperature=1, stream=False
+        return self._generate_and_parse_list(
+            prompt=prompt,
+            max_tokens=2048,
+            temperature=1,
+            response_kind="schema questions",
         )
-
-        return parse_list_response(response, 6)
 
     def _generate_assertion_questions(self, assertion: str) -> list[str]:
         """
@@ -217,23 +280,22 @@ class ComplianceChecker(ABC):
                 The SQL assertion to analyze.
 
         Returns:
-            list[str]: A list of compliance question strings. Returns up to 3 questions,
-                       even if JSON parsing fails (fallback to text extraction).
+            list[str]: A list of compliance question strings.
 
         Raises:
-            No exceptions are raised - parsing failures trigger fallback logic.
+            ValueError: If list parsing fails for all configured retry attempts.
 
         Note:
-            The method expects JSON output from the LLM but has robust fallback
-            handling for malformed responses, including stripping markdown code blocks.
+            The method expects JSON list-shaped output from the LLM. It retries generation
+            up to `LLM_MAX_PARSE_RETRIES` additional times if parsing fails.
         """
         prompt = self._build_assertion_questions_prompt(assertion)
-
-        response = self._llm.generate(
-            prompt, max_tokens=2048, temperature=1.2, stream=False
+        return self._generate_and_parse_list(
+            prompt=prompt,
+            max_tokens=2048,
+            temperature=1.2,
+            response_kind="assertion questions",
         )
-
-        return parse_list_response(response, 3)
 
     def generate_assertions(self, schema: str) -> list[str]:
         """
@@ -266,11 +328,12 @@ class ComplianceChecker(ABC):
         prompt = self._build_assertions_prompt(context, schema)
 
         logger.info("Generating SQL assertions")
-        response = self._llm.generate(
-            prompt, max_tokens=4096, temperature=1.4, stream=False
+        assertions = self._generate_and_parse_list(
+            prompt=prompt,
+            max_tokens=4096,
+            temperature=1.4,
+            response_kind="assertions",
         )
-
-        assertions = parse_list_response(response, 20)
         logger.info("Successfully generated %s SQL assertions", len(assertions))
 
         return assertions
