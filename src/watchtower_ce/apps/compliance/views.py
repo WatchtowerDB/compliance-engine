@@ -37,7 +37,7 @@ from .filters import (
 )
 from .renderers import SSERenderer
 from .sse import RedisSSEStream, build_cloud_event, format_sse
-from .tasks import initialize_model_task, schedule_sql_assertion_pipeline
+from .tasks import schedule_sql_assertion_pipeline
 
 
 @extend_schema_view(
@@ -382,14 +382,17 @@ def stream_check_updates(request, check_id):
 )
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def trigger_model_init(request):
-    # TODO: ADD MODEL STATES AFTER NEW SINGLETON IMPLEMENTATION,
-    #       GET FOR POLLING, OTHER STATUS CODES, AND UPDATE THE
-    #       TASK ITSELF.
-    cast(Task, initialize_model_task).delay()
-    return Response(
-        {"message": "Model initialization enqueued."}, status=status.HTTP_202_ACCEPTED
-    )
+def model_status(request) -> Response:
+    if settings.USE_MOCK_COMPLIANCE_CHECKER:
+        return Response(
+            {
+                "status": "initialized",
+                "details": {"disclaimer": "Mock compliance checker is enabled."},
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    return Response(LLMInference().health(), status=status.HTTP_200_OK)
 
 
 @extend_schema(
@@ -519,27 +522,3 @@ def schema_iteration_chart(request):
         result.append(entry)
 
     return Response(result)
-
-
-@extend_schema(
-    summary="Get inference server status",
-    description=(
-        "Return the current state of the llama-server inference server.\n\n"
-        "Queries the server's `/health` endpoint directly. "
-        'Possible statuses: "not_initialized", "initializing", "initialized", "error".\n\n'
-        "Requires authentication."
-    ),
-)
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def model_status(request) -> Response:
-    if settings.USE_MOCK_COMPLIANCE_CHECKER:
-        return Response(
-            {
-                "status": "initialized",
-                "details": {"disclaimer": "Mock compliance checker is enabled."},
-            },
-            status=status.HTTP_200_OK,
-        )
-
-    return Response(LLMInference().health(), status=status.HTTP_200_OK)
