@@ -63,6 +63,7 @@ MOCK_ARTIFICIAL_STREAMING_DELAY: float = float(
 MOCK_ARTIFICIAL_PROCESSING_DELAY: float = float(
     os.getenv("WTCE_MOCK_ARTIFICIAL_PROCESSING_DELAY", "7")
 )
+LLM_MAX_PARSE_RETRIES: int = int(os.getenv("WTCE_LLM_MAX_PARSE_RETRIES", "3"))
 LLM_SERVER_URL: str = os.getenv("WTCE_LLM_SERVER_URL", "http://127.0.0.1:6767")
 
 WTVS_SERVER_URL: str = os.getenv("WTCE_WTVS_SERVER_URL", "http://localhost:7777")

@@ -1,3 +1,4 @@
+from django.db.models import Exists, OuterRef
 from django_filters import rest_framework as filters
 from drf_spectacular.utils import extend_schema_serializer
 
@@ -46,10 +47,25 @@ class ComplianceAssertionFilter(filters.FilterSet):
 class ClientDBSchemaFilter(filters.FilterSet):
     client_db = NumberInFilter(field_name="client_db__id", lookup_expr="in")
     name = filters.CharFilter(field_name="name", lookup_expr="icontains")
+    latest = filters.BooleanFilter(method="filter_latest")
+
+    def filter_latest(self, queryset, name, value):
+        _ = name
+        if value is not True:
+            return queryset
+
+        newer_schema_exists = ClientDBSchema.objects.filter(
+            client_db=OuterRef("client_db"),
+            name=OuterRef("name"),
+            internal_version__gt=OuterRef("internal_version"),
+        )
+        return queryset.annotate(_has_newer_version=Exists(newer_schema_exists)).filter(
+            _has_newer_version=False
+        )
 
     class Meta:
         model = ClientDBSchema
-        fields = ["client_db", "name"]
+        fields = ["client_db", "name", "latest"]
 
 
 class ClientDBFilter(filters.FilterSet):

@@ -2,7 +2,7 @@ import json
 import logging
 import random
 import re
-import textwrap
+from textwrap import dedent
 from time import sleep
 from typing import Iterator, Optional
 
@@ -43,8 +43,7 @@ class MockComplianceChecker:
         self,
         collection_name: str = "Mock-v1.0.0",
         retrieval_k: int = 4,
-        system_prompt: Optional[str] = "",
-        stop: Optional[list[str]] = None,
+        stop: Optional[str | list[str]] = None,
         top_k: int = 64,
     ) -> None:
         """
@@ -56,16 +55,13 @@ class MockComplianceChecker:
 
         Args:
             collection_name (str):
-                Name of the mock collection. Will be used as the key for the instance registry. Defaults to `"Mock-v1.0.0"`.
+                Name of the mock collection. Defaults to `"Mock-v1.0.0"`.
             retrieval_k (int):
                 Mock parameter - not used in mock implementation.
                 Defaults to `4`.
-            prompt_template (str):
+            stop (Optional[str | list[str]]):
                 Mock parameter - not used in mock implementation.
-                Defaults to Gemma 4's format: `"<|turn>user\n{prompt}<turn|>\n<|turn>model\n"`.
-            stop (str | list[str] | None):
-                Mock parameter - not used in mock implementation.
-                Defaults to `["<turn|>"]`.
+                Defaults to `None`.
             top_k (int):
                 Mock parameter - not used in mock implementation.
                 Defaults to `64`.
@@ -84,6 +80,12 @@ class MockComplianceChecker:
                 "or set WTCE_SUPPRESS_MOCK_COMPLIANCE_CHECKER_WARNING=True to silence this warning.",
                 collection_name,
             )
+
+    def _get_default_system_prompt(self) -> str:
+        """
+        Return a mock system prompt for development.
+        """
+        return f"You are a mock {self.standard} auditor for development purposes."
 
     def _parse_list_response(
         self, response: str, fallback_item_limit: int = 6
@@ -124,7 +126,7 @@ class MockComplianceChecker:
             list[str]: List of extracted table names.
         """
         return re.findall(
-            textwrap.dedent(
+            dedent(
                 r"""
                 CREATE\s+TABLE\s+
                 (?P<name>
@@ -177,7 +179,7 @@ class MockComplianceChecker:
         Returns:
             str: Mock analysis text describing the failure.
         """
-        return textwrap.dedent(
+        return dedent(
             f"""
             ## VIOLATION SUMMARY
             {self.standard} analysis for failed assertion.
