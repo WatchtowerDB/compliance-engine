@@ -1,5 +1,5 @@
 import logging
-import textwrap
+from textwrap import dedent
 from time import sleep
 from typing import Generator
 
@@ -170,7 +170,7 @@ class ContextRetriever:
             >>> context = retriever.retrieve("encryption requirements")
             >>> print(context)  # Prints all retrieved documents as one string
         """
-        return textwrap.dedent(
+        return dedent(
             "\n\n".join([doc.page_content for doc in self.context(query, retrieval_k)])
         )
 

@@ -1,0 +1,2720 @@
+{
+  "analysis": {
+    "metrics": {
+      "total_cases": 45,
+      "requirement_identification_rate": 0.8889,
+      "required_phrases_coverage_rate": 0.9357,
+      "preferred_phrases_coverage_rate": 0.732,
+      "remediation_completeness_rate": 0.92,
+      "overall_score": 0.895,
+      "raw_counts": {
+        "requirement_correctly_identified": 40,
+        "required_phrases": "131/140",
+        "preferred_phrases": "183/250",
+        "remediation_steps": "138/150"
+      }
+    },
+    "results": [
+      {
+        "case": "PCI_DSS_ST4_TC001_CVV_Storage_Analysis",
+        "description": "Stage 4: analysis quality for CVV storage violation",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['CVC', 'CVV', 'card verification value']",
+            "Any of ['SAD', 'Sensitive Authentication Data', 'Sensitive Cardholder Data']",
+            "Any of ['limited', 'not allowed', 'not stored', 'prohibited']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 4,
+          "total": 4,
+          "details": [
+            "Any of ['access need', 'access-need', 'business need', 'business-need', 'need to know', 'need-to-know']",
+            "Any of ['counterfeit cards', 'counterfeit payment cards']",
+            "fraudulent transaction",
+            "Any of ['cleartext', 'encrypt', 'plaintext', 'unencrypt']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "Any of ['Delete CVV column / data from database', 'Drop CVV column / data from database', 'Remove CVV column / data from database']",
+            "Any of ['Document Policies and Business Justification', 'Review Policies and Business Justification']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe system is storing Sensitive Authentication Data (SAD), specifically the CVV, in a persistent database, which is a direct violation of strict PCI-DSS requirements regarding the storage of authentication data.\n\n## Standard Reference\nRequirement 3.3.1.a: If SAD is received, examine documented policies, procedures, and system configurations to verify the data is not stored after authorization.\nRequirement 3.3.1.b: If SAD is received, examine the documented procedures and obs...",
+        "iteration": 1
+      },
+      {
+        "case": "PCI_DSS_ST4_TC002_Unencrypted_PAN_Analysis",
+        "description": "Stage 4: analysis quality for unencrypted PAN storage",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['PAN', 'Primary Account Number']",
+            "Any of ['cleartext', 'cryptography', 'encrypt', 'plaintext', 'unecrypt']",
+            "unauthorized"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 5,
+          "total": 6,
+          "details": [
+            "Any of ['4 digit', '4-digit', 'four digit', 'four-digit']",
+            "reconstruct",
+            "Any of ['data breach', 'security breach']",
+            "Any of ['strong cryptography', 'unreadable']",
+            "Any of ['masking', 'tokenization', 'truncate', 'truncation']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Encrypt PAN using AES-256', 'Encrypt card number column using AES-256', 'Encrypt card_number column using AES-256']",
+            "Any of ['Implement encryption key management', 'Implement encryption key-management', 'Use encryption key management', 'Use encryption key-management']",
+            "Any of ['Delete cleartext data', 'Delete plaintext data', 'Drop cleartext data', 'Drop plaintext data', 'Remove cleartext data', 'Remove plaintext data']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe database contains stored Primary Account Numbers (PANs) in cleartext, which constitutes a critical violation of requirements designed to render stored PAN data unreadable.\n\n## Standard Reference\nRequirement 3.5.1: PAN is rendered unreadable anywhere it is stored by using any of the following approaches:\n* One-way hashes based on strong cryptography of the entire PAN.\n* Truncation (hashing cannot be used to replace the truncated segment of PAN).\n* Index tokens.\n* Strong c...",
+        "iteration": 1
+      },
+      {
+        "case": "PCI_DSS_ST4_TC003_Track_Data_Analysis",
+        "description": "Stage 4: analysis quality for track data violation",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "Any of ['full track', 'track 1', 'track 2']",
+            "Any of ['limited', 'not allowed', 'not stored', 'prohibited']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 5,
+          "total": 5,
+          "details": [
+            "Any of ['chip', 'magnetic stripe', 'magnetic-stripe']",
+            "Any of ['counterfeit card', 'counterfeit payment card', 'reproduce card', 'reproduce payment card']",
+            "fraudulent transaction",
+            "Any of ['after authorization', 'after authorization is complete', 'after the authorization', 'post-authorization']",
+            "rendered unrecoverable"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Delete track 1 data and track 2 data columns', 'Delete track1_data and track2_data columns', 'Drop track 1 data and track 2 data columns', 'Drop track1_data and track2_data columns', 'Remove track 1 data and track 2 data columns', 'Remove track1_data and track2_data columns']",
+            "Any of ['Delete all track data', 'Drop all track data', 'Remove all track data']",
+            "Any of ['Ensure data deletion after authorization', 'Ensure data removal after authorization']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe system is storing the full contents of payment card tracks after the authorization process has completed, which constitutes a violation of the standard prohibiting the retention of this data.\n\n## Standard Reference\nRequirement 3.3.1.1: The full contents of any track are not stored upon completion of the authorization process.\n\n## Detailed Analysis\nThe assertion failed because the query `SELECT * FROM card_swipes WHERE track1_data IS NOT NULL OR track2_data IS NOT NULL` r...",
+        "iteration": 1
+      },
+      {
+        "case": "PCI_DSS_ST4_TC004_Unencrypted_Transmission_Analysis",
+        "description": "Stage 4: analysis quality for unencrypted data transmission indicators",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['HTTPS', 'SSL', 'TLS', 'TSL/SSL']",
+            "Any of ['cryptography', 'encrypt', 'encrypted', 'encryption']",
+            "Any of ['transfer', 'transit', 'transmission', 'transmit']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 7,
+          "total": 8,
+          "details": [
+            "Any of ['robust cryptography', 'strong cryptography']",
+            "Any of ['open', 'public', 'untrusted']",
+            "Any of ['data breach', 'security breach']",
+            "Any of ['MITM', 'eavesdrop', 'eavesdropping', 'intercept', 'interception', 'man-in-the-middle', 'sniffing', 'tamper']",
+            "Any of ['open network', 'public network', 'untrusted network']",
+            "Any of ['local network', 'localhost', 'loopback']",
+            "Any of ['secure configuration', 'secure protocol', 'secure version']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Change endpoints to HTTPS', 'Migrate endpoints to HTTPS', 'Update endpoints to use HTTPS']",
+            "Any of ['Enable TLS 1.2 or higher', 'Enable TLS 1.3', 'Enable TLS/SSL', 'Encrypt data at the session level', 'Implement TLS 1.2 or higher', 'Implement TLS 1.3', 'Implement TLS/SSL', 'Use TLS 1.2 or higher', 'Use TLS 1.3', 'Use TLS/SSL']",
+            "Any of ['Review certificate configuration', 'Validate certificate configuration', 'Verify certificate configuration']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe system is configured to transmit Cardholder Data (PAN) over open, public networks using insecure protocols, presenting a significant risk of interception.\n\n## Standard Reference\nRequirement 4: Protect Cardholder Data with Strong Cryptography During Transmission Over Open, Public Networks, specifically section 4.2.1.c, which mandates: \"Examine cardholder data transmissions to verify that all PAN is encrypted with strong cryptography when it is transmitted over open, publi...",
+        "iteration": 1
+      },
+      {
+        "case": "PCI_DSS_ST4_TC005_Missing_Access_Controls_Analysis",
+        "description": "Stage 4: analysis quality for missing access control mechanisms",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['access control', 'access restriction']",
+            "Any of ['access need', 'access-need', 'business need', 'business-need', 'need to know', 'need-to-know']",
+            "Any of ['least privilege', 'least-privilege', 'minimum necessary', 'minimum privilege']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 4,
+          "total": 6,
+          "details": [
+            "Any of ['authorized individuals', 'authorized personnel', 'authorized users']",
+            "Any of ['business function', 'job classification', 'job function', 'job role', 'minimum access', 'minimum level']",
+            "Any of ['data breach', 'security breach']",
+            "Any of ['access must be restricted', 'enforce permissions', 'restrict access']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Configure attribute-based access control / ABAC', 'Configure role-based access control / RBAC', 'Establish attribute-based access control / ABAC', 'Establish role-based access control / RBAC', 'Implement attribute-based access control / ABAC', 'Implement role-based access control / RBAC']",
+            "Any of ['Create user roles and permissions', 'Define user roles and permissions', 'Establish user roles and permissions']",
+            "Any of ['Limit access to authorized personnel only', 'Restrict access to authorized personnel only', 'Revoke public access']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe assertion failed because the tables `payments` and `credit_cards` contain resources that store Cardholder Data but are not restricted from being accessible to non-public roles or users, indicating a failure to restrict access based on business need-to-know principles.\n\n## Standard Reference\nRequirement 7: Restrict Access to System Components and Cardholder Data by Business Need to Know. Specifically, clauses 7.2 (Access to system components and data is appropriately defi...",
+        "iteration": 1
+      },
+      {
+        "case": "PCI_DSS_ST4_TC006_Overly_Permissive_Access_Analysis",
+        "description": "Stage 4: analysis quality for overly broad access permissions",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 4,
+          "total": 4,
+          "details": [
+            "Any of ['access control', 'access restriction']",
+            "Any of ['access need', 'access-need', 'business need', 'business-need', 'need to know', 'need-to-know']",
+            "Any of ['business function', 'job classification', 'job function', 'job role']",
+            "Any of ['least privilege', 'least-privilege', 'minimum necessary', 'minimum privilege']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 2,
+          "total": 5,
+          "details": [
+            "unauthorized",
+            "Any of ['broad privileges', 'excessive privileges', 'overly permissive access', 'risk profile', 'unnecessary privileges']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Identify job functions and access needs', 'Identify job functions and define roles']",
+            "Any of ['Configure attribute-based access control / ABAC', 'Configure role-based access control / RBAC', 'Establish attribute-based access control / ABAC', 'Establish role-based access control / RBAC', 'Implement attribute-based access control / ABAC', 'Implement role-based access control / RBAC']",
+            "Any of ['Adjust privileges to the minimum required', 'Adjust user privileges', 'Assign only necessary permissions', 'Audit user privileges', 'Grant only necessary permissions', 'Limit user privileges', 'Modify user privileges', 'Provide minimum required permissions', 'Reduce user privileges', 'Review user privileges', 'Revoke excessive privileges', 'Update user privileges']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe audit revealed that specific user accounts possess excessively broad privileges on tables containing Cardholder Data (CHD). The presence of accounts assigned `ALL` or `SUPER` privileges on tables such as `cardholder_data`, `transactions`, and `payment_info` constitutes a violation of the principle of least privilege, exposing sensitive data to unwarranted access.\n\n## Standard Reference\n*   **Requirement 7.2.2:** Access is assigned to users, including privileged users, ba...",
+        "iteration": 1
+      },
+      {
+        "case": "PCI_DSS_ST4_TC007_Weak_Password_Storage_Analysis",
+        "description": "Stage 4: analysis quality for weak password hashing",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['complex', 'complexity']",
+            "Any of ['hash', 'hashing']",
+            "authentication"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 3,
+          "total": 6,
+          "details": ["factor", "characters", "minimum"]
+        },
+        "remediation_steps": {
+          "found": 2,
+          "total": 4,
+          "details": [
+            "Any of ['Create strong passwords', 'Generate strong passwords', 'Update passwords of affected accounts']",
+            "Any of ['Hash passwords securely', 'Implement strong password hashing algorithm', 'Use strong password hashing algorithm']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe system is storing password hashes for user accounts that do not meet established security strength requirements, indicating weak protection of authentication factors for system accounts.\n\n## Standard Reference\nRequirement 8.3.2 (Applicability Notes referencing Requirement 8.3.2) and Good Practice guidelines related to password strength and protection.\n\n## Detailed Analysis\nThe provided assertion detected that certain users possess password hashes (`password_hash IS NOT N...",
+        "iteration": 1
+      },
+      {
+        "case": "PCI_DSS_ST4_TC008_Missing_MFA_Tracking_Analysis",
+        "description": "Stage 4: analysis quality for missing MFA implementation tracking",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['2FA', 'MFA', 'multi-factor', 'multiple authentication', 'two-factor']",
+            "Any of ['admin access', 'administrative access', 'privileged access']",
+            "Any of ['authentication factor', 'authentication method']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 4,
+          "total": 5,
+          "details": [
+            "Any of ['admin', 'elevate', 'elevation', 'escalate', 'escalation']",
+            "Any of ['CDE', 'Cardholder Data Environment']",
+            "credentials",
+            "unauthorized"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Enable multi-factor authentication for privileged users', 'Implement multi-factor authentication for privileged users']",
+            "Any of ['Record MFA enrollment in database', 'Track MFA enrollment in database']",
+            "Any of ['Enforce MFA for privileged / administrative access', 'Require MFA for privileged / administrative access']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe database contains user accounts with high-level privileges ('admin', 'privileged') who are not configured to use Multi-Factor Authentication (MFA) for access, which constitutes a significant vulnerability regarding administrative access to the Cardholder Data Environment (CDE).\n\n## Standard Reference\nRequirement 8.4.1: MFA is implemented for all non-console access into the CDE for personnel with administrative access.\n\n## Detailed Analysis\nThe failed assertion identified...",
+        "iteration": 1
+      },
+      {
+        "case": "PCI_DSS_ST4_TC009_Inadequate_Audit_Logging_Analysis",
+        "description": "Stage 4: analysis quality for missing or weak audit logging controls",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['anomalies', 'anomaly', 'forensic analysis', 'suspicious activity']",
+            "Any of ['audit log', 'log events', 'logging']",
+            "Any of ['destruction', 'integrity', 'tamper', 'unauthorized modification']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 5,
+          "total": 5,
+          "details": [
+            "Any of ['alerting', 'detection', 'monitor', 'monitoring']",
+            "Any of ['historical logs', 'log history', 'retention']",
+            "Any of ['NTP', 'clock drift', 'time sync', 'time synchronization']",
+            "Any of ['CDE', 'critical security controls', 'system components']",
+            "Any of ['daily review', 'log review', 'periodic review', 'review logs']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 5,
+          "total": 5,
+          "details": [
+            "Any of ['Enable audit logging on system components', 'Implement centralized audit logging']",
+            "Any of ['Implement tamper-evident log protection', 'Protect logs from unauthorized modification and deletion', 'Restrict write/delete access to logs']",
+            "Any of ['Configure long-term log retention', 'Increase log retention to at least one year / 12 months / 365 days', 'Retain logs for at least one year / 12 months / 365 days']",
+            "Any of ['Enable time synchronization across all systems', 'Implement centralized time synchronization', 'Network Time Protocol (NTP)', 'Synchronize system clocks']",
+            "Any of ['Configure alerts for suspicious activity', 'Define periodic log review process', 'Establish and enforce regular audit log review procedures']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe audit revealed critical deficiencies across multiple aspects of the logging and monitoring infrastructure, indicating failures in ensuring comprehensive logging, adequate log retention, integrity protection, time synchronization, and formalized review processes for system components and Cardholder Data access.\n\n## Standard Reference\nRequirement 10: Log and Monitor All Access to System Components and Cardholder Data\nSpecifically related to the failures:\n*   10.1: Processe...",
+        "iteration": 1
+      },
+      {
+        "case": "PCI_DSS_ST4_TC001_CVV_Storage_Analysis",
+        "description": "Stage 4: analysis quality for CVV storage violation",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['CVC', 'CVV', 'card verification value']",
+            "Any of ['SAD', 'Sensitive Authentication Data', 'Sensitive Cardholder Data']",
+            "Any of ['limited', 'not allowed', 'not stored', 'prohibited']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 3,
+          "total": 4,
+          "details": [
+            "Any of ['counterfeit cards', 'counterfeit payment cards']",
+            "fraudulent transaction",
+            "Any of ['cleartext', 'encrypt', 'plaintext', 'unencrypt']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Delete CVV column / data from database', 'Drop CVV column / data from database', 'Remove CVV column / data from database']",
+            "Any of ['Implement Access Controls', 'Verifiy Access Controls']",
+            "Any of ['Document Policies and Business Justification', 'Review Policies and Business Justification']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe system is storing Sensitive Authentication Data (SAD), specifically the Card Verification Value (CVV), in persistent storage, which constitutes a direct violation of the standard.\n\n## Standard Reference\nRequirement 3.3.1: SAD is not stored after authorization, even if encrypted. All sensitive authentication data received is rendered unrecoverable upon completion of the authorization process.\n\n## Detailed Analysis\nThe provided assertion failed because it returned rows whe...",
+        "iteration": 2
+      },
+      {
+        "case": "PCI_DSS_ST4_TC002_Unencrypted_PAN_Analysis",
+        "description": "Stage 4: analysis quality for unencrypted PAN storage",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['PAN', 'Primary Account Number']",
+            "Any of ['cleartext', 'cryptography', 'encrypt', 'plaintext', 'unecrypt']",
+            "unauthorized"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 3,
+          "total": 6,
+          "details": [
+            "reconstruct",
+            "Any of ['strong cryptography', 'unreadable']",
+            "Any of ['masking', 'tokenization', 'truncate', 'truncation']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Encrypt PAN using AES-256', 'Encrypt card number column using AES-256', 'Encrypt card_number column using AES-256']",
+            "Any of ['Implement encryption key management', 'Implement encryption key-management', 'Use encryption key management', 'Use encryption key-management']",
+            "Any of ['Delete cleartext data', 'Delete plaintext data', 'Drop cleartext data', 'Drop plaintext data', 'Remove cleartext data', 'Remove plaintext data']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe database contains instances of Primary Account Number (PAN) data stored in cleartext format within the `transactions` table, which constitutes a violation of the standard's requirements for securing stored cardholder data.\n\n## Standard Reference\nRequirement 3.5.1: PAN is rendered unreadable anywhere it is stored by using any of the following approaches: One-way hashes based on strong cryptography of the entire PAN, Truncation, Index tokens, or Strong cryptography with as...",
+        "iteration": 2
+      },
+      {
+        "case": "PCI_DSS_ST4_TC003_Track_Data_Analysis",
+        "description": "Stage 4: analysis quality for track data violation",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "Any of ['full track', 'track 1', 'track 2']",
+            "Any of ['limited', 'not allowed', 'not stored', 'prohibited']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 4,
+          "total": 5,
+          "details": [
+            "Any of ['chip', 'magnetic stripe', 'magnetic-stripe']",
+            "Any of ['counterfeit card', 'counterfeit payment card', 'reproduce card', 'reproduce payment card']",
+            "fraudulent transaction",
+            "Any of ['after authorization', 'after authorization is complete', 'after the authorization', 'post-authorization']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Delete track 1 data and track 2 data columns', 'Delete track1_data and track2_data columns', 'Drop track 1 data and track 2 data columns', 'Drop track1_data and track2_data columns', 'Remove track 1 data and track 2 data columns', 'Remove track1_data and track2_data columns']",
+            "Any of ['Delete all track data', 'Drop all track data', 'Remove all track data']",
+            "Any of ['Ensure data deletion after authorization', 'Ensure data removal after authorization']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe database schema is storing the full contents of payment card tracks, which constitutes a direct violation of PCI-DSS requirements regarding the retention of sensitive payment data.\n\n## Standard Reference\nRequirement 3.3.1.1: The full contents of any track are not stored upon completion of the authorization process.\n\n## Detailed Analysis\nThe failed assertion, which queried the `card_swipes` table for records where `track1_data` or `track2_data` was present, returned data ...",
+        "iteration": 2
+      },
+      {
+        "case": "PCI_DSS_ST4_TC004_Unencrypted_Transmission_Analysis",
+        "description": "Stage 4: analysis quality for unencrypted data transmission indicators",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['HTTPS', 'SSL', 'TLS', 'TSL/SSL']",
+            "Any of ['cryptography', 'encrypt', 'encrypted', 'encryption']",
+            "Any of ['transfer', 'transit', 'transmission', 'transmit']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 7,
+          "total": 8,
+          "details": [
+            "Any of ['robust cryptography', 'strong cryptography']",
+            "Any of ['open', 'public', 'untrusted']",
+            "Any of ['data breach', 'security breach']",
+            "Any of ['MITM', 'eavesdrop', 'eavesdropping', 'intercept', 'interception', 'man-in-the-middle', 'sniffing', 'tamper']",
+            "Any of ['open network', 'public network', 'untrusted network']",
+            "Any of ['local network', 'localhost', 'loopback']",
+            "Any of ['secure configuration', 'secure protocol', 'secure version']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Change endpoints to HTTPS', 'Migrate endpoints to HTTPS', 'Update endpoints to use HTTPS']",
+            "Any of ['Enable TLS 1.2 or higher', 'Enable TLS 1.3', 'Enable TLS/SSL', 'Encrypt data at the session level', 'Implement TLS 1.2 or higher', 'Implement TLS 1.3', 'Implement TLS/SSL', 'Use TLS 1.2 or higher', 'Use TLS 1.3', 'Use TLS/SSL']",
+            "Any of ['Review certificate configuration', 'Validate certificate configuration', 'Verify certificate configuration']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe system is transmitting Primary Account Numbers (PAN) or related sensitive data over open, public networks using unencrypted HTTP connections, which violates requirements mandating the use of strong cryptography during data transmission.\n\n## Standard Reference\nRequirement 4.2.1c: \"Examine cardholder data transmissions to verify that all PAN is encrypted with strong cryptography when it is transmitted over open, public networks.\" This aligns with the objective that \"Cleart...",
+        "iteration": 2
+      },
+      {
+        "case": "PCI_DSS_ST4_TC005_Missing_Access_Controls_Analysis",
+        "description": "Stage 4: analysis quality for missing access control mechanisms",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['access control', 'access restriction']",
+            "Any of ['access need', 'access-need', 'business need', 'business-need', 'need to know', 'need-to-know']",
+            "Any of ['least privilege', 'least-privilege', 'minimum necessary', 'minimum privilege']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 4,
+          "total": 6,
+          "details": [
+            "Any of ['authorized individuals', 'authorized personnel', 'authorized users']",
+            "Any of ['business function', 'job classification', 'job function', 'job role', 'minimum access', 'minimum level']",
+            "Any of ['data breach', 'security breach']",
+            "Any of ['`PUBLIC` access', 'public access']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Configure attribute-based access control / ABAC', 'Configure role-based access control / RBAC', 'Establish attribute-based access control / ABAC', 'Establish role-based access control / RBAC', 'Implement attribute-based access control / ABAC', 'Implement role-based access control / RBAC']",
+            "Any of ['Create user roles and permissions', 'Define user roles and permissions', 'Establish user roles and permissions']",
+            "Any of ['Limit access to authorized personnel only', 'Restrict access to authorized personnel only', 'Revoke public access']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe assertion failed because certain tables containing potentially sensitive data, specifically `payments` and `credit_cards`, are accessible to users other than those explicitly granted privileges, indicating a potential failure in restricting access based on business need.\n\n## Standard Reference\nRequirement 7.2.2.a and 7.2.2.b, which mandate that \"Examine policies and procedures to verify they cover assigning access to users in accordance with all elements specified in thi...",
+        "iteration": 2
+      },
+      {
+        "case": "PCI_DSS_ST4_TC006_Overly_Permissive_Access_Analysis",
+        "description": "Stage 4: analysis quality for overly broad access permissions",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 4,
+          "total": 4,
+          "details": [
+            "Any of ['access control', 'access restriction']",
+            "Any of ['access need', 'access-need', 'business need', 'business-need', 'need to know', 'need-to-know']",
+            "Any of ['business function', 'job classification', 'job function', 'job role']",
+            "Any of ['least privilege', 'least-privilege', 'minimum necessary', 'minimum privilege']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 2,
+          "total": 5,
+          "details": [
+            "Any of ['data breach', 'data loss']",
+            "Any of ['broad privileges', 'excessive privileges', 'overly permissive access', 'risk profile', 'unnecessary privileges']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Identify job functions and access needs', 'Identify job functions and define roles']",
+            "Any of ['Configure attribute-based access control / ABAC', 'Configure role-based access control / RBAC', 'Establish attribute-based access control / ABAC', 'Establish role-based access control / RBAC', 'Implement attribute-based access control / ABAC', 'Implement role-based access control / RBAC']",
+            "Any of ['Adjust privileges to the minimum required', 'Adjust user privileges', 'Assign only necessary permissions', 'Audit user privileges', 'Grant only necessary permissions', 'Limit user privileges', 'Modify user privileges', 'Provide minimum required permissions', 'Reduce user privileges', 'Review user privileges', 'Revoke excessive privileges', 'Update user privileges']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe current configuration grants overly permissive privileges to certain user accounts accessing tables containing Cardholder Data (CHD). Specifically, the `app_user` and `reporting_user` have been assigned 'ALL' privileges on sensitive tables like `cardholder_data`, `transactions`, and `payment_info`, violating the principle of least privilege.\n\n## Standard Reference\n*   **Requirement 7.2.2:** Access is assigned to users, including privileged users, based on:\n    *   Job cl...",
+        "iteration": 2
+      },
+      {
+        "case": "PCI_DSS_ST4_TC007_Weak_Password_Storage_Analysis",
+        "description": "Stage 4: analysis quality for weak password hashing",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['complex', 'complexity']",
+            "Any of ['hash', 'hashing']",
+            "authentication"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 6,
+          "total": 6,
+          "details": [
+            "factor",
+            "characters",
+            "minimum",
+            "Any of ['salt', 'salted', 'salting']",
+            "Any of ['Argon2', 'PBKDF2', 'bcrypt', 'scrypt']",
+            "Any of ['password guidelines', 'password policy', 'password requirements']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 4,
+          "details": [
+            "Any of ['Create strong passwords', 'Generate strong passwords', 'Update passwords of affected accounts']",
+            "Any of ['Hash passwords securely', 'Implement strong password hashing algorithm', 'Use strong password hashing algorithm']",
+            "Any of ['Apply salt to password hashes', 'Include salt in password hashes']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe system is storing password hashes that do not meet defined complexity or length requirements, potentially leading to weak authentication factors for application and system accounts.\n\n## Standard Reference\nRequirement 8.3.2 (Stored passwords/passphrases are required to be encrypted in accordance with PCI DSS Requirement 8.3.2.) and guidance related to the rigor of authentication factor protection, which includes appropriate password strength.\n\n## Detailed Analysis\nThe ass...",
+        "iteration": 2
+      },
+      {
+        "case": "PCI_DSS_ST4_TC008_Missing_MFA_Tracking_Analysis",
+        "description": "Stage 4: analysis quality for missing MFA implementation tracking",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['2FA', 'MFA', 'multi-factor', 'multiple authentication', 'two-factor']",
+            "Any of ['admin access', 'administrative access', 'privileged access']",
+            "Any of ['authentication factor', 'authentication method']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 4,
+          "total": 5,
+          "details": [
+            "Any of ['admin', 'elevate', 'elevation', 'escalate', 'escalation']",
+            "Any of ['CDE', 'Cardholder Data Environment']",
+            "credentials",
+            "unauthorized"
+          ]
+        },
+        "remediation_steps": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "Any of ['Enable multi-factor authentication for privileged users', 'Implement multi-factor authentication for privileged users']",
+            "Any of ['Enforce MFA for privileged / administrative access', 'Require MFA for privileged / administrative access']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe security assessment detected users with 'admin' or 'privileged' access levels who are not configured to use Multi-Factor Authentication (MFA) for accessing the Cardholder Data Environment (CDE). This constitutes a failure to enforce robust authentication controls for high-privilege accounts.\n\n## Standard Reference\nRequirement 8.4.1.a: Examine network and/or system configurations to verify MFA is required for all non-console into the CDE for personnel with administrative ...",
+        "iteration": 2
+      },
+      {
+        "case": "PCI_DSS_ST4_TC009_Inadequate_Audit_Logging_Analysis",
+        "description": "Stage 4: analysis quality for missing or weak audit logging controls",
+        "requirement_identified": false,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['anomalies', 'anomaly', 'forensic analysis', 'suspicious activity']",
+            "Any of ['audit log', 'log events', 'logging']",
+            "Any of ['destruction', 'integrity', 'tamper', 'unauthorized modification']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 5,
+          "total": 5,
+          "details": [
+            "Any of ['alerting', 'detection', 'monitor', 'monitoring']",
+            "Any of ['historical logs', 'log history', 'retention']",
+            "Any of ['NTP', 'clock drift', 'time sync', 'time synchronization']",
+            "Any of ['CDE', 'critical security controls', 'system components']",
+            "Any of ['daily review', 'log review', 'periodic review', 'review logs']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 5,
+          "total": 5,
+          "details": [
+            "Any of ['Enable audit logging on system components', 'Implement centralized audit logging']",
+            "Any of ['Implement tamper-evident log protection', 'Protect logs from unauthorized modification and deletion', 'Restrict write/delete access to logs']",
+            "Any of ['Configure long-term log retention', 'Increase log retention to at least one year / 12 months / 365 days', 'Retain logs for at least one year / 12 months / 365 days']",
+            "Any of ['Enable time synchronization across all systems', 'Implement centralized time synchronization', 'Network Time Protocol (NTP)', 'Synchronize system clocks']",
+            "Any of ['Configure alerts for suspicious activity', 'Define periodic log review process', 'Establish and enforce regular audit log review procedures']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe audit reveals configuration issues across critical logging and monitoring controls for system components, specifically related to the enablement of logging, insufficient data retention periods, lack of file integrity monitoring, absence of centralized time synchronization, and missing review frequency definitions. These deficiencies indicate inadequate protection and oversight of system activities, potentially leading to undetected security incidents.\n\n## Standard Refere...",
+        "iteration": 2
+      },
+      {
+        "case": "PCI_DSS_ST4_TC001_CVV_Storage_Analysis",
+        "description": "Stage 4: analysis quality for CVV storage violation",
+        "requirement_identified": false,
+        "required_phrases": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "Any of ['CVC', 'CVV', 'card verification value']",
+            "Any of ['SAD', 'Sensitive Authentication Data', 'Sensitive Cardholder Data']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 2,
+          "total": 4,
+          "details": [
+            "Any of ['access need', 'access-need', 'business need', 'business-need', 'need to know', 'need-to-know']",
+            "Any of ['cleartext', 'encrypt', 'plaintext', 'unencrypt']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Delete CVV column / data from database', 'Drop CVV column / data from database', 'Remove CVV column / data from database']",
+            "Any of ['Implement Access Controls', 'Verifiy Access Controls']",
+            "Any of ['Document Policies and Business Justification', 'Review Policies and Business Justification']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe database schema is storing Cardholder Data, specifically the Card Verification Value (CVV), in a manner that is not compliant with PCI-DSS v4.0.1 requirements for the protection of stored cardholder data.\n\n## Standard Reference\nRequirement 3: Storage and protection of stored cardholder data. Specifically, this violates the principle that Cardholder Data must not be stored if not strictly necessary, and if stored, must be rendered unreadable.\n\n## Detailed Analysis\nThe ass...",
+        "iteration": 3
+      },
+      {
+        "case": "PCI_DSS_ST4_TC002_Unencrypted_PAN_Analysis",
+        "description": "Stage 4: analysis quality for unencrypted PAN storage",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['PAN', 'Primary Account Number']",
+            "Any of ['cleartext', 'cryptography', 'encrypt', 'plaintext', 'unecrypt']",
+            "unauthorized"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 6,
+          "total": 6,
+          "details": [
+            "Any of ['defense in depth', 'defense-in-depth']",
+            "Any of ['4 digit', '4-digit', 'four digit', 'four-digit']",
+            "reconstruct",
+            "Any of ['data breach', 'security breach']",
+            "Any of ['strong cryptography', 'unreadable']",
+            "Any of ['masking', 'tokenization', 'truncate', 'truncation']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Encrypt PAN using AES-256', 'Encrypt card number column using AES-256', 'Encrypt card_number column using AES-256']",
+            "Any of ['Implement encryption key management', 'Implement encryption key-management', 'Use encryption key management', 'Use encryption key-management']",
+            "Any of ['Delete cleartext data', 'Delete plaintext data', 'Drop cleartext data', 'Drop plaintext data', 'Remove cleartext data', 'Remove plaintext data']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe database contains instances where the Primary Account Number (PAN) is stored in cleartext format within the `transactions` table, which constitutes a violation of requirements mandating that stored PANs must be rendered unreadable.\n\n## Standard Reference\nPCI-DSS v4.0.1 Requirement 3: Protect Stored Account Data, specifically:\n*   Requirement 3.5.1: Primary account number (PAN) is rendered unreadable anywhere it is stored by using any of the following approaches: One-way ...",
+        "iteration": 3
+      },
+      {
+        "case": "PCI_DSS_ST4_TC003_Track_Data_Analysis",
+        "description": "Stage 4: analysis quality for track data violation",
+        "requirement_identified": false,
+        "required_phrases": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "Any of ['SAD', 'Sensitive Authentication Data', 'Sensitive Cardholder Data']",
+            "Any of ['limited', 'not allowed', 'not stored', 'prohibited']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 4,
+          "total": 5,
+          "details": [
+            "Any of ['counterfeit card', 'counterfeit payment card', 'reproduce card', 'reproduce payment card']",
+            "fraudulent transaction",
+            "Any of ['after authorization', 'after authorization is complete', 'after the authorization', 'post-authorization']",
+            "rendered unrecoverable"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Delete track 1 data and track 2 data columns', 'Delete track1_data and track2_data columns', 'Drop track 1 data and track 2 data columns', 'Drop track1_data and track2_data columns', 'Remove track 1 data and track 2 data columns', 'Remove track1_data and track2_data columns']",
+            "Any of ['Delete all track data', 'Drop all track data', 'Remove all track data']",
+            "Any of ['Ensure data deletion after authorization', 'Ensure data removal after authorization']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe database is storing Sensitive Authentication Data (SAD) in a persistent manner after the authorization process has completed, which is strictly prohibited.\n\n## Standard Reference\nRequirement 3.3.1.a and 3.3.1.b, which state that SAD is not stored after authorization, even if encrypted, and that all SAD received is rendered unrecoverable upon completion of the authorization process.\n\n## Detailed Analysis\nThe assertion `SELECT * FROM card_swipes WHERE track1_data IS NOT NU...",
+        "iteration": 3
+      },
+      {
+        "case": "PCI_DSS_ST4_TC004_Unencrypted_Transmission_Analysis",
+        "description": "Stage 4: analysis quality for unencrypted data transmission indicators",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['HTTPS', 'SSL', 'TLS', 'TSL/SSL']",
+            "Any of ['cryptography', 'encrypt', 'encrypted', 'encryption']",
+            "Any of ['transfer', 'transit', 'transmission', 'transmit']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 7,
+          "total": 8,
+          "details": [
+            "Any of ['robust cryptography', 'strong cryptography']",
+            "Any of ['open', 'public', 'untrusted']",
+            "Any of ['MITM', 'eavesdrop', 'eavesdropping', 'intercept', 'interception', 'man-in-the-middle', 'sniffing', 'tamper']",
+            "Any of ['open network', 'public network', 'untrusted network']",
+            "Any of ['certificate validation', 'certificate verification', 'valid certificates']",
+            "Any of ['local network', 'localhost', 'loopback']",
+            "Any of ['secure configuration', 'secure protocol', 'secure version']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Change endpoints to HTTPS', 'Migrate endpoints to HTTPS', 'Update endpoints to use HTTPS']",
+            "Any of ['Enable TLS 1.2 or higher', 'Enable TLS 1.3', 'Enable TLS/SSL', 'Encrypt data at the session level', 'Implement TLS 1.2 or higher', 'Implement TLS 1.3', 'Implement TLS/SSL', 'Use TLS 1.2 or higher', 'Use TLS 1.3', 'Use TLS/SSL']",
+            "Any of ['Review certificate configuration', 'Validate certificate configuration', 'Verify certificate configuration']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe system is transmitting Cardholder Data over open, public networks without the required protection via strong cryptography, as evidenced by configurations pointing to non-secure HTTP endpoints.\n\n## Standard Reference\nRequirement 4: Protect Cardholder Data with Strong Cryptography During Transmission Over Open, Public Networks\nSpecifically, this relates to the need that \"PAN must be encrypted during transmission over networks that are easily accessed by malicious individua...",
+        "iteration": 3
+      },
+      {
+        "case": "PCI_DSS_ST4_TC005_Missing_Access_Controls_Analysis",
+        "description": "Stage 4: analysis quality for missing access control mechanisms",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['access control', 'access restriction']",
+            "Any of ['access need', 'access-need', 'business need', 'business-need', 'need to know', 'need-to-know']",
+            "Any of ['least privilege', 'least-privilege', 'minimum necessary', 'minimum privilege']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 4,
+          "total": 6,
+          "details": [
+            "Any of ['authorized individuals', 'authorized personnel', 'authorized users']",
+            "Any of ['business function', 'job classification', 'job function', 'job role', 'minimum access', 'minimum level']",
+            "Any of ['access must be restricted', 'enforce permissions', 'restrict access']",
+            "Any of ['`PUBLIC` access', 'public access']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Configure attribute-based access control / ABAC', 'Configure role-based access control / RBAC', 'Establish attribute-based access control / ABAC', 'Establish role-based access control / RBAC', 'Implement attribute-based access control / ABAC', 'Implement role-based access control / RBAC']",
+            "Any of ['Create user roles and permissions', 'Define user roles and permissions', 'Establish user roles and permissions']",
+            "Any of ['Limit access to authorized personnel only', 'Restrict access to authorized personnel only', 'Revoke public access']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe assertion failed because the tables `payments` and `credit_cards` possess public access privileges, which violates the principle of restricting access to Cardholder Data based on a \"need to know\" basis.\n\n## Standard Reference\nRequirement 7: Restrict Access to System Components and Cardholder Data by Business Need to Know. Specifically, 7.2 Access to system components and data is appropriately defined and assigned, and 7.3 Access to system components and data is managed v...",
+        "iteration": 3
+      },
+      {
+        "case": "PCI_DSS_ST4_TC006_Overly_Permissive_Access_Analysis",
+        "description": "Stage 4: analysis quality for overly broad access permissions",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 4,
+          "total": 4,
+          "details": [
+            "Any of ['access control', 'access restriction']",
+            "Any of ['access need', 'access-need', 'business need', 'business-need', 'need to know', 'need-to-know']",
+            "Any of ['business function', 'job classification', 'job function', 'job role']",
+            "Any of ['least privilege', 'least-privilege', 'minimum necessary', 'minimum privilege']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 3,
+          "total": 5,
+          "details": [
+            "Any of ['data breach', 'data loss']",
+            "unauthorized",
+            "Any of ['broad privileges', 'excessive privileges', 'overly permissive access', 'risk profile', 'unnecessary privileges']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Identify job functions and access needs', 'Identify job functions and define roles']",
+            "Any of ['Configure attribute-based access control / ABAC', 'Configure role-based access control / RBAC', 'Establish attribute-based access control / ABAC', 'Establish role-based access control / RBAC', 'Implement attribute-based access control / ABAC', 'Implement role-based access control / RBAC']",
+            "Any of ['Adjust privileges to the minimum required', 'Adjust user privileges', 'Assign only necessary permissions', 'Audit user privileges', 'Grant only necessary permissions', 'Limit user privileges', 'Modify user privileges', 'Provide minimum required permissions', 'Reduce user privileges', 'Review user privileges', 'Revoke excessive privileges', 'Update user privileges']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe system is in violation of the principle of restricting access based on a user\u2019s need to know, as evidenced by users possessing excessive privileges over tables containing Cardholder Data.\n\n## Standard Reference\nRequirement 7.3.1 and 7.3.2 mandate that \"An access control system(s) is in place that restricts access based on a user\u2019s need to know and covers all system components,\" and that \"The access control system(s) is configured to enforce permissions assigned to indivi...",
+        "iteration": 3
+      },
+      {
+        "case": "PCI_DSS_ST4_TC007_Weak_Password_Storage_Analysis",
+        "description": "Stage 4: analysis quality for weak password hashing",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['complex', 'complexity']",
+            "Any of ['hash', 'hashing']",
+            "authentication"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 5,
+          "total": 6,
+          "details": [
+            "factor",
+            "characters",
+            "minimum",
+            "Any of ['Argon2', 'PBKDF2', 'bcrypt', 'scrypt']",
+            "Any of ['password guidelines', 'password policy', 'password requirements']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 4,
+          "total": 4,
+          "details": [
+            "Any of ['Create strong passwords', 'Generate strong passwords', 'Update passwords of affected accounts']",
+            "Any of ['Hash passwords securely', 'Implement strong password hashing algorithm', 'Use strong password hashing algorithm']",
+            "Any of ['Migrate to bcrypt, PBKDF2, or Argon2 hashing implementation', 'Use bcrypt, PBKDF2, or Argon2 hashing implementation']",
+            "Any of ['Apply salt to password hashes', 'Include salt in password hashes']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe system is storing passwords/passphrases in a manner that does not meet the minimum complexity and length standards required for strong authentication. Specifically, the identified users have password hashes that are either too short (less than 32 characters) or do not adhere to expected complexity patterns (indicated by the absence of '$' in the hash structure, which may imply a missing complexity element).\n\n## Standard Reference\n8.3.6 If passwords/passphrases are used a...",
+        "iteration": 3
+      },
+      {
+        "case": "PCI_DSS_ST4_TC008_Missing_MFA_Tracking_Analysis",
+        "description": "Stage 4: analysis quality for missing MFA implementation tracking",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['2FA', 'MFA', 'multi-factor', 'multiple authentication', 'two-factor']",
+            "Any of ['admin access', 'administrative access', 'privileged access']",
+            "Any of ['authentication factor', 'authentication method']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 4,
+          "total": 5,
+          "details": [
+            "Any of ['admin', 'elevate', 'elevation', 'escalate', 'escalation']",
+            "Any of ['CDE', 'Cardholder Data Environment']",
+            "credentials",
+            "unauthorized"
+          ]
+        },
+        "remediation_steps": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "Any of ['Enable multi-factor authentication for privileged users', 'Implement multi-factor authentication for privileged users']",
+            "Any of ['Enforce MFA for privileged / administrative access', 'Require MFA for privileged / administrative access']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe system is failing to enforce Multi-factor authentication (MFA) for users with elevated privileges, specifically those classified as 'admin' or 'privileged' within the user base. This represents a critical lapse in controlling access to system components within the Cardholder Data Environment (CDE).\n\n## Standard Reference\nThis violation directly relates to the requirements surrounding the implementation and configuration of Multi-factor authentication (MFA) systems, speci...",
+        "iteration": 3
+      },
+      {
+        "case": "PCI_DSS_ST4_TC009_Inadequate_Audit_Logging_Analysis",
+        "description": "Stage 4: analysis quality for missing or weak audit logging controls",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['anomalies', 'anomaly', 'forensic analysis', 'suspicious activity']",
+            "Any of ['audit log', 'log events', 'logging']",
+            "Any of ['destruction', 'integrity', 'tamper', 'unauthorized modification']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 4,
+          "total": 5,
+          "details": [
+            "Any of ['alerting', 'detection', 'monitor', 'monitoring']",
+            "Any of ['historical logs', 'log history', 'retention']",
+            "Any of ['NTP', 'clock drift', 'time sync', 'time synchronization']",
+            "Any of ['CDE', 'critical security controls', 'system components']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 5,
+          "total": 5,
+          "details": [
+            "Any of ['Enable audit logging on system components', 'Implement centralized audit logging']",
+            "Any of ['Implement tamper-evident log protection', 'Protect logs from unauthorized modification and deletion', 'Restrict write/delete access to logs']",
+            "Any of ['Configure long-term log retention', 'Increase log retention to at least one year / 12 months / 365 days', 'Retain logs for at least one year / 12 months / 365 days']",
+            "Any of ['Enable time synchronization across all systems', 'Implement centralized time synchronization', 'Network Time Protocol (NTP)', 'Synchronize system clocks']",
+            "Any of ['Configure alerts for suspicious activity', 'Define periodic log review process', 'Establish and enforce regular audit log review procedures']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe database audit configuration exhibits multiple critical security deficiencies, including logging being disabled, inadequate retention periods, lack of integrity protection, failure to synchronize time across systems, and absence of defined review processes for audit logs.\n\n## Standard Reference\nRequirement 10: Log and Monitor All Access to System Components and Cardholder Data\nSpecifically pertaining to:\n*   10.2.1: Audit logs are enabled and active for all system compon...",
+        "iteration": 3
+      },
+      {
+        "case": "PCI_DSS_ST4_TC001_CVV_Storage_Analysis",
+        "description": "Stage 4: analysis quality for CVV storage violation",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['CVC', 'CVV', 'card verification value']",
+            "Any of ['SAD', 'Sensitive Authentication Data', 'Sensitive Cardholder Data']",
+            "Any of ['limited', 'not allowed', 'not stored', 'prohibited']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 3,
+          "total": 4,
+          "details": [
+            "Any of ['counterfeit cards', 'counterfeit payment cards']",
+            "fraudulent transaction",
+            "Any of ['cleartext', 'encrypt', 'plaintext', 'unencrypt']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "Any of ['Delete CVV column / data from database', 'Drop CVV column / data from database', 'Remove CVV column / data from database']",
+            "Any of ['Document Policies and Business Justification', 'Review Policies and Business Justification']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe database schema is storing Sensitive Authentication Data (SAD), specifically the Card Verification Value (CVV), in persistent storage. This constitutes a direct violation of PCI-DSS requirements concerning the storage of sensitive cardholder data.\n\n## Standard Reference\nPCI DSS v4.0.1 Requirement 3.3.1.a and 3.3.1.b: \"SAD is not stored after authorization, even if encrypted. All sensitive authentication data received is rendered unrecoverable upon completion of the autho...",
+        "iteration": 4
+      },
+      {
+        "case": "PCI_DSS_ST4_TC002_Unencrypted_PAN_Analysis",
+        "description": "Stage 4: analysis quality for unencrypted PAN storage",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['PAN', 'Primary Account Number']",
+            "Any of ['cleartext', 'cryptography', 'encrypt', 'plaintext', 'unecrypt']",
+            "unauthorized"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 4,
+          "total": 6,
+          "details": [
+            "Any of ['defense in depth', 'defense-in-depth']",
+            "reconstruct",
+            "Any of ['strong cryptography', 'unreadable']",
+            "Any of ['masking', 'tokenization', 'truncate', 'truncation']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Encrypt PAN using AES-256', 'Encrypt card number column using AES-256', 'Encrypt card_number column using AES-256']",
+            "Any of ['Implement encryption key management', 'Implement encryption key-management', 'Use encryption key management', 'Use encryption key-management']",
+            "Any of ['Delete cleartext data', 'Delete plaintext data', 'Drop cleartext data', 'Drop plaintext data', 'Remove cleartext data', 'Remove plaintext data']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe database contains instances where the Primary Account Number (PAN) is stored in cleartext, indicating a failure to render stored PAN unreadable wherever it is stored.\n\n## Standard Reference\nRequirement 3.5.1: PAN is rendered unreadable anywhere it is stored by using any of the following approaches:\n* One-way hashes based on strong cryptography of the entire PAN.\n* Truncation (hashing cannot be used to replace the truncated segment of PAN).\n* Index tokens.\n* Strong crypto...",
+        "iteration": 4
+      },
+      {
+        "case": "PCI_DSS_ST4_TC003_Track_Data_Analysis",
+        "description": "Stage 4: analysis quality for track data violation",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['SAD', 'Sensitive Authentication Data', 'Sensitive Cardholder Data']",
+            "Any of ['full track', 'track 1', 'track 2']",
+            "Any of ['limited', 'not allowed', 'not stored', 'prohibited']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 4,
+          "total": 5,
+          "details": [
+            "Any of ['chip', 'magnetic stripe', 'magnetic-stripe']",
+            "Any of ['counterfeit card', 'counterfeit payment card', 'reproduce card', 'reproduce payment card']",
+            "fraudulent transaction",
+            "Any of ['after authorization', 'after authorization is complete', 'after the authorization', 'post-authorization']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Delete track 1 data and track 2 data columns', 'Delete track1_data and track2_data columns', 'Drop track 1 data and track 2 data columns', 'Drop track1_data and track2_data columns', 'Remove track 1 data and track 2 data columns', 'Remove track1_data and track2_data columns']",
+            "Any of ['Delete all track data', 'Drop all track data', 'Remove all track data']",
+            "Any of ['Ensure data deletion after authorization', 'Ensure data removal after authorization']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe database schema currently retains the full contents of magnetic stripe data (track data) within the `card_swipes` table, which constitutes a direct violation of requirements regarding the retention of sensitive authentication data and full track data following authorization.\n\n## Standard Reference\nRequirement 3: Storage and protection of stored cardholder data (specifically pertaining to the non-retention of full track data).\nClause 3.3.1.1: The full contents of any trac...",
+        "iteration": 4
+      },
+      {
+        "case": "PCI_DSS_ST4_TC004_Unencrypted_Transmission_Analysis",
+        "description": "Stage 4: analysis quality for unencrypted data transmission indicators",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['HTTPS', 'SSL', 'TLS', 'TSL/SSL']",
+            "Any of ['cryptography', 'encrypt', 'encrypted', 'encryption']",
+            "Any of ['transfer', 'transit', 'transmission', 'transmit']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 7,
+          "total": 8,
+          "details": [
+            "Any of ['robust cryptography', 'strong cryptography']",
+            "Any of ['open', 'public', 'untrusted']",
+            "Any of ['data breach', 'security breach']",
+            "Any of ['MITM', 'eavesdrop', 'eavesdropping', 'intercept', 'interception', 'man-in-the-middle', 'sniffing', 'tamper']",
+            "Any of ['open network', 'public network', 'untrusted network']",
+            "Any of ['local network', 'localhost', 'loopback']",
+            "Any of ['secure configuration', 'secure protocol', 'secure version']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Change endpoints to HTTPS', 'Migrate endpoints to HTTPS', 'Update endpoints to use HTTPS']",
+            "Any of ['Enable TLS 1.2 or higher', 'Enable TLS 1.3', 'Enable TLS/SSL', 'Encrypt data at the session level', 'Implement TLS 1.2 or higher', 'Implement TLS 1.3', 'Implement TLS/SSL', 'Use TLS 1.2 or higher', 'Use TLS 1.3', 'Use TLS/SSL']",
+            "Any of ['Review certificate configuration', 'Validate certificate configuration', 'Verify certificate configuration']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe system is transmitting Cardholder Data (PAN) over open, public networks using unencrypted HTTP connections, which constitutes a violation of data protection requirements during transmission.\n\n## Standard Reference\nRequirement 4.2: PAN is protected with strong cryptography during transmission.\n\n## Detailed Analysis\nThe failed assertion, `SELECT * FROM api_configs WHERE endpoint LIKE 'http://%' AND endpoint NOT LIKE 'http://localhost%'`, returned records indicating that ce...",
+        "iteration": 4
+      },
+      {
+        "case": "PCI_DSS_ST4_TC005_Missing_Access_Controls_Analysis",
+        "description": "Stage 4: analysis quality for missing access control mechanisms",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['access control', 'access restriction']",
+            "Any of ['access need', 'access-need', 'business need', 'business-need', 'need to know', 'need-to-know']",
+            "Any of ['least privilege', 'least-privilege', 'minimum necessary', 'minimum privilege']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 3,
+          "total": 6,
+          "details": [
+            "Any of ['business function', 'job classification', 'job function', 'job role', 'minimum access', 'minimum level']",
+            "Any of ['access must be restricted', 'enforce permissions', 'restrict access']",
+            "Any of ['`PUBLIC` access', 'public access']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Configure attribute-based access control / ABAC', 'Configure role-based access control / RBAC', 'Establish attribute-based access control / ABAC', 'Establish role-based access control / RBAC', 'Implement attribute-based access control / ABAC', 'Implement role-based access control / RBAC']",
+            "Any of ['Create user roles and permissions', 'Define user roles and permissions', 'Establish user roles and permissions']",
+            "Any of ['Limit access to authorized personnel only', 'Restrict access to authorized personnel only', 'Revoke public access']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe database audit revealed that certain tables containing sensitive payment information, specifically `payments` and `credit_cards`, have permissions granted to the `PUBLIC` role. This indicates a failure in restricting access to Cardholder Data to only those entities that have a defined \"need to know.\"\n\n## Standard Reference\nRequirement 7: Restrict Access to System Components and Cardholder Data by Business Need to Know. Specifically, sections 7.1, 7.2, and 7.3 are relevan...",
+        "iteration": 4
+      },
+      {
+        "case": "PCI_DSS_ST4_TC006_Overly_Permissive_Access_Analysis",
+        "description": "Stage 4: analysis quality for overly broad access permissions",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 4,
+          "total": 4,
+          "details": [
+            "Any of ['access control', 'access restriction']",
+            "Any of ['access need', 'access-need', 'business need', 'business-need', 'need to know', 'need-to-know']",
+            "Any of ['business function', 'job classification', 'job function', 'job role']",
+            "Any of ['least privilege', 'least-privilege', 'minimum necessary', 'minimum privilege']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 3,
+          "total": 5,
+          "details": [
+            "unauthorized",
+            "Any of ['broad privileges', 'excessive privileges', 'overly permissive access', 'risk profile', 'unnecessary privileges']",
+            "Any of ['read access', 'read-only', 'write access']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Identify job functions and access needs', 'Identify job functions and define roles']",
+            "Any of ['Configure attribute-based access control / ABAC', 'Configure role-based access control / RBAC', 'Establish attribute-based access control / ABAC', 'Establish role-based access control / RBAC', 'Implement attribute-based access control / ABAC', 'Implement role-based access control / RBAC']",
+            "Any of ['Adjust privileges to the minimum required', 'Adjust user privileges', 'Assign only necessary permissions', 'Audit user privileges', 'Grant only necessary permissions', 'Limit user privileges', 'Modify user privileges', 'Provide minimum required permissions', 'Reduce user privileges', 'Review user privileges', 'Revoke excessive privileges', 'Update user privileges']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe system exhibits a violation of the principle of least privilege, as two user accounts, `app_user` and `reporting_user`, have been granted overly broad privileges ('ALL') on tables containing sensitive Cardholder Data.\n\n## Standard Reference\nRequirement 7: Restrict Access to System Components and Cardholder Data by Business Need to Know\nSpecifically, the principles described in section 7.2, which mandates that \"Access to system components and data is appropriately defined...",
+        "iteration": 4
+      },
+      {
+        "case": "PCI_DSS_ST4_TC007_Weak_Password_Storage_Analysis",
+        "description": "Stage 4: analysis quality for weak password hashing",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 2,
+          "total": 3,
+          "details": ["Any of ['hash', 'hashing']", "authentication"]
+        },
+        "preferred_phrases": {
+          "found": 2,
+          "total": 6,
+          "details": ["factor", "Any of ['salt', 'salted', 'salting']"]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 4,
+          "details": [
+            "Any of ['Create strong passwords', 'Generate strong passwords', 'Update passwords of affected accounts']",
+            "Any of ['Hash passwords securely', 'Implement strong password hashing algorithm', 'Use strong password hashing algorithm']",
+            "Any of ['Apply salt to password hashes', 'Include salt in password hashes']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe assertion failed because some user accounts in the system possess password hashes that do not meet established security strength requirements, specifically concerning hash length or the inclusion of expected salt/hashing indicators.\n\n## Standard Reference\nRequirement 8.3.2 (Implied by the failure of the assertion designed to check password protection standards, referencing the need for encryption/strong protection of stored credentials).\n\n## Detailed Analysis\nThe provide...",
+        "iteration": 4
+      },
+      {
+        "case": "PCI_DSS_ST4_TC008_Missing_MFA_Tracking_Analysis",
+        "description": "Stage 4: analysis quality for missing MFA implementation tracking",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['2FA', 'MFA', 'multi-factor', 'multiple authentication', 'two-factor']",
+            "Any of ['admin access', 'administrative access', 'privileged access']",
+            "Any of ['authentication factor', 'authentication method']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 4,
+          "total": 5,
+          "details": [
+            "Any of ['admin', 'elevate', 'elevation', 'escalate', 'escalation']",
+            "Any of ['CDE', 'Cardholder Data Environment']",
+            "credentials",
+            "unauthorized"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Enable multi-factor authentication for privileged users', 'Implement multi-factor authentication for privileged users']",
+            "Any of ['Record MFA enrollment in database', 'Track MFA enrollment in database']",
+            "Any of ['Enforce MFA for privileged / administrative access', 'Require MFA for privileged / administrative access']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe system has identified administrative and privileged users who lack the implementation of Multi-Factor Authentication (MFA) for their non-console access into the Cardholder Data Environment (CDE). This represents a failure to enforce mandatory multi-factor authentication for high-privilege access.\n\n## Standard Reference\nRequirement 8.4.1.a: Examine network and/or system configurations to verify MFA is required for all non-console into the CDE for personnel with administra...",
+        "iteration": 4
+      },
+      {
+        "case": "PCI_DSS_ST4_TC009_Inadequate_Audit_Logging_Analysis",
+        "description": "Stage 4: analysis quality for missing or weak audit logging controls",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['anomalies', 'anomaly', 'forensic analysis', 'suspicious activity']",
+            "Any of ['audit log', 'log events', 'logging']",
+            "Any of ['destruction', 'integrity', 'tamper', 'unauthorized modification']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 5,
+          "total": 5,
+          "details": [
+            "Any of ['alerting', 'detection', 'monitor', 'monitoring']",
+            "Any of ['historical logs', 'log history', 'retention']",
+            "Any of ['NTP', 'clock drift', 'time sync', 'time synchronization']",
+            "Any of ['CDE', 'critical security controls', 'system components']",
+            "Any of ['daily review', 'log review', 'periodic review', 'review logs']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 5,
+          "total": 5,
+          "details": [
+            "Any of ['Enable audit logging on system components', 'Implement centralized audit logging']",
+            "Any of ['Implement tamper-evident log protection', 'Protect logs from unauthorized modification and deletion', 'Restrict write/delete access to logs']",
+            "Any of ['Configure long-term log retention', 'Increase log retention to at least one year / 12 months / 365 days', 'Retain logs for at least one year / 12 months / 365 days']",
+            "Any of ['Enable time synchronization across all systems', 'Implement centralized time synchronization', 'Network Time Protocol (NTP)', 'Synchronize system clocks']",
+            "Any of ['Configure alerts for suspicious activity', 'Define periodic log review process', 'Establish and enforce regular audit log review procedures']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe audit assertion failed because the configuration for at least one audit log setup is non-compliant across several critical areas, including logging enablement, data retention period, integrity protection, time synchronization status, and log review frequency. This indicates a failure to adequately manage and protect audit logs as required by the standard.\n\n## Standard Reference\nThe failure relates to multiple facets of PCI-DSS v4.0.1 Requirement 10, specifically concerni...",
+        "iteration": 4
+      },
+      {
+        "case": "PCI_DSS_ST4_TC001_CVV_Storage_Analysis",
+        "description": "Stage 4: analysis quality for CVV storage violation",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['CVC', 'CVV', 'card verification value']",
+            "Any of ['SAD', 'Sensitive Authentication Data', 'Sensitive Cardholder Data']",
+            "Any of ['limited', 'not allowed', 'not stored', 'prohibited']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 1,
+          "total": 4,
+          "details": ["fraudulent transaction"]
+        },
+        "remediation_steps": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "Any of ['Delete CVV column / data from database', 'Drop CVV column / data from database', 'Remove CVV column / data from database']",
+            "Any of ['Document Policies and Business Justification', 'Review Policies and Business Justification']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe system is storing Sensitive Authentication Data (SAD), specifically the CVV, within the database, which is a direct violation of PCI DSS requirements regarding the retention and protection of cardholder data.\n\n## Standard Reference\n*   **Requirement 3.3:** Sensitive authentication data (SAD) is not stored after authorization.\n\n## Detailed Analysis\nThe assertion failed because the query `SELECT * FROM customers WHERE cvv IS NOT NULL` returned multiple rows, indicating tha...",
+        "iteration": 5
+      },
+      {
+        "case": "PCI_DSS_ST4_TC002_Unencrypted_PAN_Analysis",
+        "description": "Stage 4: analysis quality for unencrypted PAN storage",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "Any of ['PAN', 'Primary Account Number']",
+            "Any of ['cleartext', 'cryptography', 'encrypt', 'plaintext', 'unecrypt']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 2,
+          "total": 6,
+          "details": [
+            "Any of ['strong cryptography', 'unreadable']",
+            "Any of ['masking', 'tokenization', 'truncate', 'truncation']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Encrypt PAN using AES-256', 'Encrypt card number column using AES-256', 'Encrypt card_number column using AES-256']",
+            "Any of ['Implement encryption key management', 'Implement encryption key-management', 'Use encryption key management', 'Use encryption key-management']",
+            "Any of ['Delete cleartext data', 'Delete plaintext data', 'Drop cleartext data', 'Drop plaintext data', 'Remove cleartext data', 'Remove plaintext data']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe database contains instances where the Primary Account Number (PAN) is stored in cleartext or unrendered format within the `transactions` table. This represents a direct failure to secure stored Cardholder Data as mandated by the standard.\n\n## Standard Reference\nRequirement 3.5.1: PAN is rendered unreadable anywhere it is stored by using any of the following approaches:\n*   One-way hashes based on strong cryptography of the entire PAN.\n*   Truncation (hashing cannot be us...",
+        "iteration": 5
+      },
+      {
+        "case": "PCI_DSS_ST4_TC003_Track_Data_Analysis",
+        "description": "Stage 4: analysis quality for track data violation",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "Any of ['full track', 'track 1', 'track 2']",
+            "Any of ['limited', 'not allowed', 'not stored', 'prohibited']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 4,
+          "total": 5,
+          "details": [
+            "Any of ['chip', 'magnetic stripe', 'magnetic-stripe']",
+            "Any of ['counterfeit card', 'counterfeit payment card', 'reproduce card', 'reproduce payment card']",
+            "fraudulent transaction",
+            "Any of ['after authorization', 'after authorization is complete', 'after the authorization', 'post-authorization']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Delete track 1 data and track 2 data columns', 'Delete track1_data and track2_data columns', 'Drop track 1 data and track 2 data columns', 'Drop track1_data and track2_data columns', 'Remove track 1 data and track 2 data columns', 'Remove track1_data and track2_data columns']",
+            "Any of ['Delete all track data', 'Drop all track data', 'Remove all track data']",
+            "Any of ['Ensure data deletion after authorization', 'Ensure data removal after authorization']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe database schema contains stored full contents of track data (`track1_data` and/or `track2_data`) from payment card transactions, which constitutes a direct violation of standards prohibiting the retention of this sensitive data after authorization.\n\n## Standard Reference\n3.3.1.1 The full contents of any track are not stored upon completion of the authorization process.\n\n## Detailed Analysis\nThe provided failed assertion, `SELECT * FROM card_swipes WHERE track1_data IS NO...",
+        "iteration": 5
+      },
+      {
+        "case": "PCI_DSS_ST4_TC004_Unencrypted_Transmission_Analysis",
+        "description": "Stage 4: analysis quality for unencrypted data transmission indicators",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['HTTPS', 'SSL', 'TLS', 'TSL/SSL']",
+            "Any of ['cryptography', 'encrypt', 'encrypted', 'encryption']",
+            "Any of ['transfer', 'transit', 'transmission', 'transmit']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 6,
+          "total": 8,
+          "details": [
+            "Any of ['robust cryptography', 'strong cryptography']",
+            "Any of ['open', 'public', 'untrusted']",
+            "Any of ['MITM', 'eavesdrop', 'eavesdropping', 'intercept', 'interception', 'man-in-the-middle', 'sniffing', 'tamper']",
+            "Any of ['open network', 'public network', 'untrusted network']",
+            "Any of ['local network', 'localhost', 'loopback']",
+            "Any of ['secure configuration', 'secure protocol', 'secure version']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Change endpoints to HTTPS', 'Migrate endpoints to HTTPS', 'Update endpoints to use HTTPS']",
+            "Any of ['Enable TLS 1.2 or higher', 'Enable TLS 1.3', 'Enable TLS/SSL', 'Encrypt data at the session level', 'Implement TLS 1.2 or higher', 'Implement TLS 1.3', 'Implement TLS/SSL', 'Use TLS 1.2 or higher', 'Use TLS 1.3', 'Use TLS/SSL']",
+            "Any of ['Review certificate configuration', 'Validate certificate configuration', 'Verify certificate configuration']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe system is transmitting Cardholder Data over open, public networks using unencrypted HTTP connections. The observed configurations point to direct exposure of PAN transmissions over insecure protocols.\n\n## Standard Reference\nRequirement 4: Protect Cardholder Data with Strong Cryptography During Transmission Over Open, Public Networks. Specifically, the principle that \"PAN must be encrypted during transmission over networks that are easily accessed by malicious individuals...",
+        "iteration": 5
+      },
+      {
+        "case": "PCI_DSS_ST4_TC005_Missing_Access_Controls_Analysis",
+        "description": "Stage 4: analysis quality for missing access control mechanisms",
+        "requirement_identified": false,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['access control', 'access restriction']",
+            "Any of ['access need', 'access-need', 'business need', 'business-need', 'need to know', 'need-to-know']",
+            "Any of ['least privilege', 'least-privilege', 'minimum necessary', 'minimum privilege']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 4,
+          "total": 6,
+          "details": [
+            "Any of ['business function', 'job classification', 'job function', 'job role', 'minimum access', 'minimum level']",
+            "Any of ['data breach', 'security breach']",
+            "Any of ['access must be restricted', 'enforce permissions', 'restrict access']",
+            "Any of ['`PUBLIC` access', 'public access']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Configure attribute-based access control / ABAC', 'Configure role-based access control / RBAC', 'Establish attribute-based access control / ABAC', 'Establish role-based access control / RBAC', 'Implement attribute-based access control / ABAC', 'Implement role-based access control / RBAC']",
+            "Any of ['Create user roles and permissions', 'Define user roles and permissions', 'Establish user roles and permissions']",
+            "Any of ['Limit access to authorized personnel only', 'Restrict access to authorized personnel only', 'Revoke public access']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe assertion detected that the tables `payments` and `credit_cards` lack explicit restrictions on read access, as they appear to be accessible by users other than the `PUBLIC` role, which suggests a failure in restricting access to Cardholder Data.\n\n## Standard Reference\nRequirement 7: Restrict the access to Cardholder Data by business need-to-know. Specifically, the guidance mentions: \"Read access to audit logs files is limited to those with a job-related need.\" This princ...",
+        "iteration": 5
+      },
+      {
+        "case": "PCI_DSS_ST4_TC006_Overly_Permissive_Access_Analysis",
+        "description": "Stage 4: analysis quality for overly broad access permissions",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 4,
+          "details": [
+            "Any of ['access control', 'access restriction']",
+            "Any of ['business function', 'job classification', 'job function', 'job role']",
+            "Any of ['least privilege', 'least-privilege', 'minimum necessary', 'minimum privilege']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 2,
+          "total": 5,
+          "details": [
+            "unauthorized",
+            "Any of ['broad privileges', 'excessive privileges', 'overly permissive access', 'risk profile', 'unnecessary privileges']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "Any of ['Identify job functions and access needs', 'Identify job functions and define roles']",
+            "Any of ['Adjust privileges to the minimum required', 'Adjust user privileges', 'Assign only necessary permissions', 'Audit user privileges', 'Grant only necessary permissions', 'Limit user privileges', 'Modify user privileges', 'Provide minimum required permissions', 'Reduce user privileges', 'Review user privileges', 'Revoke excessive privileges', 'Update user privileges']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe audit revealed that certain user accounts possess excessive privileges (specifically 'ALL' access) on tables containing Cardholder Data, indicating a failure to enforce the principle of least privilege when granting access to users.\n\n## Standard Reference\nRequirement 7.2.2: Access is assigned to users, including privileged users, based on:\n*   Job classification and function.\n*   Least privileges necessary to perform job responsibilities.\n\n## Detailed Analysis\nThe assert...",
+        "iteration": 5
+      },
+      {
+        "case": "PCI_DSS_ST4_TC007_Weak_Password_Storage_Analysis",
+        "description": "Stage 4: analysis quality for weak password hashing",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['complex', 'complexity']",
+            "Any of ['hash', 'hashing']",
+            "authentication"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 4,
+          "total": 6,
+          "details": [
+            "factor",
+            "characters",
+            "minimum",
+            "Any of ['password guidelines', 'password policy', 'password requirements']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 2,
+          "total": 4,
+          "details": [
+            "Any of ['Create strong passwords', 'Generate strong passwords', 'Update passwords of affected accounts']",
+            "Any of ['Hash passwords securely', 'Implement strong password hashing algorithm', 'Use strong password hashing algorithm']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe database contains records for system and application accounts that utilize passwords or passphrases that are not adequately protected, specifically failing to meet minimum complexity or length standards for stored authentication factors.\n\n## Standard Reference\nRequirement 8.6.2 and related guidance concerning the protection of passwords/passphrases for any application and system accounts that can be used for interactive login.\n\n## Detailed Analysis\nThe executed assertion...",
+        "iteration": 5
+      },
+      {
+        "case": "PCI_DSS_ST4_TC008_Missing_MFA_Tracking_Analysis",
+        "description": "Stage 4: analysis quality for missing MFA implementation tracking",
+        "requirement_identified": false,
+        "required_phrases": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "Any of ['2FA', 'MFA', 'multi-factor', 'multiple authentication', 'two-factor']",
+            "Any of ['authentication factor', 'authentication method']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 4,
+          "total": 5,
+          "details": [
+            "Any of ['admin', 'elevate', 'elevation', 'escalate', 'escalation']",
+            "Any of ['CDE', 'Cardholder Data Environment']",
+            "credentials",
+            "unauthorized"
+          ]
+        },
+        "remediation_steps": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['Enable multi-factor authentication for privileged users', 'Implement multi-factor authentication for privileged users']",
+            "Any of ['Record MFA enrollment in database', 'Track MFA enrollment in database']",
+            "Any of ['Enforce MFA for privileged / administrative access', 'Require MFA for privileged / administrative access']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe database contains users with elevated privileges, such as 'admin' or 'privileged' accounts, who are not secured with Multi-Factor Authentication (MFA), which constitutes a failure to establish strong authentication for users and administrators accessing the system components.\n\n## Standard Reference\nRequirement 8: Identify Users and Authenticate Access to System Components.\nSpecifically, this relates to the principle that \"Strong authentication for users and administrator...",
+        "iteration": 5
+      },
+      {
+        "case": "PCI_DSS_ST4_TC009_Inadequate_Audit_Logging_Analysis",
+        "description": "Stage 4: analysis quality for missing or weak audit logging controls",
+        "requirement_identified": true,
+        "required_phrases": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['anomalies', 'anomaly', 'forensic analysis', 'suspicious activity']",
+            "Any of ['audit log', 'log events', 'logging']",
+            "Any of ['destruction', 'integrity', 'tamper', 'unauthorized modification']"
+          ]
+        },
+        "preferred_phrases": {
+          "found": 5,
+          "total": 5,
+          "details": [
+            "Any of ['alerting', 'detection', 'monitor', 'monitoring']",
+            "Any of ['historical logs', 'log history', 'retention']",
+            "Any of ['NTP', 'clock drift', 'time sync', 'time synchronization']",
+            "Any of ['CDE', 'critical security controls', 'system components']",
+            "Any of ['daily review', 'log review', 'periodic review', 'review logs']"
+          ]
+        },
+        "remediation_steps": {
+          "found": 5,
+          "total": 5,
+          "details": [
+            "Any of ['Enable audit logging on system components', 'Implement centralized audit logging']",
+            "Any of ['Implement tamper-evident log protection', 'Protect logs from unauthorized modification and deletion', 'Restrict write/delete access to logs']",
+            "Any of ['Configure long-term log retention', 'Increase log retention to at least one year / 12 months / 365 days', 'Retain logs for at least one year / 12 months / 365 days']",
+            "Any of ['Enable time synchronization across all systems', 'Implement centralized time synchronization', 'Network Time Protocol (NTP)', 'Synchronize system clocks']",
+            "Any of ['Configure alerts for suspicious activity', 'Define periodic log review process', 'Establish and enforce regular audit log review procedures']"
+          ]
+        },
+        "analysis_excerpt": "## Violation Summary\nThe audit logs are not configured to meet essential security and retention standards required by the standard. Specifically, logging is disabled, the retention period is insufficient, the integrity of the logs is not protected, time synchronization is not enforced, and the review frequency is not defined.\n\n## Standard Reference\nThis violation relates to several aspects of Requirement 10 (Logging and Monitoring), including:\n\n*   **10.2.1:** Audit logs are enabled and active f...",
+        "iteration": 5
+      }
+    ]
+  },
+  "generation": {
+    "metrics": {
+      "total_cases": 40,
+      "keyword_coverage_rate": 0.7667,
+      "schema_coverage_rate": 0.9067,
+      "overall_score": 0.8367,
+      "raw_counts": {
+        "keywords": "92/120",
+        "tables_covered": "68/75"
+      }
+    },
+    "results": [
+      {
+        "case": "PCI_DSS_ST2_TC001_Req3_Stored_Account_Data",
+        "description": "Stage 2: generate assertions for prohibited CVV/PAN storage",
+        "assertion_count": 3,
+        "keywords": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "Any of ['SAD', 'card_verification_value', 'cvc', 'cvv', 'sensitive_authentication_data']",
+            "Any of ['cleartext', 'plaintext', 'unencrypted']"
+          ]
+        },
+        "tables_covered": {
+          "found": 0,
+          "total": 1,
+          "details": []
+        },
+        "assertions": [
+          "SELECT pm.payment_method_id AS payment_method_id, pm.card_number AS card_number_plaintext FROM payment_methods pm WHERE pm.card_number NOT REGEXP '^(0[0-9]{12}(?:[0-9]{3})?|[1-5][0-9]{14}|3[47][0-9]{13})$' OR pm.card_number IS NULL AND pm.card_number != ''",
+          "SELECT pm.payment_method_id AS payment_method_id, pm.cvv AS cvv_plaintext FROM payment_methods pm WHERE pm.cvv IS NOT NULL AND pm.cvv != ''",
+          "SELECT pm.payment_method_id AS payment_method_id, pm.card_number AS card_number_unprotected FROM payment_methods pm WHERE pm.card_number IS NOT NULL AND pm.card_number != '' AND NOT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'payment_methods'::regclass AND attname = 'card_number' AND data_type IN ('bytea', 'varchar') AND description ILIKE '%encrypted%')"
+        ],
+        "iteration": 1
+      },
+      {
+        "case": "PCI_DSS_ST2_TC002_Req4_Transmission",
+        "description": "Stage 2: generate assertions for insecure transmission endpoints",
+        "assertion_count": 9,
+        "keywords": {
+          "found": 1,
+          "total": 2,
+          "details": ["Any of ['in_transit', 'network', 'transmission']"]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["api_configs"]
+        },
+        "assertions": [
+          "SELECT id AS api_configs_potential_violation FROM api_configs WHERE endpoint LIKE '%card_data%' OR endpoint LIKE '%pan%'",
+          "SELECT id AS api_configs_potential_violation FROM api_configs WHERE service_name LIKE '%payment%' AND uses_tls = FALSE",
+          "SELECT integration_id AS network_integrations_potential_violation FROM network_integrations WHERE transport LIKE '%http%' AND integration_type LIKE '%card%'",
+          "SELECT webhook_id AS webhook_subscriptions_potential_violation FROM webhook_subscriptions WHERE callback_url LIKE '%payment%' AND auth_header_value IS NULL",
+          "SELECT id AS api_configs_no_tls_for_sensitive_endpoint FROM api_configs WHERE endpoint LIKE '%card%' AND uses_tls = FALSE",
+          "SELECT integration_id AS network_integrations_cleartext_risk FROM network_integrations WHERE transport = 'HTTP' AND destination_port IN (80, 443) AND integration_type = 'payment'",
+          "SELECT webhook_id AS webhook_subscriptions_no_encryption_indicator FROM webhook_subscriptions WHERE auth_header_value IS NULL AND subscriber_name LIKE '%payment%'",
+          "SELECT id AS api_configs_unverified_security FROM api_configs WHERE certificate_pinning_enabled = FALSE AND protocol = 'TLS'",
+          "SELECT integration_id AS network_integrations_ambiguous_data_risk FROM network_integrations WHERE notes LIKE '%cardholder%' OR notes LIKE '%pan%'"
+        ],
+        "iteration": 1
+      },
+      {
+        "case": "PCI_DSS_ST2_TC003_Req7_Access_Control",
+        "description": "Stage 2: generate assertions for missing least-privilege controls",
+        "assertion_count": 8,
+        "keywords": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "privilege_type",
+            "Any of ['authorization', 'permission', 'role']"
+          ]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["user_privileges"]
+        },
+        "assertions": [
+          "SELECT user_id, username FROM users WHERE NOT EXISTS (SELECT 1 FROM protected_assets WHERE protected_assets.table_name = 'users' AND protected_assets.data_classification IN ('CDE', 'Cardholder Data')) AND (department LIKE '%finance%' OR department LIKE '%billing%') -- Checks for high-risk access to users table without explicit asset classification/protection noted against CDE/CHD",
+          "SELECT up.user_id, up.table_name, up.privilege_type FROM user_privileges up WHERE up.privilege_type IN ('SELECT', 'INSERT', 'UPDATE', 'DELETE') AND up.table_name NOT IN ('users', 'roles') -- Detects general data manipulation privileges on tables not explicitly tracked as protected assets",
+          "SELECT u.user_id, u.username FROM users WHERE u.is_active = TRUE AND NOT EXISTS (SELECT 1 FROM user_privileges up WHERE up.user_id = u.user_id AND up.privilege_type = 'READ') -- Identifies active users potentially lacking minimum required read privileges, if applicable, though this is more of a process check",
+          "SELECT up.user_id, up.table_name, up.user_name FROM user_privileges up WHERE up.privilege_type = 'ALL' -- Identifies users granted excessively broad privileges (ALL) which violates least privilege principle (PCI 7.3.2)",
+          "SELECT p.table_name, p.data_classification FROM protected_assets p WHERE p.data_classification IS NULL AND p.table_name IN ('users', 'roles') -- Flags tables that may contain Cardholder Data but lack defined classification",
+          "SELECT up.user_name, up.table_name FROM user_privileges up WHERE up.granted_at > DATE_SUB(NOW(), INTERVAL 90 DAY) AND up.privilege_type = 'SELECT' -- Basic monitoring/logging check: reviews recent access grants (though logging of data access itself is the true requirement)",
+          "SELECT u.username FROM users WHERE u.department IN ('IT Operations', 'System Admins') AND NOT EXISTS (SELECT 1 FROM user_privileges up WHERE up.user_id = u.user_id AND up.role_id IN (SELECT role_id FROM roles WHERE role_name = 'Restricted_CDE_Access')) -- Hypothetical check for critical admin roles lacking specific CDE access constraints (PCI 7.3.1)",
+          "SELECT u.user_id, u.username FROM users WHERE u.is_active = FALSE AND EXISTS (SELECT 1 FROM user_privileges up WHERE up.user_id = u.user_id) -- Identifies deactivated users who still have assigned privileges, suggesting cleanup failure (PCI 7.3)"
+        ],
+        "iteration": 1
+      },
+      {
+        "case": "PCI_DSS_ST2_TC004_Req8_Authentication",
+        "description": "Stage 2: generate assertions for weak/default credentials and auth controls",
+        "assertion_count": 3,
+        "keywords": {
+          "found": 2,
+          "total": 2,
+          "details": [
+            "Any of ['auth', 'credential', 'identity']",
+            "Any of ['hash', 'mfa', 'multi-factor', 'multi_factor', 'password']"
+          ]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["users"]
+        },
+        "assertions": [
+          "SELECT user_id AS potentially_unprotected_user FROM users WHERE password_hash IS NULL;",
+          "SELECT auth_method_id AS potentially_unprotected_auth_method FROM authentication_methods WHERE method_type LIKE '%plain_text%' OR method_type LIKE '%unencrypted%';",
+          "SELECT login_event_id AS potentially_unlogged_event FROM login_events WHERE occurred_at IS NULL OR occurred_at = '0000-00-00 00:00:00';"
+        ],
+        "iteration": 1
+      },
+      {
+        "case": "PCI_DSS_ST2_TC005_Req10_Logging_Monitoring",
+        "description": "Stage 2: generate assertions for missing audit logging coverage",
+        "assertion_count": 5,
+        "keywords": {
+          "found": 1,
+          "total": 2,
+          "details": ["Any of ['audit', 'log', 'logging']"]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["payments"]
+        },
+        "assertions": [
+          "SELECT payment_id AS violation_record_id, pan AS potential_plaintext_pan_violation FROM payments WHERE pan IS NOT NULL AND pan REGEXP '[0-9]{13,16}' AND LENGTH(pan) > 10;",
+          "SELECT payment_id AS violation_record_id FROM payments WHERE processed_by_user_id IS NULL;",
+          "SELECT user_id AS violation_user_id, action AS suspicious_action FROM access_events WHERE user_id IS NULL;",
+          "SELECT log_id AS violation_log_id FROM audit_log WHERE actor_user_id IS NULL;",
+          "SELECT payment_id AS violation_record_id, pan AS potential_plaintext_pan_violation FROM payments WHERE pan IS NOT NULL AND (pan NOT LIKE 'XXXX%' AND pan NOT LIKE '************%');"
+        ],
+        "iteration": 1
+      },
+      {
+        "case": "PCI_DSS_ST2_TC006_Multi_Stored_Data_Access_Logging",
+        "description": "Stage 2: generate assertions for combined PAN/CVV storage, broad access, and weak audit trails",
+        "assertion_count": 10,
+        "keywords": {
+          "found": 3,
+          "total": 4,
+          "details": [
+            "Any of ['SAD', 'cvc', 'cvv', 'sensitive_authentication_data']",
+            "Any of ['card_number', 'pan', 'primary_account_number']",
+            "Any of ['audit', 'log', 'traceability']"
+          ]
+        },
+        "tables_covered": {
+          "found": 3,
+          "total": 3,
+          "details": ["customer_cards", "app_permissions", "security_log"]
+        },
+        "assertions": [
+          "SELECT card_id AS violation_record FROM customer_cards WHERE PAN IS NOT NULL AND PAN NOT LIKE 'XXXX%'",
+          "SELECT card_id AS violation_record FROM customer_cards WHERE CVV IS NOT NULL AND CVV NOT LIKE 'XXX#'",
+          "SELECT card_id AS violation_record FROM customer_cards WHERE PAN IS NOT NULL AND PAN NOT IN (SELECT hashed_pan FROM hashed_data_mock) AND PAN NOT LIKE 'XXXXXXXXXXXX1234' AND PAN NOT LIKE 'XXXXXXXXXXXX5678'",
+          "SELECT card_id AS violation_record FROM customer_cards WHERE CVV IS NOT NULL AND CVV NOT LIKE 'NONE'",
+          "SELECT * FROM customer_cards WHERE PAN IS NOT NULL AND CVV IS NOT NULL",
+          "SELECT permission_id AS violation_record FROM app_permissions WHERE role_name = 'PUBLIC' AND privilege_type IN ('READ', 'WRITE')",
+          "SELECT log_id AS violation_record FROM security_log WHERE event_type NOT LIKE '%ACCESS_CARDHOLDER_DATA%'",
+          "SELECT card_id AS violation_record FROM customer_cards WHERE PAN IS NOT NULL AND cardholder_name IS NOT NULL",
+          "SELECT 1 AS compliance_check WHERE (SELECT count(*) FROM customer_cards WHERE PAN IS NOT NULL AND PAN NOT LIKE 'XXXXXXXXXXXX%') > 0",
+          "SELECT 1 AS compliance_check WHERE (SELECT count(*) FROM customer_cards WHERE CVV IS NOT NULL AND CVV <> 'NULL') > 0"
+        ],
+        "iteration": 1
+      },
+      {
+        "case": "PCI_DSS_ST2_TC007_Multi_Transmission_Auth_Logging",
+        "description": "Stage 2: generate assertions for insecure transport, weak authentication controls, and insufficient event logging",
+        "assertion_count": 2,
+        "keywords": {
+          "found": 1,
+          "total": 3,
+          "details": ["Any of ['default', 'hash', 'password', 'weak']"]
+        },
+        "tables_covered": {
+          "found": 2,
+          "total": 3,
+          "details": ["integrations", "user_accounts"]
+        },
+        "assertions": [
+          "SELECT user_id AS potentially_unauthorized_access_user FROM user_accounts WHERE password_hash IS NULL;",
+          "SELECT * FROM integrations WHERE transport_protocol NOT IN ('HTTPS', 'TLS');"
+        ],
+        "iteration": 1
+      },
+      {
+        "case": "PCI_DSS_ST2_TC008_Multi_Core_Control_Gaps",
+        "description": "Stage 2: generate assertions for combined card-data storage, transmission, access, and authentication control gaps",
+        "assertion_count": 7,
+        "keywords": {
+          "found": 5,
+          "total": 5,
+          "details": [
+            "Any of ['SAD', 'cvv', 'security_code', 'sensitive_authentication_data']",
+            "Any of ['card_number', 'cleartext', 'pan', 'unencrypted']",
+            "Any of ['SSL', 'https', 'in_transit', 'tls', 'transmission']",
+            "Any of ['RBAC', 'access-need', 'access_control', 'access_need', 'business-need', 'business_need', 'least_privilege', 'need-to-know', 'need_to_know', 'role-based_access', 'role_based_access']",
+            "Any of ['2-factor', '2FA', '2_factor', 'MFA', 'authentication', 'default_credential', 'multi-factor', 'multi_factor', 'multiple_authentication', 'two-factor', 'two_factor']"
+          ]
+        },
+        "tables_covered": {
+          "found": 4,
+          "total": 4,
+          "details": [
+            "payment_profiles",
+            "outbound_endpoints",
+            "role_grants",
+            "admin_credentials"
+          ]
+        },
+        "assertions": [
+          "SELECT profile_id, 'Unencrypted PAN detected in payment_profiles.card_number' AS violation FROM payment_profiles WHERE card_number IS NOT NULL AND tokenized = FALSE",
+          "SELECT profile_id, 'Sensitive Authentication Data (Security Code/CVV) stored in clear text in payment_profiles' AS violation FROM payment_profiles WHERE security_code IS NOT NULL",
+          "SELECT profile_id, 'PAN is stored without proper encryption or truncation mechanism' AS violation FROM payment_profiles WHERE card_number IS NOT NULL AND (tokenized = FALSE OR LENGTH(card_number) > 0 AND NOT EXISTS (SELECT 1 FROM payment_profiles WHERE profile_id = payment_profiles.profile_id AND tokenized = TRUE))",
+          "SELECT credential_id, 'Administrative credential stored without required multi-factor authentication tracking/flag' AS violation FROM admin_credentials WHERE mfa_secret IS NULL AND username IS NOT NULL",
+          "SELECT grant_id, 'Role granting access without explicit restriction or business need-to-know definition' AS violation FROM role_grants WHERE object_name IS NOT NULL AND privilege IS NOT NULL",
+          "SELECT endpoint_id, 'Outbound endpoint potentially transmitting Cardholder Data without strong cryptography enforcement' AS violation FROM outbound_endpoints WHERE requires_tls = FALSE AND service_name LIKE '%payment%'",
+          "SELECT profile_id, 'PAN is present without associated tokenization flag' AS violation FROM payment_profiles WHERE card_number IS NOT NULL AND tokenized = FALSE"
+        ],
+        "iteration": 1
+      },
+      {
+        "case": "PCI_DSS_ST2_TC001_Req3_Stored_Account_Data",
+        "description": "Stage 2: generate assertions for prohibited CVV/PAN storage",
+        "assertion_count": 8,
+        "keywords": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['SAD', 'card_verification_value', 'cvc', 'cvv', 'sensitive_authentication_data']",
+            "Any of ['card number', 'pan', 'primary_account_number']",
+            "Any of ['cleartext', 'plaintext', 'unencrypted']"
+          ]
+        },
+        "tables_covered": {
+          "found": 0,
+          "total": 1,
+          "details": []
+        },
+        "assertions": [
+          "SELECT payment_method_id, card_number AS Potential_Unencrypted_PAN FROM payment_methods WHERE card_number IS NOT NULL AND card_number != 'TOKEN_REF_PLACEHOLDER' AND LENGTH(card_number) > 13",
+          "SELECT payment_method_id, cvv AS Stored_SAD_Violation FROM payment_methods WHERE cvv IS NOT NULL AND LENGTH(cvv) > 0",
+          "SELECT payment_method_id, card_number AS Potential_Unencrypted_PAN_Check_Truncation_Or_Masking FROM payment_methods WHERE card_number IS NOT NULL AND LENGTH(card_number) >= 13 AND LENGTH(card_number) <= 19",
+          "SELECT payment_method_id, card_number AS Potential_Unencrypted_PAN_Full_Length_Check FROM payment_methods WHERE card_number IS NOT NULL AND LENGTH(card_number) >= 16",
+          "SELECT payment_method_id, card_number AS Potential_Unencrypted_PAN_Stored_In_Database FROM payment_methods WHERE card_number IS NOT NULL AND token_reference IS NULL",
+          "SELECT payment_method_id, exp_month, exp_year AS Potentially_Stored_Sensitive_Data FROM payment_methods WHERE exp_month IS NOT NULL AND exp_year IS NOT NULL AND token_reference IS NULL",
+          "SELECT p.payment_method_id, p.card_number AS Unencrypted_PAN_Violation FROM payment_methods p LEFT JOIN invoices i ON p.payment_method_id = i.payment_method_id WHERE p.card_number IS NOT NULL AND p.card_number != 'TOKEN_REF_PLACEHOLDER' AND i.invoice_id IS NOT NULL",
+          "SELECT p.payment_method_id, p.cvv AS SAD_Stored_Post_Authorization_Violation FROM payment_methods p WHERE p.cvv IS NOT NULL AND p.cvv != ''"
+        ],
+        "iteration": 2
+      },
+      {
+        "case": "PCI_DSS_ST2_TC002_Req4_Transmission",
+        "description": "Stage 2: generate assertions for insecure transmission endpoints",
+        "assertion_count": 3,
+        "keywords": {
+          "found": 0,
+          "total": 2,
+          "details": []
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["api_configs"]
+        },
+        "assertions": [
+          "SELECT * FROM api_configs WHERE protocol = 'HTTP' OR uses_tls = FALSE",
+          "SELECT * FROM api_configs WHERE tls_min_version IS NULL AND uses_tls = TRUE",
+          "SELECT * FROM webhook_subscriptions WHERE created_at IS NULL"
+        ],
+        "iteration": 2
+      },
+      {
+        "case": "PCI_DSS_ST2_TC003_Req7_Access_Control",
+        "description": "Stage 2: generate assertions for missing least-privilege controls",
+        "assertion_count": 6,
+        "keywords": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "privilege_type",
+            "Any of ['authorization', 'permission', 'role']"
+          ]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["user_privileges"]
+        },
+        "assertions": [
+          "SELECT user_id AS user_id, username AS username FROM users WHERE created_at IS NULL OR created_at = '0000-00-00 00:00:00' AND department IS NULL UNION SELECT 1",
+          "SELECT user_id AS user_id, username AS username FROM users WHERE created_at IS NULL",
+          "SELECT user_id AS user_id, username AS username FROM users WHERE created_at IS NOT NULL AND (updated_at IS NULL OR updated_at < created_at)",
+          "SELECT user_id AS user_id, username AS username FROM users WHERE is_active = FALSE AND department IS NULL",
+          "SELECT T1.privilege_id AS privilege_id, T1.user_id AS user_id, T1.role_id AS role_id, T1.table_name AS table_name, T1.privilege_type AS privilege_type FROM user_privileges AS T1 LEFT JOIN roles AS T2 ON T1.role_id = T2.role_id WHERE T2.description IS NULL AND T1.table_name LIKE '%cardholder%';",
+          "SELECT T1.asset_id AS asset_id, T1.table_name AS table_name, T1.data_classification AS data_classification FROM protected_assets AS T1 WHERE T1.data_classification IS NULL OR T1.data_classification NOT LIKE '%Sensitive%';"
+        ],
+        "iteration": 2
+      },
+      {
+        "case": "PCI_DSS_ST2_TC004_Req8_Authentication",
+        "description": "Stage 2: generate assertions for weak/default credentials and auth controls",
+        "assertion_count": 6,
+        "keywords": {
+          "found": 2,
+          "total": 2,
+          "details": [
+            "Any of ['auth', 'credential', 'identity']",
+            "Any of ['hash', 'mfa', 'multi-factor', 'multi_factor', 'password']"
+          ]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["users"]
+        },
+        "assertions": [
+          "SELECT user_id, 'Potential cleartext password storage in users table' AS violation_description FROM users WHERE password_hash IS NULL AND access_level NOT IN ('ADMIN', 'SUPER_ADMIN');",
+          "SELECT user_id, 'Potential lack of strong authentication factor documented or enforced for users' AS violation_description FROM users WHERE access_level NOT IN ('ADMIN', 'SUPER_ADMIN') AND failed_login_attempts > 0;",
+          "SELECT login_event_id, 'Audit log entry missing required time synchronization context' AS violation_description FROM login_events WHERE occurred_at IS NULL;",
+          "SELECT user_id, 'User account potentially lacks sufficient access logging context' AS violation_description FROM users WHERE username IS NULL;",
+          "SELECT user_id, 'Authentication method recorded but potentially not meeting strong authentication standards' AS violation_description FROM authentication_methods WHERE method_type IN ('PASSWORD_ONLY') AND is_enabled = TRUE;",
+          "SELECT user_id, 'No specific log tracking for administrative or sensitive data access detected for this user' AS violation_description FROM users WHERE access_level IN ('ADMIN', 'SUPER_ADMIN');"
+        ],
+        "iteration": 2
+      },
+      {
+        "case": "PCI_DSS_ST2_TC005_Req10_Logging_Monitoring",
+        "description": "Stage 2: generate assertions for missing audit logging coverage",
+        "assertion_count": 5,
+        "keywords": {
+          "found": 2,
+          "total": 2,
+          "details": [
+            "Any of ['audit', 'log', 'logging']",
+            "Any of ['created_at', 'timestamp', 'updated_at']"
+          ]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["payments"]
+        },
+        "assertions": [
+          "SELECT payment_id, pan AS potentially_unencrypted_pan_violation FROM payments WHERE LENGTH(pan) > 0",
+          "SELECT payment_id, pan AS potentially_unencrypted_pan_violation FROM payments WHERE pan IS NOT NULL AND pan NOT LIKE 'XXXX-%' AND pan NOT LIKE '%hash%'",
+          "SELECT user_id, action AS potential_overly_permissive_access FROM access_events WHERE action = 'SELECT' AND resource_name NOT IN ('payments', 'audit_log') AND action_timestamp >= NOW() - INTERVAL '1 year'",
+          "SELECT log_id, event_timestamp AS missing_retention_marker FROM audit_log WHERE event_timestamp < NOW() - INTERVAL '12 month'",
+          "SELECT payment_id, processed_by_user_id AS potential_insufficient_access_control_violation FROM payments WHERE processed_by_user_id IS NULL"
+        ],
+        "iteration": 2
+      },
+      {
+        "case": "PCI_DSS_ST2_TC006_Multi_Stored_Data_Access_Logging",
+        "description": "Stage 2: generate assertions for combined PAN/CVV storage, broad access, and weak audit trails",
+        "assertion_count": 6,
+        "keywords": {
+          "found": 3,
+          "total": 4,
+          "details": [
+            "Any of ['SAD', 'cvc', 'cvv', 'sensitive_authentication_data']",
+            "Any of ['card_number', 'pan', 'primary_account_number']",
+            "Any of ['audit', 'log', 'traceability']"
+          ]
+        },
+        "tables_covered": {
+          "found": 3,
+          "total": 3,
+          "details": ["customer_cards", "app_permissions", "security_log"]
+        },
+        "assertions": [
+          "SELECT card_id AS PAN_in_plaintext FROM customer_cards WHERE LENGTH(pan) > 0 AND (pan NOT LIKE 'XXXX%' OR pan IS NULL) AND pan NOT LIKE '%[a-zA-Z0-9]%'",
+          "SELECT card_id AS SAD_detected FROM customer_cards WHERE cvv IS NOT NULL AND LENGTH(cvv) > 0",
+          "SELECT card_id AS SAD_detected FROM customer_cards WHERE pan IS NOT NULL AND LENGTH(pan) > 0 AND (pan LIKE '^[a-zA-Z0-9]+$' OR pan NOT LIKE 'XXXX%')",
+          "SELECT card_id AS PAN_in_plaintext_check FROM customer_cards WHERE pan IS NOT NULL AND (CAST(pan AS TEXT) IS NOT NULL) AND (pan NOT GLOB 'XXXX*' AND pan IS NOT NULL)",
+          "SELECT role_name AS Unrestricted_Access_Role FROM app_permissions WHERE privilege_type IN ('SELECT', 'INSERT', 'UPDATE', 'DELETE') AND table_name IN ('customer_cards', 'security_log') AND role_name = 'public'",
+          "SELECT T1.log_id FROM security_log AS T1 LEFT JOIN customer_cards AS T2 ON T1.target_table = 'customer_cards' WHERE T2.pan IS NOT NULL AND T1.event_type NOT IN ('PAN_ACCESS', 'DATA_MODIFICATION')"
+        ],
+        "iteration": 2
+      },
+      {
+        "case": "PCI_DSS_ST2_TC007_Multi_Transmission_Auth_Logging",
+        "description": "Stage 2: generate assertions for insecure transport, weak authentication controls, and insufficient event logging",
+        "assertion_count": 7,
+        "keywords": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "Any of ['2-factor', '2FA', '2_factor', 'MFA', 'authentication', 'default_credential', 'multi-factor', 'multi_factor', 'multiple_authentication', 'two-factor', 'two_factor']",
+            "Any of ['default', 'hash', 'password', 'weak']"
+          ]
+        },
+        "tables_covered": {
+          "found": 3,
+          "total": 3,
+          "details": ["integrations", "user_accounts", "auth_events"]
+        },
+        "assertions": [
+          "SELECT user_id AS potential_plaintext_credential_violation FROM user_accounts WHERE password_hash IS NULL OR password_hash = ''",
+          "SELECT * FROM integrations WHERE transport_protocol NOT IN ('HTTPS', 'TLS') AND endpoint_url IS NOT NULL",
+          "SELECT user_id FROM auth_events WHERE event_type = 'CardDataAccess' AND event_result = 'Success' AND event_timestamp IS NULL",
+          "SELECT user_id FROM user_accounts WHERE mfa_enabled = FALSE AND username IS NOT NULL",
+          "SELECT * FROM user_accounts WHERE lockout_enabled = FALSE",
+          "SELECT event_id FROM auth_events WHERE event_type LIKE '%PAN%' OR event_type LIKE '%SensitiveData%'",
+          "SELECT * FROM integrations WHERE tls_version IN ('SSLv3', 'TLS 1.0', 'TLS 1.1') AND endpoint_url IS NOT NULL"
+        ],
+        "iteration": 2
+      },
+      {
+        "case": "PCI_DSS_ST2_TC008_Multi_Core_Control_Gaps",
+        "description": "Stage 2: generate assertions for combined card-data storage, transmission, access, and authentication control gaps",
+        "assertion_count": 14,
+        "keywords": {
+          "found": 5,
+          "total": 5,
+          "details": [
+            "Any of ['SAD', 'cvv', 'security_code', 'sensitive_authentication_data']",
+            "Any of ['card_number', 'cleartext', 'pan', 'unencrypted']",
+            "Any of ['SSL', 'https', 'in_transit', 'tls', 'transmission']",
+            "Any of ['RBAC', 'access-need', 'access_control', 'access_need', 'business-need', 'business_need', 'least_privilege', 'need-to-know', 'need_to_know', 'role-based_access', 'role_based_access']",
+            "Any of ['2-factor', '2FA', '2_factor', 'MFA', 'authentication', 'default_credential', 'multi-factor', 'multi_factor', 'multiple_authentication', 'two-factor', 'two_factor']"
+          ]
+        },
+        "tables_covered": {
+          "found": 4,
+          "total": 4,
+          "details": [
+            "payment_profiles",
+            "outbound_endpoints",
+            "role_grants",
+            "admin_credentials"
+          ]
+        },
+        "assertions": [
+          "SELECT profile_id AS potential_plaintext_pan FROM payment_profiles WHERE LENGTH(card_number) > 0 AND tokenized = FALSE;",
+          "SELECT profile_id AS potential_plaintext_pan_or_unencrypted_pan FROM payment_profiles WHERE LENGTH(card_number) > 0 AND tokenized = FALSE AND card_number NOT IN ('NULL', '');",
+          "SELECT profile_id AS potential_plaintext_pan FROM payment_profiles WHERE card_number IS NOT NULL AND tokenized = FALSE AND card_number != '0000000000000000';",
+          "SELECT profile_id AS potential_plaintext_pan_storage_violation FROM payment_profiles WHERE card_number IS NOT NULL AND tokenized = FALSE AND LENGTH(card_number) > 10;",
+          "SELECT profile_id AS potential_plaintext_pan_storage_violation_2 FROM payment_profiles WHERE security_code IS NOT NULL AND LENGTH(security_code) = 4;",
+          "SELECT profile_id AS potential_storage_of_sad_violation FROM payment_profiles WHERE security_code IS NOT NULL AND tokenized = FALSE;",
+          "SELECT credential_id AS potential_plaintext_password_violation FROM admin_credentials WHERE password_hash IS NULL OR password_hash = 'N/A';",
+          "SELECT credential_id AS potential_weak_authentication_factor FROM admin_credentials WHERE mfa_secret IS NULL AND is_default_credential = FALSE;",
+          "SELECT role_name AS potentially_over-privileged_role FROM role_grants WHERE privilege NOT IN ('read', 'select') AND object_name LIKE '%payment%' OR object_name LIKE '%card%';",
+          "SELECT object_name AS sensitive_data_object_with_insufficient_access_control FROM role_grants WHERE privilege NOT IN ('read', 'select') AND object_name LIKE '%card%' OR object_name LIKE '%account%';",
+          "SELECT endpoint_id AS endpoint_not_mandating_tls_for_data_transmission FROM outbound_endpoints WHERE requires_tls = FALSE AND service_name LIKE '%payment%';",
+          "SELECT profile_id AS potential_data_exposure_risk_in_non_tokenized_data FROM payment_profiles WHERE card_number IS NOT NULL AND tokenized = FALSE;",
+          "SELECT profile_id AS potential_storage_of_pan_without_encryption FROM payment_profiles WHERE card_number IS NOT NULL AND LENGTH(card_number) >= 16 AND tokenized = FALSE;",
+          "SELECT profile_id AS potential_storage_of_sensitive_authentication_data FROM payment_profiles WHERE security_code IS NOT NULL AND tokenized = FALSE;"
+        ],
+        "iteration": 2
+      },
+      {
+        "case": "PCI_DSS_ST2_TC001_Req3_Stored_Account_Data",
+        "description": "Stage 2: generate assertions for prohibited CVV/PAN storage",
+        "assertion_count": 10,
+        "keywords": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['SAD', 'card_verification_value', 'cvc', 'cvv', 'sensitive_authentication_data']",
+            "Any of ['card number', 'pan', 'primary_account_number']",
+            "Any of ['cleartext', 'plaintext', 'unencrypted']"
+          ]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["customers"]
+        },
+        "assertions": [
+          "SELECT payment_method_id AS violation_id, card_number AS potentially_plaintext_pan_violation FROM payment_methods WHERE card_number IS NOT NULL AND card_number NOT LIKE 'XXXX%';",
+          "SELECT payment_method_id AS violation_id, cvv AS prohibited_sad_violation FROM payment_methods WHERE cvv IS NOT NULL AND cvv != '';",
+          "SELECT payment_method_id AS violation_id, card_number AS potentially_plaintext_pan_violation FROM payment_methods WHERE card_number IS NOT NULL AND card_number NOT LIKE 'XXXX%' AND card_number NOT LIKE 'XXXXXXXXXXXX%';",
+          "SELECT payment_method_id AS violation_id, card_number AS potentially_plaintext_pan_violation FROM payment_methods WHERE card_number IS NOT NULL AND LENGTH(card_number) > 16 AND card_number NOT LIKE '%[0-9a-f]%';",
+          "SELECT payment_method_id AS violation_id, cardholder_name AS ambiguous_data_storage_violation FROM payment_methods WHERE cardholder_name IS NOT NULL AND cardholder_name != ''",
+          "SELECT id AS violation_id, 'Access controls need review for Customer data' AS access_control_check FROM customers WHERE 1=1",
+          "SELECT payment_method_id AS violation_id, 'Data retention policy verification needed for payment_methods table' AS data_retention_check FROM payment_methods WHERE 1=1",
+          "SELECT invoice_id AS violation_id, 'Access controls need review for Invoice data' AS access_control_check FROM invoices WHERE 1=1",
+          "SELECT 1 AS violation_flag WHERE EXISTS (SELECT 1 FROM payment_methods WHERE card_number IS NOT NULL AND LENGTH(card_number) > 0 AND card_number NOT LIKE 'XXXX%' AND card_number NOT LIKE 'XXXXXXXXXXXX%') AND (card_number IS NULL OR card_number = '')",
+          "SELECT 1 AS violation_flag WHERE EXISTS (SELECT 1 FROM payment_methods WHERE cvv IS NOT NULL AND cvv != '')"
+        ],
+        "iteration": 3
+      },
+      {
+        "case": "PCI_DSS_ST2_TC002_Req4_Transmission",
+        "description": "Stage 2: generate assertions for insecure transmission endpoints",
+        "assertion_count": 4,
+        "keywords": {
+          "found": 1,
+          "total": 2,
+          "details": ["Any of ['in_transit', 'network', 'transmission']"]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["api_configs"]
+        },
+        "assertions": [
+          "SELECT * FROM webhook_subscriptions WHERE created_at IS NULL AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'webhook_subscriptions' AND column_name IN ('created_at')) AS MissingTimestampIndicator",
+          "SELECT * FROM api_configs WHERE uses_tls = FALSE AND endpoint LIKE '%payment%'",
+          "SELECT * FROM network_integrations WHERE transport LIKE '%HTTP%' AND destination_host LIKE '%processor%'",
+          "SELECT * FROM webhook_subscriptions WHERE subscriber_name LIKE '%payment%' AND auth_header_value IS NOT NULL"
+        ],
+        "iteration": 3
+      },
+      {
+        "case": "PCI_DSS_ST2_TC003_Req7_Access_Control",
+        "description": "Stage 2: generate assertions for missing least-privilege controls",
+        "assertion_count": 6,
+        "keywords": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "privilege_type",
+            "Any of ['authorization', 'permission', 'role']"
+          ]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["user_privileges"]
+        },
+        "assertions": [
+          "SELECT user_id, username AS potentially_unrestricted_user FROM users WHERE is_active = TRUE AND created_at IS NULL;",
+          "SELECT DISTINCT table_name FROM protected_assets WHERE data_classification IN ('Cardholder Data', 'PCI Scope') AND owner_team IS NULL;",
+          "SELECT DISTINCT u.user_id, u.username AS user_with_no_defined_role FROM users u LEFT JOIN user_privileges up ON u.user_id = up.user_id WHERE up.role_id IS NULL;",
+          "SELECT DISTINCT up.user_id, up.table_name AS privileged_access_to_table FROM user_privileges up WHERE up.privilege_type IN ('SELECT', 'INSERT', 'UPDATE', 'DELETE') AND up.table_name NOT IN ('users');",
+          "SELECT user_id, username FROM users WHERE department IS NULL AND username LIKE '%admin%';",
+          "SELECT DISTINCT up.table_name, up.privilege_type FROM user_privileges up WHERE up.privilege_type = 'SELECT' AND up.table_name IN ('users', 'roles') AND up.table_name NOT IN ('protected_assets');"
+        ],
+        "iteration": 3
+      },
+      {
+        "case": "PCI_DSS_ST2_TC004_Req8_Authentication",
+        "description": "Stage 2: generate assertions for weak/default credentials and auth controls",
+        "assertion_count": 6,
+        "keywords": {
+          "found": 2,
+          "total": 2,
+          "details": [
+            "Any of ['auth', 'credential', 'identity']",
+            "Any of ['hash', 'mfa', 'multi-factor', 'multi_factor', 'password']"
+          ]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["users"]
+        },
+        "assertions": [
+          "SELECT user_id, username AS Potential_Unprotected_Account_Identifier FROM users WHERE username LIKE '%card%' OR username LIKE '%payment%'",
+          "SELECT user_id, password_hash AS Potentially_Weak_Authentication_Factor_Storage FROM users WHERE password_hash IS NULL OR LENGTH(password_hash) < 12",
+          "SELECT user_id, failed_login_attempts AS Excessive_Failed_Login_Attempts FROM users WHERE failed_login_attempts > 5",
+          "SELECT user_id, access_level AS Access_Level_Check FROM users WHERE access_level = 'admin' AND user_id NOT IN (SELECT user_id FROM authentication_methods WHERE method_type = 'MFA' AND is_enabled = TRUE)",
+          "SELECT login_event_id, user_id AS Potential_Unlogged_Access_Event FROM login_events WHERE login_result IS NULL",
+          "SELECT login_event_id, occurred_at AS Missing_Audit_Log_Timestamp FROM login_events WHERE occurred_at IS NULL"
+        ],
+        "iteration": 3
+      },
+      {
+        "case": "PCI_DSS_ST2_TC005_Req10_Logging_Monitoring",
+        "description": "Stage 2: generate assertions for missing audit logging coverage",
+        "assertion_count": 14,
+        "keywords": {
+          "found": 2,
+          "total": 2,
+          "details": [
+            "Any of ['audit', 'log', 'logging']",
+            "Any of ['created_at', 'timestamp', 'updated_at']"
+          ]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["payments"]
+        },
+        "assertions": [
+          "SELECT payment_id AS potentially_unencrypted_pan FROM payments WHERE pan IS NOT NULL AND pan NOT LIKE 'XXXX%' AND pan NOT LIKE '****%';",
+          "SELECT payment_id AS potentially_unencrypted_pan FROM payments WHERE pan IS NOT NULL AND LENGTH(pan) > 0 AND pan NOT REGEXP '^[A-Z0-9]{13,19}$';",
+          "SELECT 1 AS violation_indicator FROM payments WHERE pan IS NOT NULL AND NOT (pan REGEXP '^(?:[0-9]{16})$' OR pan REGEXP '^(?:[0-9]{15})$') AND pan NOT REGEXP '^[A-Z0-9]{13,19}$';",
+          "SELECT pan AS potentially_sensitive_data FROM payments WHERE pan IS NOT NULL AND pan NOT REGEXP '^[A-Z0-9]{13,19}$';",
+          "SELECT 1 AS violation_indicator FROM payments WHERE pan IS NOT NULL AND (pan LIKE '____' OR pan LIKE '****') AND LENGTH(pan) > 0;",
+          "SELECT 1 AS violation_indicator FROM payments WHERE pan IS NOT NULL AND pan LIKE '____%';",
+          "SELECT 1 AS violation_indicator FROM payments WHERE pan IS NOT NULL AND LENGTH(pan) = 16 AND pan NOT REGEXP '^[0-9]{16}$';",
+          "SELECT 1 AS violation_indicator FROM payments WHERE pan IS NOT NULL AND LENGTH(pan) = 19;",
+          "SELECT 1 AS violation_indicator FROM payments WHERE processed_by_user_id IS NOT NULL AND processed_by_user_id NOT IN (SELECT user_id FROM access_events WHERE action IN ('READ', 'WRITE'));",
+          "SELECT 1 AS violation_indicator FROM payments WHERE processed_by_user_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM access_events WHERE user_id = payments.processed_by_user_id AND action IN ('READ', 'WRITE'));",
+          "SELECT 1 AS violation_indicator FROM payments WHERE payment_id IS NOT NULL AND payment_status NOT IN ('APPROVED', 'DECLINED') AND NOT EXISTS (SELECT 1 FROM audit_log WHERE target_table = 'payments' AND target_record_id = CAST(payment_id AS TEXT) AND event_type LIKE '%UPDATE%');",
+          "SELECT 1 AS violation_indicator FROM audit_log WHERE event_timestamp IS NULL;",
+          "SELECT 1 AS violation_indicator FROM access_events WHERE action IS NULL;",
+          "SELECT 1 AS violation_indicator FROM access_events WHERE user_id IS NULL;"
+        ],
+        "iteration": 3
+      },
+      {
+        "case": "PCI_DSS_ST2_TC006_Multi_Stored_Data_Access_Logging",
+        "description": "Stage 2: generate assertions for combined PAN/CVV storage, broad access, and weak audit trails",
+        "assertion_count": 7,
+        "keywords": {
+          "found": 3,
+          "total": 4,
+          "details": [
+            "Any of ['SAD', 'cvc', 'cvv', 'sensitive_authentication_data']",
+            "Any of ['card_number', 'pan', 'primary_account_number']",
+            "Any of ['audit', 'log', 'traceability']"
+          ]
+        },
+        "tables_covered": {
+          "found": 3,
+          "total": 3,
+          "details": ["customer_cards", "app_permissions", "security_log"]
+        },
+        "assertions": [
+          "SELECT card_id AS violating_record_id FROM customer_cards WHERE pan IS NOT NULL AND LENGTH(pan) = 16 AND pan NOT RLIKE '^\\x00.*' AND pan NOT REGEXP '^\\x01.*';",
+          "SELECT card_id AS violating_record_id FROM customer_cards WHERE cvv IS NOT NULL AND LENGTH(cvv) > 0;",
+          "SELECT card_id AS violating_record_id FROM customer_cards WHERE pan IS NOT NULL AND pan NOT LIKE 'XXXX%' AND pan NOT LIKE 'X%';",
+          "SELECT card_id AS violating_record_id FROM customer_cards WHERE pan IS NOT NULL AND pan IS NOT ENCRYPTED;",
+          "SELECT card_id AS violating_record_id FROM customer_cards WHERE pan IS NOT NULL AND pan NOT REGEXP '^\\w{16}$' AND pan NOT REGEXP '^[0-9]{16}$';",
+          "SELECT T1.table_name AS exposed_table, T1.role_name AS associated_role, T1.privilege_type AS exposed_privilege FROM app_permissions AS T1 INNER JOIN customer_cards AS T2 ON T1.table_name = 'customer_cards' WHERE T1.privilege_type = 'READ';",
+          "SELECT NULL AS no_violation_found FROM security_log WHERE event_type IS NULL OR actor_user_id IS NULL OR target_table IS NULL;"
+        ],
+        "iteration": 3
+      },
+      {
+        "case": "PCI_DSS_ST2_TC007_Multi_Transmission_Auth_Logging",
+        "description": "Stage 2: generate assertions for insecure transport, weak authentication controls, and insufficient event logging",
+        "assertion_count": 3,
+        "keywords": {
+          "found": 1,
+          "total": 3,
+          "details": ["Any of ['default', 'hash', 'password', 'weak']"]
+        },
+        "tables_covered": {
+          "found": 3,
+          "total": 3,
+          "details": ["integrations", "user_accounts", "auth_events"]
+        },
+        "assertions": [
+          "SELECT user_id, username FROM user_accounts WHERE password_hash IS NULL OR password_hash = '' AS Missing_or_Null_Password_Hash_Violation",
+          "SELECT event_id, user_id, event_type FROM auth_events WHERE event_timestamp IS NULL AS Missing_Event_Timestamp_Violation",
+          "SELECT * FROM integrations WHERE transport_protocol NOT IN ('HTTPS', 'TLS') OR tls_version NOT LIKE 'TLS%' AS Insecure_Transmission_Protocol_Violation"
+        ],
+        "iteration": 3
+      },
+      {
+        "case": "PCI_DSS_ST2_TC008_Multi_Core_Control_Gaps",
+        "description": "Stage 2: generate assertions for combined card-data storage, transmission, access, and authentication control gaps",
+        "assertion_count": 10,
+        "keywords": {
+          "found": 4,
+          "total": 5,
+          "details": [
+            "Any of ['SAD', 'cvv', 'security_code', 'sensitive_authentication_data']",
+            "Any of ['card_number', 'cleartext', 'pan', 'unencrypted']",
+            "Any of ['SSL', 'https', 'in_transit', 'tls', 'transmission']",
+            "Any of ['2-factor', '2FA', '2_factor', 'MFA', 'authentication', 'default_credential', 'multi-factor', 'multi_factor', 'multiple_authentication', 'two-factor', 'two_factor']"
+          ]
+        },
+        "tables_covered": {
+          "found": 4,
+          "total": 4,
+          "details": [
+            "payment_profiles",
+            "outbound_endpoints",
+            "role_grants",
+            "admin_credentials"
+          ]
+        },
+        "assertions": [
+          "SELECT profile_id AS Potential_Unencrypted_PAN_Violation FROM payment_profiles WHERE card_number IS NOT NULL AND tokenized = FALSE;",
+          "SELECT profile_id AS Potential_Unencrypted_PAN_Violation FROM payment_profiles WHERE card_number IS NOT NULL AND LENGTH(card_number) >= 12;",
+          "SELECT profile_id AS Potential_Stored_SAD_Violation FROM payment_profiles WHERE security_code IS NOT NULL;",
+          "SELECT profile_id AS Potential_Weak_Encryption_Violation FROM payment_profiles WHERE tokenized = FALSE AND card_number IS NOT NULL;",
+          "SELECT username AS Potential_Unidentified_Admin_User FROM admin_credentials WHERE is_default_credential = TRUE;",
+          "SELECT credential_id AS Potential_Weak_Authentication_Factor_Violation FROM admin_credentials WHERE password_hash IS NULL OR password_hash = '';",
+          "SELECT credential_id AS Potential_Missing_MFA_Violation FROM admin_credentials WHERE mfa_secret IS NULL AND username NOT IN ('SYSTEM', 'SERVICE_ACCOUNT');",
+          "SELECT role_name, object_name AS Potential_Overly_Permissive_Access_Violation FROM role_grants WHERE privilege IN ('ALL', 'ADMIN') AND object_name LIKE '%CARD_DATA%';",
+          "SELECT username AS Potential_Lack_of_Unique_Identifier FROM admin_credentials WHERE username IS NULL;",
+          "SELECT endpoint_id AS Potential_Unencrypted_Transmission_Violation FROM outbound_endpoints WHERE requires_tls = FALSE AND service_name LIKE '%PAYMENT%' OR callback_url LIKE '%http://%';"
+        ],
+        "iteration": 3
+      },
+      {
+        "case": "PCI_DSS_ST2_TC001_Req3_Stored_Account_Data",
+        "description": "Stage 2: generate assertions for prohibited CVV/PAN storage",
+        "assertion_count": 11,
+        "keywords": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['SAD', 'card_verification_value', 'cvc', 'cvv', 'sensitive_authentication_data']",
+            "Any of ['card number', 'pan', 'primary_account_number']",
+            "Any of ['cleartext', 'plaintext', 'unencrypted']"
+          ]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["customers"]
+        },
+        "assertions": [
+          "SELECT payment_method_id, 'PCI Requirement 3 Violation: Card number stored in cleartext' AS violation_reason FROM payment_methods WHERE card_number IS NOT NULL AND card_number NOT LIKE 'XXXX%';",
+          "SELECT payment_method_id, 'PCI Requirement 3 Violation: CVV/SAD stored in cleartext' AS violation_reason FROM payment_methods WHERE cvv IS NOT NULL AND cvv != '';",
+          "SELECT payment_method_id, 'PCI Requirement 3 Violation: Storing sensitive authentication data (CVV) without truncation/encryption' AS violation_reason FROM payment_methods WHERE cvv IS NOT NULL AND cvv != '';",
+          "SELECT payment_method_id, 'PCI Requirement 3 Violation: Unmasked PAN displayed (full PAN potentially present)' AS violation_reason FROM payment_methods WHERE card_number LIKE '______%';",
+          "SELECT p.payment_method_id, 'PCI Requirement 7/8 Violation: Access control complexity unverified on payment data' AS violation_reason FROM payment_methods p WHERE p.card_number IS NOT NULL;",
+          "SELECT i.invoice_id, 'PCI Requirement 10 Violation: Transaction record missing creation timestamp for auditability' AS violation_reason FROM invoices i WHERE issued_at IS NULL;",
+          "SELECT i.invoice_id, 'PCI Requirement 10 Violation: Transaction record missing update timestamp for auditability' AS violation_reason FROM invoices i WHERE paid_at IS NULL;",
+          "SELECT pm.payment_method_id, 'PCI Requirement 3.5.1 Violation: Card number does not appear to be rendered unreadable (assuming no encryption/hashing implemented)' AS violation_reason FROM payment_methods pm WHERE card_number IS NOT NULL AND LENGTH(card_number) > 4;",
+          "SELECT pm.payment_method_id, 'PCI Requirement 3.5.1 Violation: Card number stored without evidence of strong encryption or hashing' AS violation_reason FROM payment_methods pm WHERE card_number IS NOT NULL AND card_number NOT REGEXP '^(^[A-Z0-9]{3}[A-Z0-9]{4}|.{16,19})$'; -- Basic check, actual encryption check requires metadata",
+          "SELECT c.id, 'PCI Requirement 7 Violation: Customer record accessible without explicit need-to-know restriction (Schema Level)' AS violation_reason FROM customers c WHERE 1=1;",
+          "SELECT pm.customer_id, 'PCI Requirement 7 Violation: Payment method linked to customer data without explicit role restriction (Schema Level)' AS violation_reason FROM payment_methods pm WHERE 1=1;"
+        ],
+        "iteration": 4
+      },
+      {
+        "case": "PCI_DSS_ST2_TC002_Req4_Transmission",
+        "description": "Stage 2: generate assertions for insecure transmission endpoints",
+        "assertion_count": 3,
+        "keywords": {
+          "found": 1,
+          "total": 2,
+          "details": ["Any of ['in_transit', 'network', 'transmission']"]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["api_configs"]
+        },
+        "assertions": [
+          "SELECT * FROM network_integrations WHERE notes ILIKE '%cardholder data%'",
+          "SELECT * FROM api_configs WHERE endpoint ILIKE '%cardholder%' OR service_name ILIKE '%cardholder%'",
+          "SELECT * FROM webhook_subscriptions WHERE callback_url ILIKE '%cardholder%'"
+        ],
+        "iteration": 4
+      },
+      {
+        "case": "PCI_DSS_ST2_TC003_Req7_Access_Control",
+        "description": "Stage 2: generate assertions for missing least-privilege controls",
+        "assertion_count": 4,
+        "keywords": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "privilege_type",
+            "Any of ['authorization', 'permission', 'role']"
+          ]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["user_privileges"]
+        },
+        "assertions": [
+          "SELECT user_id AS potentially_unprotected_user_id FROM users WHERE created_at IS NULL",
+          "SELECT up.privilege_id AS potentially_overly_broad_privilege_id FROM user_privileges up LEFT JOIN roles r ON up.role_id = r.role_id WHERE r.role_name = 'ADMIN' AND up.table_name NOT IN ('users', 'roles', 'user_privileges') AND up.privilege_type = 'SELECT'",
+          "SELECT pa.asset_id AS potentially_unclassified_asset_id FROM protected_assets pa WHERE pa.data_classification IS NULL OR pa.data_classification = 'Unclassified'",
+          "SELECT u.user_id AS user_with_no_creation_timestamp FROM users WHERE u.created_at IS NULL"
+        ],
+        "iteration": 4
+      },
+      {
+        "case": "PCI_DSS_ST2_TC004_Req8_Authentication",
+        "description": "Stage 2: generate assertions for weak/default credentials and auth controls",
+        "assertion_count": 3,
+        "keywords": {
+          "found": 0,
+          "total": 2,
+          "details": []
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["users"]
+        },
+        "assertions": [
+          "SELECT user_id AS potentially_unprotected_user_id FROM users WHERE access_level LIKE '%admin%' AND username LIKE '%card%'",
+          "SELECT user_id AS potentially_overprivileged_user_id FROM users WHERE access_level NOT IN ('viewer', 'limited_access') AND failed_login_attempts > 5",
+          "SELECT login_event_id AS suspicious_login_event FROM login_events WHERE login_result = 'FAILURE' AND source_ip NOT IN ('127.0.0.1', '192.168.1.0/24')"
+        ],
+        "iteration": 4
+      },
+      {
+        "case": "PCI_DSS_ST2_TC005_Req10_Logging_Monitoring",
+        "description": "Stage 2: generate assertions for missing audit logging coverage",
+        "assertion_count": 5,
+        "keywords": {
+          "found": 2,
+          "total": 2,
+          "details": [
+            "Any of ['audit', 'log', 'logging']",
+            "Any of ['created_at', 'timestamp', 'updated_at']"
+          ]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["payments"]
+        },
+        "assertions": [
+          "SELECT payment_id AS potential_unencrypted_pan FROM payments WHERE LENGTH(pan) >= 12 AND pan NOT LIKE 'XXXX%'",
+          "SELECT log_id AS potential_unlogged_activity_event FROM audit_log WHERE event_type IS NULL OR event_type = ''",
+          "SELECT access_event_id AS potential_unlogged_access_event FROM access_events WHERE action_timestamp IS NULL OR action = ''",
+          "SELECT p.payment_id AS pan_not_protected FROM payments p LEFT JOIN (SELECT * FROM audit_log) a ON p.payment_id = a.target_record_id WHERE a.log_id IS NULL",
+          "SELECT pa.action_event_id AS missing_audit_for_access FROM access_events pa LEFT JOIN (SELECT log_id FROM audit_log WHERE target_table = 'access_events' AND target_record_id = CAST(pa.access_event_id AS VARCHAR)) a ON TRUE WHERE a.log_id IS NULL"
+        ],
+        "iteration": 4
+      },
+      {
+        "case": "PCI_DSS_ST2_TC006_Multi_Stored_Data_Access_Logging",
+        "description": "Stage 2: generate assertions for combined PAN/CVV storage, broad access, and weak audit trails",
+        "assertion_count": 6,
+        "keywords": {
+          "found": 3,
+          "total": 4,
+          "details": [
+            "Any of ['SAD', 'cvc', 'cvv', 'sensitive_authentication_data']",
+            "Any of ['card_number', 'pan', 'primary_account_number']",
+            "Any of ['audit', 'log', 'traceability']"
+          ]
+        },
+        "tables_covered": {
+          "found": 3,
+          "total": 3,
+          "details": ["customer_cards", "app_permissions", "security_log"]
+        },
+        "assertions": [
+          "SELECT card_id, 'PAN Stored in Plaintext' as violation_reason FROM customer_cards WHERE LENGTH(pan) > 0 AND pan NOT RLIKE '^[a-fA-F0-9]+$' AND pan IS NOT NULL;",
+          "SELECT card_id, 'SAD (CVV) Stored' as violation_reason FROM customer_cards WHERE cvv IS NOT NULL AND LENGTH(cvv) > 0;",
+          "SELECT card_id, 'PAN potentially sensitive due to length/type' as violation_reason FROM customer_cards WHERE LENGTH(pan) > 0 AND LENGTH(pan) <= 16;",
+          "SELECT card_id, 'Lack of sufficient logging for card access' as violation_reason FROM customer_cards WHERE EXISTS (SELECT 1 FROM security_log sl WHERE sl.target_table = 'customer_cards' AND sl.event_type LIKE '%access%') = FALSE;",
+          "SELECT permission_id, 'Role may have over-privileged access' as violation_reason FROM app_permissions WHERE privilege_type IN ('ALL', 'WRITE') AND role_name NOT LIKE '%ADMIN%' OR table_name LIKE '%cards_%';",
+          "SELECT permission_id, 'Access control missing for sensitive data' as violation_reason FROM app_permissions WHERE table_name LIKE '%card%' AND privilege_type NOT IN ('SELECT');"
+        ],
+        "iteration": 4
+      },
+      {
+        "case": "PCI_DSS_ST2_TC007_Multi_Transmission_Auth_Logging",
+        "description": "Stage 2: generate assertions for insecure transport, weak authentication controls, and insufficient event logging",
+        "assertion_count": 4,
+        "keywords": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "Any of ['2-factor', '2FA', '2_factor', 'MFA', 'authentication', 'default_credential', 'multi-factor', 'multi_factor', 'multiple_authentication', 'two-factor', 'two_factor']",
+            "Any of ['default', 'hash', 'password', 'weak']"
+          ]
+        },
+        "tables_covered": {
+          "found": 2,
+          "total": 3,
+          "details": ["user_accounts", "auth_events"]
+        },
+        "assertions": [
+          "SELECT user_id AS potentially_unprotected_account_id FROM user_accounts WHERE password_hash IS NULL AND username IS NOT NULL;",
+          "SELECT * FROM auth_events WHERE event_timestamp IS NULL;",
+          "SELECT * FROM user_accounts WHERE mfa_enabled = FALSE AND username IS NOT NULL;",
+          "SELECT * FROM user_accounts WHERE lockout_enabled = FALSE AND username IS NOT NULL;"
+        ],
+        "iteration": 4
+      },
+      {
+        "case": "PCI_DSS_ST2_TC008_Multi_Core_Control_Gaps",
+        "description": "Stage 2: generate assertions for combined card-data storage, transmission, access, and authentication control gaps",
+        "assertion_count": 4,
+        "keywords": {
+          "found": 2,
+          "total": 5,
+          "details": [
+            "Any of ['SAD', 'cvv', 'security_code', 'sensitive_authentication_data']",
+            "Any of ['card_number', 'cleartext', 'pan', 'unencrypted']"
+          ]
+        },
+        "tables_covered": {
+          "found": 2,
+          "total": 4,
+          "details": ["payment_profiles", "admin_credentials"]
+        },
+        "assertions": [
+          "SELECT profile_id AS potential_plaintext_pan_violation FROM payment_profiles WHERE card_number IS NOT NULL AND tokenized = FALSE",
+          "SELECT profile_id AS potential_plaintext_security_code_violation FROM payment_profiles WHERE security_code IS NOT NULL AND tokenized = FALSE",
+          "SELECT username AS potential_unhashed_credential_violation FROM admin_credentials WHERE password_hash IS NULL OR password_hash = ''",
+          "SELECT profile_id AS non_tokenized_card_number_violation FROM payment_profiles WHERE card_number IS NOT NULL AND tokenized = FALSE"
+        ],
+        "iteration": 4
+      },
+      {
+        "case": "PCI_DSS_ST2_TC001_Req3_Stored_Account_Data",
+        "description": "Stage 2: generate assertions for prohibited CVV/PAN storage",
+        "assertion_count": 7,
+        "keywords": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['SAD', 'card_verification_value', 'cvc', 'cvv', 'sensitive_authentication_data']",
+            "Any of ['card number', 'pan', 'primary_account_number']",
+            "Any of ['cleartext', 'plaintext', 'unencrypted']"
+          ]
+        },
+        "tables_covered": {
+          "found": 0,
+          "total": 1,
+          "details": []
+        },
+        "assertions": [
+          "SELECT pm.card_number AS unencrypted_pan FROM payment_methods pm WHERE pm.card_number IS NOT NULL AND pm.card_number != 'TOKEN_REDACTED' UNION ALL SELECT pm.card_number AS unencrypted_pan FROM payment_methods pm WHERE pm.card_number IS NOT NULL AND pm.card_number LIKE '%0000%'",
+          "SELECT pm.cvv AS sensitive_auth_data_stored FROM payment_methods pm WHERE pm.cvv IS NOT NULL AND LENGTH(pm.cvv) > 0",
+          "SELECT pm.card_number AS potentially_unmasked_pan FROM payment_methods pm WHERE pm.token_reference IS NULL AND pm.card_number IS NOT NULL",
+          "SELECT pm.card_number AS potentially_plaintext_data FROM payment_methods pm WHERE pm.card_number IS NOT NULL AND pm.card_number NOT RLIKE '^(#|****).*$'",
+          "SELECT pm.card_number AS unencrypted_data_field_check FROM payment_methods pm WHERE pm.card_number IS NOT NULL",
+          "SELECT pm.cvv AS prohibited_sad_field FROM payment_methods pm WHERE pm.cvv IS NOT NULL",
+          "SELECT pm.card_number AS potential_pan_field_check FROM payment_methods pm WHERE pm.card_number IS NOT NULL AND pm.card_number != 'NULL'"
+        ],
+        "iteration": 5
+      },
+      {
+        "case": "PCI_DSS_ST2_TC002_Req4_Transmission",
+        "description": "Stage 2: generate assertions for insecure transmission endpoints",
+        "assertion_count": 5,
+        "keywords": {
+          "found": 2,
+          "total": 2,
+          "details": [
+            "Any of ['in_transit', 'network', 'transmission']",
+            "Any of ['cryptography', 'encrypted']"
+          ]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["api_configs"]
+        },
+        "assertions": [
+          "SELECT * FROM api_configs WHERE uses_tls = FALSE OR tls_min_version IN ('', '1.0', '1.1') AS Potential_Insecure_Transmission_Config",
+          "SELECT * FROM network_integrations WHERE transport NOT IN ('HTTPS', 'TLS') AS Potential_Non_Encrypted_Transmission",
+          "SELECT * FROM webhook_subscriptions WHERE created_at IS NULL AS Missing_Timestamp_For_Auditing",
+          "SELECT * FROM network_integrations WHERE notes LIKE '%PAN%' OR notes LIKE '%Cardholder Data%' AS Ambiguous_Note_Containing_CD",
+          "SELECT * FROM webhook_subscriptions WHERE auth_header_value IS NOT NULL AND auth_header_value LIKE '%XXXX%' AS Potential_Storage_Of_Tokenized_Or_Sensitive_Data"
+        ],
+        "iteration": 5
+      },
+      {
+        "case": "PCI_DSS_ST2_TC003_Req7_Access_Control",
+        "description": "Stage 2: generate assertions for missing least-privilege controls",
+        "assertion_count": 9,
+        "keywords": {
+          "found": 2,
+          "total": 3,
+          "details": [
+            "privilege_type",
+            "Any of ['authorization', 'permission', 'role']"
+          ]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["user_privileges"]
+        },
+        "assertions": [
+          "SELECT user_id, username FROM users WHERE username LIKE '%admin%' OR department = 'System Administration' -- Checking for potentially excessive privileges or naming conventions for access control risk (Req 7, 8)",
+          "SELECT role_id, role_name FROM roles WHERE description IS NULL OR description LIKE '%access%' -- Checking for poorly defined roles related to access control (Req 7)",
+          "SELECT user_id, table_name, privilege_type FROM user_privileges WHERE privilege_type IN ('SELECT', 'INSERT', 'UPDATE', 'DELETE') AND table_name LIKE '%card%' -- Detecting overly broad data access permissions if table names hint at CDE (Req 7, 3)",
+          "SELECT u.user_id, r.role_name FROM users u JOIN user_privileges up ON u.user_id = up.user_id JOIN roles r ON up.role_id = r.role_id WHERE r.role_name LIKE '%superuser%' OR u.username = 'administrator' -- Identifying high-privilege users for stringent logging/monitoring review (Req 8, 10)",
+          "SELECT pa.table_name, pa.data_classification FROM protected_assets pa WHERE pa.data_classification IS NULL OR pa.data_classification NOT IN ('PCI', 'HIGH_SENSITIVE') -- Detecting unclassified sensitive assets (Req 3, 7)",
+          "SELECT u.created_at FROM users WHERE u.created_at < DATE('now', '-30 day') -- Basic check for aging/dormant user accounts requiring review (Req 8)",
+          "SELECT up.user_id, up.table_name FROM user_privileges up JOIN users u ON up.user_id = u.user_id WHERE up.privilege_type = 'ALL' -- Detecting granting of 'ALL' privileges (potential over-privileging) (Req 7, 8)",
+          "SELECT u.user_id FROM users u LEFT JOIN user_privileges up ON u.user_id = up.user_id WHERE up.privilege_id IS NULL AND u.username LIKE '%service%' -- Identifying service accounts without explicit defined privileges (Req 7, 8)",
+          "SELECT u.user_id, u.username FROM users u LEFT JOIN user_privileges up ON u.user_id = up.user_id WHERE up.privilege_id IS NULL AND u.is_active = TRUE -- Identifying active users without explicit defined privileges (Req 7)"
+        ],
+        "iteration": 5
+      },
+      {
+        "case": "PCI_DSS_ST2_TC004_Req8_Authentication",
+        "description": "Stage 2: generate assertions for weak/default credentials and auth controls",
+        "assertion_count": 9,
+        "keywords": {
+          "found": 2,
+          "total": 2,
+          "details": [
+            "Any of ['auth', 'credential', 'identity']",
+            "Any of ['hash', 'mfa', 'multi-factor', 'multi_factor', 'password']"
+          ]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["users"]
+        },
+        "assertions": [
+          "SELECT user_id, username, 'Potential cleartext credentials stored without adequate hashing or encryption (Req 8)' AS violation_detail FROM users WHERE password_hash IS NULL OR password_hash = ''",
+          "SELECT user_id, 'Account without documented last change timestamp (Req 8)' AS violation_detail FROM users WHERE password_last_changed_at IS NULL",
+          "SELECT user_id, 'User account configuration lacks sufficient monitoring indicators (Req 10)' AS violation_detail FROM users WHERE failed_login_attempts IS NULL",
+          "SELECT user_id, 'User account lacks adequate access restriction logging (Req 10)' AS violation_detail FROM users WHERE is_locked IS NULL",
+          "SELECT user_id, 'User entity lacks specific access control linkage (Req 7)' AS violation_detail FROM users WHERE access_level IS NULL",
+          "SELECT user_id, 'User account lacks unique identifier linkage for authentication (Req 8.3.11)' AS violation_detail FROM users WHERE user_id IS NULL",
+          "SELECT auth_method_id, 'Authentication method missing specific enrollment time (Req 8.3.11)' AS violation_detail FROM authentication_methods WHERE enrolled_at IS NULL",
+          "SELECT login_event_id, 'Login event missing timestamp for audit trail analysis (Req 10.5.1)' AS violation_detail FROM login_events WHERE occurred_at IS NULL",
+          "SELECT login_event_id, 'Login event missing user context for audit trail review (Req 10)' AS violation_detail FROM login_events WHERE user_id IS NULL"
+        ],
+        "iteration": 5
+      },
+      {
+        "case": "PCI_DSS_ST2_TC005_Req10_Logging_Monitoring",
+        "description": "Stage 2: generate assertions for missing audit logging coverage",
+        "assertion_count": 12,
+        "keywords": {
+          "found": 2,
+          "total": 2,
+          "details": [
+            "Any of ['audit', 'log', 'logging']",
+            "Any of ['created_at', 'timestamp', 'updated_at']"
+          ]
+        },
+        "tables_covered": {
+          "found": 1,
+          "total": 1,
+          "details": ["payments"]
+        },
+        "assertions": [
+          "SELECT payment_id, pan AS unencrypted_pan_violation FROM payments WHERE pan IS NOT NULL AND pan NOT RLIKE '^[A-Za-z0-9_]{16,19}$' OR pan IS NULL;",
+          "SELECT payment_id, pan AS unencrypted_pan_violation FROM payments WHERE LENGTH(pan) > 16 AND pan NOT REGEXP '^[0-9]{13,19}$' AND pan NOT REGEXP '^[a-zA-Z0-9]{16,19}$';",
+          "SELECT payment_id, pan AS potentially_sensitive_data FROM payments WHERE pan IS NOT NULL AND pan LIKE '%\\d%' AND pan LIKE '%[A-Za-z]%' AND pan NOT REGEXP '^[0-9]{13,19}$';",
+          "SELECT payment_id, pan AS potential_pan_storage_violation FROM payments WHERE pan IS NOT NULL AND pan REGEXP '[0-9]{13,19}$';",
+          "SELECT payment_id, processed_by_user_id AS access_violation_check FROM payments WHERE processed_by_user_id IS NULL;",
+          "SELECT log_id, event_type AS missing_access_logging_violation FROM audit_log WHERE event_type IS NULL;",
+          "SELECT log_id, event_timestamp AS missing_timestamp_violation FROM audit_log WHERE event_timestamp IS NULL;",
+          "SELECT log_id, event_actor_id AS missing_actor_logging_violation FROM audit_log WHERE actor_user_id IS NULL;",
+          "SELECT log_id, target_table AS missing_target_logging_violation FROM audit_log WHERE target_table IS NULL;",
+          "SELECT log_id, target_record_id AS missing_target_id_logging_violation FROM audit_log WHERE target_record_id IS NULL;",
+          "SELECT access_event_id, user_id AS missing_user_auth_check FROM access_events WHERE user_id IS NULL;",
+          "SELECT access_event_id, action AS missing_action_check FROM access_events WHERE action IS NULL;"
+        ],
+        "iteration": 5
+      },
+      {
+        "case": "PCI_DSS_ST2_TC006_Multi_Stored_Data_Access_Logging",
+        "description": "Stage 2: generate assertions for combined PAN/CVV storage, broad access, and weak audit trails",
+        "assertion_count": 9,
+        "keywords": {
+          "found": 4,
+          "total": 4,
+          "details": [
+            "Any of ['SAD', 'cvc', 'cvv', 'sensitive_authentication_data']",
+            "Any of ['card_number', 'pan', 'primary_account_number']",
+            "Any of ['RBAC', 'access-need', 'access_control', 'access_need', 'business-need', 'business_need', 'least_privilege', 'need-to-know', 'need_to_know', 'role-based_access', 'role_based_access']",
+            "Any of ['audit', 'log', 'traceability']"
+          ]
+        },
+        "tables_covered": {
+          "found": 3,
+          "total": 3,
+          "details": ["customer_cards", "app_permissions", "security_log"]
+        },
+        "assertions": [
+          "SELECT card_id AS unencrypted_pan_violation FROM customer_cards WHERE LENGTH(pan) > 0 AND pan NOT LIKE BINARY 'XXXXXXXXXXXX%' AND pan NOT LIKE BINARY '0000000000000000';",
+          "SELECT card_id AS prohibited_sad_violation FROM customer_cards WHERE cvv IS NOT NULL AND LENGTH(cvv) > 0;",
+          "SELECT card_id AS cleartext_pan_storage_violation FROM customer_cards WHERE pan IS NOT NULL AND pan NOT RLIKE '^([0-9]{12}(?:[0-9]{3})?|[0-9]{15}|[0-9]{16})$' AND pan NOT LIKE BINARY 'XXXXX';",
+          "SELECT card_id AS unmasked_pan_violation FROM customer_cards WHERE pan IS NOT NULL AND LENGTH(pan) = 16;",
+          "SELECT card_id AS unencrypted_full_pan_violation FROM customer_cards WHERE pan IS NOT NULL AND LENGTH(pan) >= 19;",
+          "SELECT 1 AS missing_audit_log_timestamp FROM customer_cards WHERE created_at IS NULL;",
+          "SELECT 1 AS missing_audit_log_timestamp_updated FROM customer_cards WHERE updated_at IS NULL;",
+          "SELECT 1 AS missing_unique_user_id_log FROM security_log WHERE actor_user_id IS NULL;",
+          "SELECT 1 AS access_control_gap_for_sensitive_data FROM app_permissions WHERE table_name = 'customer_cards' AND privilege_type = 'SELECT' AND role_name NOT IN ('auditor', 'compliance_role');"
+        ],
+        "iteration": 5
+      },
+      {
+        "case": "PCI_DSS_ST2_TC007_Multi_Transmission_Auth_Logging",
+        "description": "Stage 2: generate assertions for insecure transport, weak authentication controls, and insufficient event logging",
+        "assertion_count": 4,
+        "keywords": {
+          "found": 3,
+          "total": 3,
+          "details": [
+            "Any of ['2-factor', '2FA', '2_factor', 'MFA', 'authentication', 'default_credential', 'multi-factor', 'multi_factor', 'multiple_authentication', 'two-factor', 'two_factor']",
+            "Any of ['default', 'hash', 'password', 'weak']",
+            "Any of ['audit', 'log', 'monitoring']"
+          ]
+        },
+        "tables_covered": {
+          "found": 3,
+          "total": 3,
+          "details": ["integrations", "user_accounts", "auth_events"]
+        },
+        "assertions": [
+          "SELECT user_id, username, 'Potential plain text password storage - Check Requirement 8.3' AS violation_reason FROM user_accounts WHERE password_hash IS NULL OR password_hash = ''",
+          "SELECT user_id, username, 'Missing MFA enforcement - Check Requirement 8.4.1.a' AS violation_reason FROM user_accounts WHERE mfa_enabled = FALSE",
+          "SELECT event_id, 'Potential lack of audit logging completeness - Check Requirement 10.2.1.1' AS violation_reason FROM auth_events WHERE event_type NOT LIKE '%access%' AND event_type NOT LIKE '%cardholder_data%'",
+          "SELECT integration_id, provider_name, 'Potential unencrypted transmission vector - Check Requirement 4.2' AS violation_reason FROM integrations WHERE transport_protocol = 'HTTP' OR tls_version < '1.2'"
+        ],
+        "iteration": 5
+      },
+      {
+        "case": "PCI_DSS_ST2_TC008_Multi_Core_Control_Gaps",
+        "description": "Stage 2: generate assertions for combined card-data storage, transmission, access, and authentication control gaps",
+        "assertion_count": 6,
+        "keywords": {
+          "found": 5,
+          "total": 5,
+          "details": [
+            "Any of ['SAD', 'cvv', 'security_code', 'sensitive_authentication_data']",
+            "Any of ['card_number', 'cleartext', 'pan', 'unencrypted']",
+            "Any of ['SSL', 'https', 'in_transit', 'tls', 'transmission']",
+            "Any of ['RBAC', 'access-need', 'access_control', 'access_need', 'business-need', 'business_need', 'least_privilege', 'need-to-know', 'need_to_know', 'role-based_access', 'role_based_access']",
+            "Any of ['2-factor', '2FA', '2_factor', 'MFA', 'authentication', 'default_credential', 'multi-factor', 'multi_factor', 'multiple_authentication', 'two-factor', 'two_factor']"
+          ]
+        },
+        "tables_covered": {
+          "found": 4,
+          "total": 4,
+          "details": [
+            "payment_profiles",
+            "outbound_endpoints",
+            "role_grants",
+            "admin_credentials"
+          ]
+        },
+        "assertions": [
+          "SELECT profile_id AS 'Unencrypted_PAN_Violation' FROM payment_profiles WHERE card_number IS NOT NULL AND tokenized = FALSE;",
+          "SELECT profile_id AS 'Stored_SAD_Violation' FROM payment_profiles WHERE security_code IS NOT NULL;",
+          "SELECT credential_id AS 'Missing_MFA_Configuration_Violation' FROM admin_credentials WHERE mfa_secret IS NULL AND is_default_credential = TRUE;",
+          "SELECT profile_id AS 'Potential_Data_Exposure_Violation' FROM payment_profiles WHERE account_id IS NULL AND card_number IS NOT NULL;",
+          "SELECT grant_id AS 'Incomplete_Access_Control_Mapping_Violation' FROM role_grants WHERE object_name IS NULL;",
+          "SELECT endpoint_id AS 'Unsecured_Transmission_Indicator' FROM outbound_endpoints WHERE requires_tls = FALSE AND service_name LIKE '%payment%';"
+        ],
+        "iteration": 5
+      }
+    ]
+  }
+}

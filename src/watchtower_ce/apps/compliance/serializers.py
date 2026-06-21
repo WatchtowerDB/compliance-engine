@@ -135,6 +135,12 @@ class ComplianceAssertionSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class ComplianceCheckSchemaSerializer(serializers.ModelSerializer):
+    class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
+        model = ClientDBSchema
+        fields = ("id", "name", "internal_version")
+
+
 class ComplianceCheckSerializer(serializers.ModelSerializer):
     framework = serializers.PrimaryKeyRelatedField(
         queryset=ComplianceFramework.objects.all(),
@@ -164,11 +170,14 @@ class ComplianceCheckSerializer(serializers.ModelSerializer):
             "The system automatically resolves to the latest uploaded version."
         ),
     )
-    schema_version = serializers.PrimaryKeyRelatedField(
-        source="schema",
+    schema = ComplianceCheckSchemaSerializer(
         read_only=True,
-        help_text="ID of the exact schema version that was resolved and used for this check.",
+        help_text=(
+            "Details of the exact schema version that was resolved and used for this check."
+        ),
     )
+    # Will change later to its own serializer to match the schema one
+    client_db_name = serializers.CharField(source="client_db.name", read_only=True)
     user = serializers.PrimaryKeyRelatedField(
         read_only=True,
         help_text="ID of the user who submitted this check.",
@@ -180,13 +189,14 @@ class ComplianceCheckSerializer(serializers.ModelSerializer):
             "id",
             "framework",
             "client_db",
+            "client_db_name",
+            "schema",
             "schema_name",
-            "schema_version",
             "user",
             "date",
             "status",
         )
-        read_only_fields = ("date", "schema_version", "user", "status")
+        read_only_fields = ("date", "schema", "user", "status")
 
     def validate(self, attrs):
         client_db = attrs["client_db"]

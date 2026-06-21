@@ -1,4 +1,4 @@
-import textwrap
+from textwrap import dedent
 
 from django.conf import settings
 
@@ -28,6 +28,38 @@ class PCIComplianceChecker(ComplianceChecker):
 
     standard: str = "PCI-DSS v4.0.1"
 
+    def _get_system_prompt(self) -> str:
+        """
+        Return the default system prompt for PCI-DSS compliance auditing.
+        """
+        return dedent(
+            f"""
+            You are an expert {self.standard} compliance auditor and database security specialist.
+            Your role is to identify potential security risks and compliance violations within SQL database schemas and assertions.
+
+            Definitions:
+            - Assertion: A `SELECT` SQL statement that returns rows ONLY when a compliance violation is detected. An empty result indicates full compliance.
+            - Failure Result: The output of an assertion that indicates a violation of {self.standard} complaince requirements.
+
+            Core {self.standard} Requirements to Audit:
+            - Requirement 3: Storage and protection of stored cardholder data (e.g., PAN, SAD, hashing, encryption, truncation)
+            - Requirement 4: Protection of cardholder data during transmission (encryption in transit, key management assumptions)
+            - Requirement 7: Restriction of access to cardholder data by business need-to-know
+            - Requirement 8: Identification and authentication of users and administrators accessing system components
+            - Requirement 10: Logging, monitoring, and audit trails for access to cardholder data
+
+            General Instructions:
+            1. Always use precise {self.standard} terminology (e.g., "PAN", "SAD", "Cardholder Data").
+            2. You'll only ever respond either in markdown or JSON.
+            3. When generating lists (questions or assertions), always respond with a valid JSON list of strings.
+            4. Do NOT include any introductory text, comments, or markdown formatting in JSON responses.
+            5. Do NOT respond with more than what is requested. Follow the format requested by the user.
+            6. Do NOT wrap your whole response in ```json``` or ```markdown``` code blocks when responding in JSON or markdown format, respectively. You may use them only for code snippets or when explicitly requested by the user.
+            7. Ensure your responses are friendly to text searching.
+            8. Ensure all SQL generated is valid and executable against the provided schema with respect to its database dialect (either PostgreSQL or MySQL).
+            """
+        ).strip()
+
     def _build_schema_questions_prompt(self, schema: str) -> str:
         """
         Build a prompt for generating PCI-DSS specific compliance questions.
@@ -45,37 +77,24 @@ class PCIComplianceChecker(ComplianceChecker):
             str: A formatted prompt instructing the LLM to generate 3-6 comprehensive
                  questions as a JSON list of strings.
         """
-        return textwrap.dedent(
-            # TODO: Refine ALL prompts with respect to the new more powerful model.
+        return dedent(
             f"""
-            You are an expert PCI-DSS compliance auditor and database security specialist.
-
             Task:
-            Analyze the SQL schema and infer possible {self.standard} concerns.
-            Generate ONLY 3-6 comprehensive rich questions an auditor would ask that
-            directly relate to the following PCI-DSS requirements:
-            - Requirement 3: Storage and protection of stored cardholder data (e.g., PAN, SAD, hashing, encryption, truncation)
-            - Requirement 4: Protection of cardholder data during transmission (encryption in transit, key management assumptions)
-            - Requirement 7: Restriction of access to cardholder data by business need-to-know
-            - Requirement 8: Identification and authentication of users accessing cardholder data
-            - Requirement 10: Logging, monitoring, and audit trails for access to cardholder data
+            - Analyze the SQL schema and infer possible {self.standard} concerns.
+            - Generate ONLY 3-6 comprehensive rich questions an auditor would ask that directly relate to the core {self.standard} requirements.
 
             Instructions:
             1. Examine the schema for both clear (e.g., "credit_card") and ambiguous (e.g., "blob_data", "user_info") columns.
-            2. Generate questions that use PCI-DSS terminology (e.g., "PAN" instead of "card number", "SAD" instead of "security code", etc.).
-            3. Be specific (e.g., PAN and SAD are not the same thing and should be treated as so in your questions;
-                these are two separate topics, so two separate questions if needed).
-            4. Avoid using raw database field names in the questions; translate them into natural English descriptions (e.g., "card number" instead of "card_number", etc.).
-            5. Ensure questions are retrieval friendly to vector stores. They should sound like they are seeking specific guidance from the standard.
+            2. Be specific (e.g., PAN and SAD are not the same thing and should be treated as so in your questions).
+            3. Avoid using raw database field names in the questions; translate them into natural English descriptions.
+            4. Ensure questions are retrieval friendly to vector stores. They should sound like they are seeking specific guidance from the standard.
 
-            Response:
-            - Respond ONLY with a valid JSON list of strings containing the questions.
-            - Ensure the output is valid JSON and respects proper escaping.
+            Output Format:
+            - Respond with a valid JSON list of strings (the questions).
             - MAXIMUM 6 questions.
-            - Do NOT include any comments of any kind, introductory text, or any markdown formatting.
 
-            Output example:
-            ["<question 1>", "<question 2>", ...]
+            Example Output:
+            ["Question 1 ?", "Question 2 ?", ...]
 
             Schema:
             {schema}
@@ -96,39 +115,28 @@ class PCIComplianceChecker(ComplianceChecker):
                 The SQL assertion to analyze.
 
         Returns:
-            str: A formatted prompt instructing the LLM to generate 2 comprehensive
+            str: A formatted prompt instructing the LLM to generate 4 comprehensive
                  questions as a JSON list of strings.
         """
-        return textwrap.dedent(
+        return dedent(
             f"""
-            You are an expert PCI-DSS compliance auditor and database security specialist.
-
             Task:
-            Analyze the SQL assertion command and infer possible {self.standard} concerns.
-            Generate ONLY 4 comprehensive rich questions depending on what the assertion command checks for that an auditor would ask that directly relate to the following PCI-DSS requirements:
-            - Requirement 3: Storage and protection of stored cardholder data (e.g., PAN, SAD, hashing, encryption, truncation)
-            - Requirement 4: Protection of cardholder data during transmission (encryption in transit, key management assumptions)
-            - Requirement 7: Restriction of access to cardholder data by business need-to-know
-            - Requirement 8: Identification and authentication of users and administrators accessing system components (password hashing, MFA)
-            - Requirement 10: Logging, monitoring, and audit trails for access to cardholder data
+            - Analyze the SQL assertion command and infer possible {self.standard} concerns.
+            - Generate ONLY 3 comprehensive rich questions depending on what the assertion command checks for that an auditor would ask that directly relate to the core {self.standard} requirements.
 
             Instructions:
             1. Examine the assertion for both clear (e.g., "credit_card") and ambiguous (e.g., "blob_data", "user_info") columns.
-            2. Generate questions that use PCI-DSS terminology (e.g., "PAN" instead of "card number", "SAD" instead of "security code", etc.).
-            3. Be specific (e.g., PAN and SAD are not the same thing and should be treated as so in your questions;
-                these are two separate topics, so two separate questions if needed).
-            4. Avoid using raw database field names in the questions; translate them into natural English descriptions (e.g., "card number" instead of "card_number", etc.).
-            5. End your questions with "according to requirement <requirement number you are asking about> ?"
-            6. Ensure questions are retrieval friendly to vector stores. They should be written with many keywords to help with searching.
+            2. Be specific (e.g., PAN and SAD are not the same thing and should be treated as so in your questions).
+            3. Avoid using raw database field names in the questions; translate them into natural English descriptions.
+            4. End your questions with "according to requirement <requirement number you are asking about> ?"
+            5. Ensure questions are retrieval friendly to vector stores. They should be written with many keywords to help with searching.
 
-            Output:
-            - Respond ONLY with a valid JSON list of strings containing the questions.
-            - Ensure the output is valid JSON and respects proper escaping.
-            - EXACTLY 4 questions.
-            - Do NOT include any comments of any kind, introductory text, or any markdown formatting.
+            Output Format:
+            - Respond with a valid JSON list of strings (the questions).
+            - EXACTLY 3 questions.
 
-            Output example:
-            ["<question 1>", "<question 2>", "<question 3>", "<question 4>"]
+            Example Output:
+            ["Question 1 ?", "Question 2 ?", "Question 3 ?"]
 
             Assertion:
             {assertion}
@@ -154,14 +162,8 @@ class PCIComplianceChecker(ComplianceChecker):
                  as a JSON list of strings. Each assertion is a SELECT query that
                  identifies compliance violations.
         """
-        # TODO: Experiment with changing
-        # "- Include descriptive column aliases explaining the violation"
-        # to
-        # "- Be as simple and direct as possible while still being effective at identifying violations"
-        return textwrap.dedent(
+        return dedent(
             f"""
-            You are an expert PCI-DSS compliance auditor and SQL specialist.
-
             Context chunks (retrieved from a {self.standard} standard vector store):
             {context}
 
@@ -171,31 +173,29 @@ class PCIComplianceChecker(ComplianceChecker):
             Empty results mean compliance.
 
             Focus on:
-            1. Detecting unencrypted cardholder data (PANs stored in plaintext)
-            2. Detecting prohibited sensitive authentication data (CVV, PIN, full track data)
-            3. Verifying encryption/hashing is applied to sensitive columns
-            4. Checking for audit logging capabilities (created_at, updated_at, etc.)
-            5. Identifying columns with ambiguous names that might store payment data
-            6. Verifying access controls exist (not just public tables)
+            1. Detecting unencrypted cardholder data (PANs stored in plaintext).
+            2. Detecting prohibited sensitive authentication data (CVV, PIN, full track data).
+            3. Verifying encryption/hashing is applied to sensitive columns.
+            4. Checking for audit logging capabilities (created_at, updated_at, etc.).
+            5. Identifying columns with ambiguous names that might store payment data.
+            6. Verifying access controls exist (not just public tables).
 
-            Requirements for each assertion:
-            - Must be a valid SELECT query
-            - Should return violating rows/columns, or designed to return empty results if compliant
-            - Include descriptive column aliases explaining the violation
-            - Be executable against the provided schema
-            - Focus on one specific compliance check
+            Instructions:
+            - Each assertion must be a valid SELECT query. Assertions should not be generic examples; they should be runnable against the provided schema.
+            - Include descriptive column aliases explaining the potential violation.
+            - Generate as many assertions as you need against the provided schema. Aim for the highest coverage of the schema against the highest coverage of compliance requirements using the highest amount of assertions possible.
+            - Do NOT generate one assertion that covers multiple compliance requirements. One big assertion that covers many compliance requirements is not acceptable.
+            - Do NOT generate assertions that cover unrelated database errors or non-compliance issues.
+            - Make sure to cover all relevant compliance requirements, and all relevant parts of the database schema.
+
+            Output Format:
+            - Respond with a valid JSON list of strings containing the SQL queries.
+
+            Example Output:
+            ["SELECT ...", "SELECT ...", ...]
 
             SQL Schema:
             {schema}
-
-            Output:
-            - Generate as many assertions as you need against the provided schema covering different {self.standard} requirements when necessary.
-            - Respond **ONLY** with a valid JSON list of strings containing the SQL queries.
-            - Ensure the output is valid JSON and respects proper escaping.
-            - Do NOT include any comments of any kind, introductory text, or any markdown formatting.
-
-            Output example:
-            ["<assertion SQL query 1>", "<assertion SQL query 2>", ...]
             """
         ).strip()
 
@@ -220,34 +220,55 @@ class PCIComplianceChecker(ComplianceChecker):
             str: A formatted prompt instructing the LLM to analyze the failure and
                  provide specific remediation steps including SQL fixes.
         """
-        return textwrap.dedent(
+        return dedent(
             f"""
-            You are an expert PCI-DSS compliance auditor and database security specialist.
-
-            Context chunks (retrieved from a {self.standard} standard vector store; often not all of it is needed. Pick only what's relevant):
+            Context Chunks (retrieved from the {self.standard} vector store; use only relevant portions):
             {context}
 
-            A compliance assertion has FAILED, indicating a {self.standard} violation.
+            A compliance assertion has failed, indicating a {self.standard} violation.
 
             Failed Assertion:
             {assertion}
 
-            Violation Details (rows returned by assertion):
+            Rows Returned by the Assertion:
             {failure_result}
 
             Task:
-            Analyze this failure and provide specific remediation guidance.
+            Analyze the violation and provide remediation guidance.
 
-            Your response must include:
-            1. VIOLATION SUMMARY: What specific {self.standard} requirement is violated
-            2. STANDARD REFERENCE: Cite the exact {self.standard} clause(s) that apply
-            3. SECURITY IMPACT: Explain the risk this violation poses to cardholder data
-            4. REMEDIATION STEPS: Provide concrete, actionable steps and optionally SQL queries to fix this violation
+            Instructions:
+            - Base the analysis on the provided context.
+            - Use as much wording from the given context as possible.
+            - If the context does not provide sufficient detail, use your own knowledge to fill in the gaps.
+            - Organize the response using markdown into clear, sectioned sections, with subsections when appropriate.
+            - Use markdown skillfully to structure the response.
+            - Wrap SQL queries in code blocks.
+            - Be specific and actionable.
+            - Omit any personal or sensitive information; replace it with placeholders (e.g., ****).
+            - Do not mention the context directly; use the context to explain why the assertion failed, or call it the "standard".
 
-            Your reply should:
-            - Use as much wording from the given context as possible except for the REMEDIATION STEPS.
-            - Be specific and actionable. If encryption is needed, specify what to encrypt and how.
-                If data should be deleted, explain why and provide the SQL to do so safely. And so on.
+            Output Format:
+
+            ## Violation Summary
+            A high-level summary of the violation.
+
+            ## Standard Reference
+            Cite the exact {self.standard} requirement(s) and clause(s) that apply as granularly as reasonably possible (e.g., Requirement 3.3.1, not Requirement 3). Multiple requirements and clauses maybe applicable.
+
+            ## Detailed Analysis
+            Explain why the assertion failed from a compliance perspective and what was observed.
+            This section is your chance to be as verbose as possible, and get in as much detail as possible.
+            Multiple paragraphs are encouraged.
+
+            ## Security Impact
+            Describe the risk and potential consequences of non-compliance on the organization.
+
+            ## Remediation Steps
+            Provide concrete actions to resolve the issue.
+            Include actionable SQL queries examples based on what you know of the schema from the assertion, if relevant.
+
+            ## Additional Notes
+            Any additional context or considerations relevant to the violation. This section is optional.
             """
         ).strip()
 
