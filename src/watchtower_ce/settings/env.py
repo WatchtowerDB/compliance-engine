@@ -44,9 +44,9 @@ DATABASES: dict[str, dj_database_url.DBConfig] = {
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
-CELERY_STALE_PROCESS_TIMEOUT: int = int(os.getenv("CELERY_STALE_PROCESS_TIMEOUT", "15"))
+CELERY_STALE_PROCESS_TIMEOUT: int = int(os.getenv("CELERY_STALE_PROCESS_TIMEOUT", "5"))
 CELERY_STALE_PENDING_PROCESS_TIMEOUT: int = int(
-    os.getenv("CELERY_STALE_PENDING_PROCESS_TIMEOUT", "120")
+    os.getenv("CELERY_STALE_PENDING_PROCESS_TIMEOUT", "60")
 )
 
 # Mock compliance checker settings
