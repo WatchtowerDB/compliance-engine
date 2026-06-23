@@ -305,12 +305,8 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
     def latest(self, request):
         latest_check = self.get_queryset().last()
 
-        # TODO: RETURN INSTEAD AN EMPTY TEMPLATE RESPONSE OF THE SERIALIZER LIKE THE OTHER VIEWSETS BECAUSE 404 IS BLOWING UP THE FRONTEND HAHA
         if latest_check is None:
-            return Response(
-                {"detail": "No compliance checks found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
         serializer = self.get_serializer(latest_check)
         return Response(serializer.data)
