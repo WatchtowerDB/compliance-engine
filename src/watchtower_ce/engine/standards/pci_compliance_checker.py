@@ -184,7 +184,7 @@ class PCIComplianceChecker(ComplianceChecker):
             - Each assertion must be a valid SELECT query. Assertions should not be generic examples; they should be runnable against the provided schema.
             - Include descriptive column aliases explaining the potential violation.
             - Generate as many assertions as you need against the provided schema. Aim for the highest coverage of the schema against the highest coverage of compliance requirements using the highest amount of assertions possible.
-            - Do NOT generate one assertion that covers multiple compliance requirements. One big assertion that covers many compliance requirements is not acceptable.
+            - Do NOT generate one assertion that covers multiple compliance requirements. One big assertion that covers many compliance requirements is not acceptable. Using UNION statements to combine multiple assertions is not allowed.
             - Do NOT generate assertions that cover unrelated database errors or non-compliance issues.
             - Make sure to cover all relevant compliance requirements, and all relevant parts of the database schema.
 

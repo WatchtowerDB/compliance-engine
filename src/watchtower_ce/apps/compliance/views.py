@@ -6,6 +6,7 @@ from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
+    OpenApiParameter,
     OpenApiResponse,
     extend_schema,
     extend_schema_view,
@@ -25,7 +26,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from ...engine.clients import LLMInference
-from . import models, serializers
+from . import analytics, models, serializers
 from .filters import (
     ClientDBFilter,
     ClientDBSchemaFilter,
@@ -304,12 +305,8 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
     def latest(self, request):
         latest_check = self.get_queryset().last()
 
-        # TODO: RETURN INSTEAD AN EMPTY TEMPLATE RESPONSE OF THE SERIALIZER LIKE THE OTHER VIEWSETS
         if latest_check is None:
-            return Response(
-                {"detail": "No compliance checks found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
         serializer = self.get_serializer(latest_check)
         return Response(serializer.data)
@@ -395,3 +392,173 @@ def model_status(request) -> Response:
         )
 
     return Response(LLMInference().health(), status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    parameters=[
+        OpenApiParameter(
+            "db_id",
+            int,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            description="ID of the ClientDB whose schema history to analyse.",
+        ),
+        OpenApiParameter(
+            "schema_name",
+            str,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            description=(
+                "Schema group name (ClientDBSchema.name). "
+                "All versions for this schema name under db_id are included, "
+                "ordered as v1, v2, v3 …"
+            ),
+        ),
+        OpenApiParameter(
+            "framework_id",
+            int,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            many=True,
+            description=(
+                "One or more ComplianceFramework IDs to include. "
+                "Omit to include all frameworks."
+            ),
+        ),
+    ],
+    responses={
+        200: OpenApiResponse(
+            description=(
+                "List of schema versions with per-framework Compliance Score data. "
+                'Example: [{"version": "v1", "framework_scores": {"PCI-DSS": {"score": 7.5}}, '
+                '"compliance_score": 8.2}]'
+            )
+        ),
+        400: OpenApiResponse(
+            description="db_id/framework_id invalid, or required params missing."
+        ),
+        404: OpenApiResponse(
+            description="schema_name not found under the given db_id."
+        ),
+    },
+    summary="Schema iteration compliance scores",
+    description=(
+        "Returns a chronological series of schema versions for a given database, "
+        "each annotated with Compliance Score (CS) data derived from the latest "
+        "COMPLETED ComplianceCheck for each schema/framework pair.\n\n"
+        "**Version ordering:** all ClientDBSchema records for db_id + schema_name, "
+        "sorted by internal_version then id, are labelled v1, v2, v3 …\n\n"
+        "**Per-version data:** for each version, the latest COMPLETED check for that "
+        "schema/framework is used. If a version has no COMPLETED check yet, the previous "
+        "version's latest COMPLETED result for that framework is carried forward. "
+        "Assertions with status FAILED are excluded from all metrics.\n\n"
+        "Requires authentication."
+    ),
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def schema_iteration_chart(request):
+    raw_db_id = request.query_params.get("db_id")
+    schema_name = request.query_params.get("schema_name")
+
+    if not raw_db_id or not schema_name:
+        return Response(
+            {"detail": "db_id and schema_name are required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        db_id = int(raw_db_id)
+        framework_ids = [
+            int(fid) for fid in request.query_params.getlist("framework_id")
+        ]
+    except (ValueError, TypeError):
+        return Response(
+            {"detail": "db_id and framework_id must be integers."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not models.ClientDBSchema.objects.filter(
+        client_db_id=db_id, name=schema_name
+    ).exists():
+        return Response(
+            {"detail": "No schema found for the given db_id and schema_name."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    return Response(
+        analytics.build_schema_iteration_compliance_scores(
+            db_id=db_id,
+            schema_name=schema_name,
+            framework_ids=framework_ids,
+        )
+    )
+
+
+@extend_schema(
+    parameters=[
+        OpenApiParameter(
+            "db_id",
+            int,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            description="ID of the ClientDB to score.",
+        ),
+        OpenApiParameter(
+            "framework_id",
+            int,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            many=True,
+            description=(
+                "One or more ComplianceFramework IDs to include. "
+                "Omit to include all frameworks."
+            ),
+        ),
+    ],
+    responses={
+        200: OpenApiResponse(
+            description=(
+                "Database-level Compliance Score across latest schema versions. "
+                'Example: {"framework_scores": {"PCI-DSS": {"compliance_score": 6.2}}, '
+                '"compliance_score": 5.8}'
+            )
+        ),
+        400: OpenApiResponse(description="db_id/framework_id missing or not integers."),
+        404: OpenApiResponse(description="ClientDB not found."),
+    },
+    summary="Database compliance score",
+    description=(
+        "Returns Compliance Score (CS) for a database across all schema groups and "
+        "frameworks. Uses only latest schema versions, latest COMPLETED checks, "
+        "and excludes FAILED assertions from metrics. Requires authentication."
+    ),
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def database_compliance_score(request):
+    raw_db_id = request.query_params.get("db_id")
+    if not raw_db_id:
+        return Response(
+            {"detail": "db_id is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        db_id = int(raw_db_id)
+        framework_ids = [
+            int(fid) for fid in request.query_params.getlist("framework_id")
+        ]
+    except (ValueError, TypeError):
+        return Response(
+            {"detail": "db_id and framework_id must be integers."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    get_object_or_404(models.ClientDB, pk=db_id)
+    return Response(
+        analytics.build_database_compliance_score(
+            db_id=db_id,
+            framework_ids=framework_ids,
+        )
+    )

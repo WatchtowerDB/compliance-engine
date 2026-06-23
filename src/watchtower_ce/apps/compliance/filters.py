@@ -20,6 +20,12 @@ class NumberInFilter(filters.BaseInFilter, filters.NumberFilter):
     pass
 
 
+class StatusInFilter(filters.BaseInFilter, filters.ChoiceFilter):
+    """Allows comma-separated statuses (e.g., ?status=PENDING,ANALYZING)"""
+
+    pass
+
+
 class ComplianceAssertionFilter(filters.FilterSet):
     schema = NumberInFilter(field_name="schema__id", lookup_expr="in")
     client_db = NumberInFilter(field_name="client_db__id", lookup_expr="in")
@@ -28,7 +34,7 @@ class ComplianceAssertionFilter(filters.FilterSet):
     )
     result = filters.BooleanFilter(field_name="result")
     check = NumberInFilter(field_name="compliance_check__id", lookup_expr="in")
-    status = filters.MultipleChoiceFilter(
+    status = StatusInFilter(
         field_name="status", choices=ComplianceAssertion.Status.choices
     )
 
@@ -88,9 +94,7 @@ class ComplianceFrameworkFilter(filters.FilterSet):
 class ComplianceCheckFilter(filters.FilterSet):
     framework = NumberInFilter(field_name="framework__id", lookup_expr="in")
     client_db = NumberInFilter(field_name="client_db__id", lookup_expr="in")
-    status = filters.MultipleChoiceFilter(
-        field_name="status", choices=ComplianceCheck.Status.choices
-    )
+    status = StatusInFilter(field_name="status", choices=ComplianceCheck.Status.choices)
 
     class Meta:
         model = ComplianceCheck

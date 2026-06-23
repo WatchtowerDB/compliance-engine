@@ -17,5 +17,15 @@ urlpatterns: list[URLPattern | URLResolver] = [
         views.stream_check_updates,
         name="stream-check-updates",
     ),
+    path(
+        "analytics/database-score/",
+        views.database_compliance_score,
+        name="analytics-database-score",
+    ),
+    path(
+        "analytics/schema-iterations/",
+        views.schema_iteration_chart,
+        name="analytics-schema-iterations",
+    ),
     path("model/status/", views.model_status, name="model-status"),
 ]
