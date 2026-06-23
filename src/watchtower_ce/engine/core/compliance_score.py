@@ -37,8 +37,8 @@ class ComplianceScoreCalculator:
 
         for observation in observations:
             weight = observation.weight
-            compliance = observation.compliance
-            if weight <= 0 or compliance <= 0:
+            compliance = max(observation.compliance, 0.001)
+            if weight <= 0:
                 return 0.0
 
             weight_sum += weight
