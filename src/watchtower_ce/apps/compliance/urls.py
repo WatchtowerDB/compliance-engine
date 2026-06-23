@@ -18,6 +18,11 @@ urlpatterns: list[URLPattern | URLResolver] = [
         name="stream-check-updates",
     ),
     path(
+        "analytics/database-score/",
+        views.database_compliance_score,
+        name="analytics-database-score",
+    ),
+    path(
         "analytics/schema-iterations/",
         views.schema_iteration_chart,
         name="analytics-schema-iterations",

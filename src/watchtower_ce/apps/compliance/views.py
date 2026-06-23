@@ -497,3 +497,72 @@ def schema_iteration_chart(request):
             framework_ids=framework_ids,
         )
     )
+
+
+@extend_schema(
+    parameters=[
+        OpenApiParameter(
+            "db_id",
+            int,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            description="ID of the ClientDB to score.",
+        ),
+        OpenApiParameter(
+            "framework_id",
+            int,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            many=True,
+            description=(
+                "One or more ComplianceFramework IDs to include. "
+                "Omit to include all frameworks."
+            ),
+        ),
+    ],
+    responses={
+        200: OpenApiResponse(
+            description=(
+                "Database-level Compliance Score across latest schema versions. "
+                'Example: {"framework_scores": {"PCI-DSS": {"compliance_score": 6.2}}, '
+                '"compliance_score": 5.8}'
+            )
+        ),
+        400: OpenApiResponse(description="db_id/framework_id missing or not integers."),
+        404: OpenApiResponse(description="ClientDB not found."),
+    },
+    summary="Database compliance score",
+    description=(
+        "Returns Compliance Score (CS) for a database across all schema groups and "
+        "frameworks. Uses only latest schema versions, latest COMPLETED checks, "
+        "and excludes FAILED assertions from metrics. Requires authentication."
+    ),
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def database_compliance_score(request):
+    raw_db_id = request.query_params.get("db_id")
+    if not raw_db_id:
+        return Response(
+            {"detail": "db_id is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        db_id = int(raw_db_id)
+        framework_ids = [
+            int(fid) for fid in request.query_params.getlist("framework_id")
+        ]
+    except (ValueError, TypeError):
+        return Response(
+            {"detail": "db_id and framework_id must be integers."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    get_object_or_404(models.ClientDB, pk=db_id)
+    return Response(
+        analytics.build_database_compliance_score(
+            db_id=db_id,
+            framework_ids=framework_ids,
+        )
+    )
