@@ -2,7 +2,6 @@ from typing import cast
 
 from celery.app.task import Task
 from django.conf import settings
-from django.db.models import Count, Max
 from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -27,7 +26,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from ...engine.clients import LLMInference
-from . import models, serializers
+from . import analytics, models, serializers
 from .filters import (
     ClientDBFilter,
     ClientDBSchemaFilter,
@@ -306,7 +305,7 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
     def latest(self, request):
         latest_check = self.get_queryset().last()
 
-        # TODO: RETURN INSTEAD AN EMPTY TEMPLATE RESPONSE OF THE SERIALIZER LIKE THE OTHER VIEWSETS
+        # TODO: RETURN INSTEAD AN EMPTY TEMPLATE RESPONSE OF THE SERIALIZER LIKE THE OTHER VIEWSETS BECAUSE 404 IS BLOWING UP THE FRONTEND HAHA
         if latest_check is None:
             return Response(
                 {"detail": "No compliance checks found."},
@@ -409,14 +408,14 @@ def model_status(request) -> Response:
             description="ID of the ClientDB whose schema history to analyse.",
         ),
         OpenApiParameter(
-            "schema_id",
-            int,
+            "schema_name",
+            str,
             location=OpenApiParameter.QUERY,
             required=True,
             description=(
-                "ID of the ClientDBSchema that serves as the upper bound. "
-                "All schemas for db_id with id ≤ schema_id are included, "
-                "ordered chronologically as v1, v2, v3 …"
+                "Schema group name (ClientDBSchema.name). "
+                "All versions for this schema name under db_id are included, "
+                "ordered as v1, v2, v3 …"
             ),
         ),
         OpenApiParameter(
@@ -434,22 +433,29 @@ def model_status(request) -> Response:
     responses={
         200: OpenApiResponse(
             description=(
-                "List of schema versions with per-framework failure counts. "
-                'Example: [{"version": "v1", "SOC2": 8, "HIPAA": 14}]'
+                "List of schema versions with per-framework Compliance Score data. "
+                'Example: [{"version": "v1", "framework_scores": {"PCI-DSS": {"score": 7.5}}, '
+                '"compliance_score": 8.2}]'
             )
         ),
-        400: OpenApiResponse(description="db_id or schema_id missing or not integers."),
-        404: OpenApiResponse(description="schema_id not found under the given db_id."),
+        400: OpenApiResponse(
+            description="db_id/framework_id invalid, or required params missing."
+        ),
+        404: OpenApiResponse(
+            description="schema_name not found under the given db_id."
+        ),
     },
-    summary="Schema iteration failure counts",
+    summary="Schema iteration compliance scores",
     description=(
         "Returns a chronological series of schema versions for a given database, "
-        "each annotated with the number of failing compliance assertions per framework "
-        "as of the latest ComplianceCheck recorded for that schema.\n\n"
-        "**Version ordering:** all ClientDBSchema records for db_id with id ≤ schema_id, "
-        "sorted ascending by id, are labelled v1, v2, v3 …\n\n"
-        "**Per-version data:** for each (schema, framework) pair the most recent "
-        "ComplianceCheck is used; its assertions where result=False are counted.\n\n"
+        "each annotated with Compliance Score (CS) data derived from the latest "
+        "COMPLETED ComplianceCheck for each schema/framework pair.\n\n"
+        "**Version ordering:** all ClientDBSchema records for db_id + schema_name, "
+        "sorted by internal_version then id, are labelled v1, v2, v3 …\n\n"
+        "**Per-version data:** for each version, the latest COMPLETED check for that "
+        "schema/framework is used. If a version has no COMPLETED check yet, the previous "
+        "version's latest COMPLETED result for that framework is carried forward. "
+        "Assertions with status FAILED are excluded from all metrics.\n\n"
         "Requires authentication."
     ),
 )
@@ -457,72 +463,37 @@ def model_status(request) -> Response:
 @permission_classes([IsAuthenticated])
 def schema_iteration_chart(request):
     raw_db_id = request.query_params.get("db_id")
-    raw_schema_id = request.query_params.get("schema_id")
+    schema_name = request.query_params.get("schema_name")
 
-    if not raw_db_id or not raw_schema_id:
+    if not raw_db_id or not schema_name:
         return Response(
-            {"detail": "db_id and schema_id are required."},
+            {"detail": "db_id and schema_name are required."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
     try:
         db_id = int(raw_db_id)
-        schema_id = int(raw_schema_id)
         framework_ids = [
             int(fid) for fid in request.query_params.getlist("framework_id")
         ]
     except (ValueError, TypeError):
         return Response(
-            {"detail": "db_id, schema_id, and framework_id must be integers."},
+            {"detail": "db_id and framework_id must be integers."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    get_object_or_404(models.ClientDBSchema, pk=schema_id, client_db_id=db_id)
+    if not models.ClientDBSchema.objects.filter(
+        client_db_id=db_id, name=schema_name
+    ).exists():
+        return Response(
+            {"detail": "No schema found for the given db_id and schema_name."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
 
-    schema_ids = list(
-        models.ClientDBSchema.objects.filter(client_db_id=db_id, id__lte=schema_id)
-        .order_by("id")
-        .values_list("id", flat=True)
+    return Response(
+        analytics.build_schema_iteration_compliance_scores(
+            db_id=db_id,
+            schema_name=schema_name,
+            framework_ids=framework_ids,
+        )
     )
-
-    frameworks_qs = models.ComplianceFramework.objects.all()
-    if framework_ids:
-        frameworks_qs = frameworks_qs.filter(id__in=framework_ids)
-    framework_map: dict[int, str] = dict(frameworks_qs.values_list("id", "name"))
-
-    if not framework_map:
-        return Response([{"version": f"v{i + 1}"} for i in range(len(schema_ids))])
-
-    # Latest ComplianceCheck id per (schema, framework) pair
-    latest_check_map: dict[tuple[int, int], int] = {
-        (row["schema_id"], row["framework_id"]): row["latest_id"]
-        for row in models.ComplianceCheck.objects.filter(
-            schema_id__in=schema_ids,
-            framework_id__in=list(framework_map),
-        )
-        .values("schema_id", "framework_id")
-        .annotate(latest_id=Max("id"))
-    }
-
-    # Failure counts for each of those checks
-    failure_count_map: dict[int, int] = {
-        row["compliance_check_id"]: row["count"]
-        for row in models.ComplianceAssertion.objects.filter(
-            compliance_check_id__in=list(set(latest_check_map.values())),
-            result=False,
-        )
-        .values("compliance_check_id")
-        .annotate(count=Count("id"))
-    }
-
-    result = []
-    for i, sid in enumerate(schema_ids):
-        entry: dict[str, int | str] = {"version": f"v{i + 1}"}
-        for fw_id, fw_name in framework_map.items():
-            check_id = latest_check_map.get((sid, fw_id))
-            entry[fw_name] = (
-                failure_count_map.get(check_id, 0) if check_id is not None else 0
-            )
-        result.append(entry)
-
-    return Response(result)
