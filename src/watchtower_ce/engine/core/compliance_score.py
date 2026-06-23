@@ -62,4 +62,4 @@ class ComplianceScoreCalculator:
         raw_compliance = round(raw_compliance, 4)
         if raw_compliance <= 0:
             return 0.0
-        return round(10 * raw_compliance, 4)
+        return round(10 * raw_compliance, 1)
