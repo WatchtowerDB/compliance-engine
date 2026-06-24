@@ -439,6 +439,52 @@ gum log -l info "Postgres clientdb is ready at localhost:${usage_port}"
 gum log -l info "Connection string: postgresql://${usage_username}:${usage_password}@localhost:${usage_port}/${usage_database}"
 '''
 
+[tasks.postgres-clientdb-gdpr]
+description = "Start a PostgreSQL client database pre-loaded with the NexaCare GDPR test schema"
+tools = { docker-cli = "29" }
+usage = '''
+flag "-n --container-name <container-name>" help="Name for the test postgres container" default="wtce-postgres-clientdb-gdpr"
+flag "-i --container-image <container-image>" help="Image to use for creating the postgres container" default="postgres:18-alpine"
+flag "-P --port <port>" help="Port to listen on for postgresql connections" default="5434"
+flag "-u --username <username>" help="superuser username" default="testuser"
+flag "-p --password <password>" help="superuser password" default="testpassword"
+flag "-d --database <database>" help="initial database name" default="testdb"
+flag "-s --schema <schema>" help="Path to schema SQL file" default="./test_dbs/gdpr/pg_schema.sql"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ -n "$(docker container ls -qaf "name=${usage_container_name}")" ]; then
+  gum log -l info "Starting postgres clientdb-gdpr container: ${usage_container_name}"
+  docker container start "${usage_container_name}"
+else
+  if [ ! -f "${usage_schema}" ]; then
+    gum log -l error "Schema file not found: ${usage_schema}"
+    exit 1
+  fi
+
+  gum spin --title "Creating postgres clientdb-gdpr container" -- \
+  docker container run -d \
+  --name "${usage_container_name}" \
+  -e "POSTGRES_USER=${usage_username}" \
+  -e "POSTGRES_PASSWORD=${usage_password}" \
+  -e "POSTGRES_DB=${usage_database}" \
+  -p "${usage_port}:5432" \
+  -v "${usage_container_name}-data:/var/lib/postgresql/data" \
+  -v "$(realpath "${usage_schema}"):/docker-entrypoint-initdb.d/schema.sql:ro" \
+  "${usage_container_image}"
+fi
+
+gum spin --title "Waiting for postgres clientdb-gdpr to be ready" -- \
+  timeout 90s bash -c \
+  "until docker exec ${usage_container_name} pg_isready -U ${usage_username} -d ${usage_database} -q; \
+  do sleep 1; done"
+
+gum log -l info "Postgres clientdb-gdpr is ready at localhost:${usage_port}"
+gum log -l info "Connection string: postgresql://${usage_username}:${usage_password}@localhost:${usage_port}/${usage_database}"
+'''
+
 [tasks.mysql-clientdb]
 description = "Start a MySQL client database with schema"
 tools = { docker-cli = "29" }
