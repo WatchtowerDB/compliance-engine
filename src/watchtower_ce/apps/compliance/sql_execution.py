@@ -34,13 +34,19 @@ class DatabaseExecutor(abc.ABC):
         self.connection_string = connection_string
 
     @abc.abstractmethod
-    def execute(self, sql_query: str) -> tuple[bool, str]:
-        """Executes a SQL query and returns (passed, output_str)."""
+    def execute(self, sql_query: str) -> tuple[bool | None, str]:
+        """Executes a SQL query and returns (passed, output_str).
+
+        Returns:
+            (True, output)  — assertion passed
+            (False, output) — assertion failed (non-compliant rows found)
+            (None, error)   — execution error; should be treated as FAILED
+        """
         pass
 
 
 class PostgresExecutor(DatabaseExecutor):
-    def execute(self, sql_query: str) -> tuple[bool, str]:
+    def execute(self, sql_query: str) -> tuple[bool | None, str]:
         try:
             with psycopg.connect(self.connection_string) as conn:
                 with conn.cursor() as cur:
@@ -53,11 +59,11 @@ class PostgresExecutor(DatabaseExecutor):
                     return passed, str(rows)
         except psycopg.Error as e:
             logger.error("PostgreSQL Operational Error: %s", e)
-            return False, ""
+            return None, str(e)
 
 
 class SQLiteExecutor(DatabaseExecutor):
-    def execute(self, sql_query: str) -> tuple[bool, str]:
+    def execute(self, sql_query: str) -> tuple[bool | None, str]:
         db_path = self.connection_string.removeprefix("sqlite:///")
         try:
             with sqlite3.connect(db_path) as conn:
@@ -71,11 +77,11 @@ class SQLiteExecutor(DatabaseExecutor):
                 return passed, str(rows)
         except sqlite3.Error as e:
             logger.error("SQLite Operational Error: %s", e)
-            return False, ""
+            return None, str(e)
 
 
 class MySQLExecutor(DatabaseExecutor):
-    def execute(self, sql_query: str) -> tuple[bool, str]:
+    def execute(self, sql_query: str) -> tuple[bool | None, str]:
         parsed = urlparse(self.connection_string)
         conn_kwargs = {
             "host": parsed.hostname or "localhost",
@@ -96,7 +102,7 @@ class MySQLExecutor(DatabaseExecutor):
                     return passed, str(rows)
         except pymysql.Error as e:
             logger.error("MySQL Operational Error: %s", e)
-            return False, ""
+            return None, str(e)
 
 
 class ExecutorFactory:

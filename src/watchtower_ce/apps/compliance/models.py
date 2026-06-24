@@ -113,6 +113,13 @@ class ComplianceCheck(models.Model):
     status: models.CharField = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING
     )
+    retry_count: models.PositiveSmallIntegerField = models.PositiveSmallIntegerField(
+        default=0,
+        help_text=(
+            "Number of times this check has been automatically retried due to "
+            "a high assertion error rate during execution. Max retries: 3."
+        ),
+    )
     updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:

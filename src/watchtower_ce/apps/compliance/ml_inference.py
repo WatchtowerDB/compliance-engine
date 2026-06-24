@@ -91,7 +91,9 @@ def generate_assertions(schema: str, framework_name: str) -> List[str]:
         return []
 
 
-def execute_sql_assertion(connection_string: str, sql_query: str) -> tuple[bool, str]:
+def execute_sql_assertion(
+    connection_string: str, sql_query: str
+) -> tuple[bool | None, str]:
     """
     Execute a SQL assertion against a client database.
 
@@ -104,23 +106,25 @@ def execute_sql_assertion(connection_string: str, sql_query: str) -> tuple[bool,
         sql_query (str): SQL assertion query to execute.
 
     Returns:
-        tuple[bool, str]: `(True, "")` if the assertion passes (no rows
-            returned), `(False, result)` otherwise.
+        tuple[bool | None, str]:
+            (True, "")      — assertion passed
+            (False, output) — assertion failed (non-compliant rows found)
+            (None, error)   — execution errored; caller should mark as FAILED
     """
     clean_query = sql_query.strip().upper()
     if not clean_query.startswith("SELECT") and not clean_query.startswith("WITH"):
         logger.error("Blocked potentially unsafe query: %s", sql_query)
-        return False, ""
+        return None, "Blocked: query must start with SELECT or WITH"
 
     try:
         executor = ExecutorFactory.get_executor(connection_string)
         return executor.execute(sql_query)
     except ValueError as val_err:
         logger.error(str(val_err))
-        return False, ""
+        return None, str(val_err)
     except Exception as exc:
         logger.exception("Execution Error: %s", exc)
-        return False, ""
+        return None, str(exc)
 
 
 def analyze_failed_assertion(

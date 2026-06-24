@@ -1,9 +1,9 @@
 import json
 import logging
 from datetime import timedelta
-from typing import Optional
+from typing import Optional, cast
 
-from celery import chain, chord, shared_task
+from celery import Task, chain, chord, shared_task
 from celery.signals import worker_process_shutdown, worker_shutdown
 from django.utils import timezone
 
@@ -164,6 +164,25 @@ def execute_sql_assertion_task(assertion_id: int, check_id: int) -> tuple[int, s
         assertion.sql_query,
     )
 
+    if passed is None:
+        # Execution errored; mark as FAILED and exclude from analysis pipeline
+        assertion.query_output = output_str
+        assertion.status = models.ComplianceAssertion.Status.FAILED
+        assertion.save(update_fields=["query_output", "status"])
+
+        models.ComplianceCheck.objects.filter(id=check_id).update(
+            updated_at=timezone.now()
+        )
+
+        stream_event(
+            check_id=check_id,
+            event_type_suffix="assertion.result",
+            subject=f"assertion/{assertion_id}",
+            data={"status": "errored", "error": output_str},
+        )
+
+        return assertion_id, output_str
+
     assertion.result = passed
     assertion.query_output = output_str
 
@@ -307,12 +326,112 @@ def generate_recommendations_group(
     Callback after all executions are done. Triggers the analysis phase.
 
     Sequence:
-    1. Protocol: Streams a 'phase.update' event marking the execution phase as completed.
-    2. Filtering: Identifies failed assertions that require recommendations.
-    3. Verification: Re-checks failure status against the database for safety.
-    4. Launch: If failures exist, streams a 'phase.update' start event for analysis
+    1. Error-rate guard: counts FAILED assertions (execution errors). If ≥30%
+       of assertions errored, the check is retried once with a fresh record;
+       on a second consecutive failure the check is permanently marked FAILED.
+    2. Protocol: Streams a 'phase.update' event marking the execution phase as completed.
+    3. Filtering: Identifies failed assertions that require recommendations.
+    4. Verification: Re-checks failure status against the database for safety.
+    5. Launch: If failures exist, streams a 'phase.update' start event for analysis
        and launches a Celery chord of `generate_compliance_recommendation_task`.
     """
+    # --- Error-rate guard ---
+    total_count = models.ComplianceAssertion.objects.filter(
+        compliance_check_id=check_id
+    ).count()
+
+    if total_count > 0:
+        error_count = models.ComplianceAssertion.objects.filter(
+            compliance_check_id=check_id,
+            status=models.ComplianceAssertion.Status.FAILED,
+        ).count()
+
+        error_rate = error_count / total_count
+
+        if error_rate >= 0.30:
+            try:
+                check = models.ComplianceCheck.objects.get(id=check_id)
+            except models.ComplianceCheck.DoesNotExist:
+                logger.warning(
+                    "ComplianceCheck %s not found during error-rate guard.", check_id
+                )
+                return None
+
+            if check.retry_count < 3:
+                logger.warning(
+                    "Check %s has %.0f%% assertion errors (%d/%d). Retrying, attempt %d.",
+                    check_id,
+                    error_rate * 100,
+                    error_count,
+                    total_count,
+                    check.retry_count + 1,
+                )
+                stream_event(
+                    check_id,
+                    "pipeline.error",
+                    {
+                        "check_id": check_id,
+                        "step": "execution",
+                        "error": (
+                            f"{error_count}/{total_count} assertions errored "
+                            f"({error_rate:.0%}). Retrying check."
+                        ),
+                    },
+                )
+
+                # Capture parameters before deletion
+                schema_id = check.schema_id
+                client_db_id = check.client_db_id
+                framework_id = check.framework_id
+                user_id = check.user_id
+                next_retry_count = check.retry_count + 1
+
+                # Delete the failed check and all its assertions
+                check.delete()
+
+                # Create a replacement check and requeue the full pipeline
+                new_check = models.ComplianceCheck.objects.create(
+                    schema_id=schema_id,
+                    client_db_id=client_db_id,
+                    framework_id=framework_id,
+                    user_id=user_id,
+                    retry_count=next_retry_count,
+                )
+                cast(Task, schedule_sql_assertion_pipeline).delay(
+                    schema_id=schema_id,
+                    client_db_id=client_db_id,
+                    framework_id=framework_id,
+                    check_id=new_check.id,
+                )
+                return None
+
+            else:
+                # Already retried — permanently fail
+                logger.error(
+                    "Check %s has %.0f%% assertion errors (%d/%d) on retry. Marking FAILED.",
+                    check_id,
+                    error_rate * 100,
+                    error_count,
+                    total_count,
+                )
+                models.ComplianceCheck.objects.filter(id=check_id).update(
+                    status=models.ComplianceCheck.Status.FAILED
+                )
+                stream_event(
+                    check_id,
+                    "pipeline.error",
+                    {
+                        "check_id": check_id,
+                        "step": "execution",
+                        "error": (
+                            f"{error_count}/{total_count} assertions errored "
+                            f"({error_rate:.0%}) after retry. Check permanently failed."
+                        ),
+                    },
+                )
+                return None
+
+    # --- Normal flow ---
     stream_event(check_id, "phase.update", {"step": "execution", "status": "completed"})
 
     if not assertion_output:
