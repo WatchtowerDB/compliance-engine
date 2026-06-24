@@ -180,13 +180,18 @@ class PCIComplianceChecker(ComplianceChecker):
             5. Identifying columns with ambiguous names that might store payment data.
             6. Verifying access controls exist (not just public tables).
 
-            Instructions:
-            - Each assertion must be a valid SELECT query. Assertions should not be generic examples; they should be runnable against the provided schema.
-            - Include descriptive column aliases explaining the potential violation.
+            Response Instructions:
             - Generate as many assertions as you need against the provided schema. Aim for the highest coverage of the schema against the highest coverage of compliance requirements using the highest amount of assertions possible.
-            - Do NOT generate one assertion that covers multiple compliance requirements. One big assertion that covers many compliance requirements is not acceptable. Using UNION statements to combine multiple assertions is not allowed.
+            - Do NOT generate one assertion that covers multiple compliance requirements. One big assertion that covers many compliance requirements is not acceptable.
             - Do NOT generate assertions that cover unrelated database errors or non-compliance issues.
             - Make sure to cover all relevant compliance requirements, and all relevant parts of the database schema.
+
+            SQL Instructions:
+            - Each assertion must be a valid SELECT query. Assertions should not be generic examples; they should be runnable against the provided schema. Assertions that use non-existent columns or tables, or anything in general that would cause an error must be avoided.
+            - UNION of any kind statements are absolutely not allowed.
+            - Always truthy or always falsy conditions are absolutely not allowed (e.g., WHERE 1=1, WHERE 1=0).
+            - Include descriptive column aliases explaining the potential violation (e.g., "SELECT <column(s)> AS very_short_potential_violation_description FROM <rest of the query>")
+            - Always put the alias right after the SELECT clause, not at the end of the query.
 
             Output Format:
             - Respond with a valid JSON list of strings containing the SQL queries.
