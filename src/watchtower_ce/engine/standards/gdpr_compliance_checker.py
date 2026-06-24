@@ -191,9 +191,9 @@ class GDPRComplianceChecker(ComplianceChecker):
 
             SQL Instructions:
             - Each assertion must be a valid SELECT query. Assertions should not be generic examples; they should be runnable against the provided schema. Assertions that use non-existent columns or tables, or anything in general that would cause an error must be avoided.
-            - UNION of any kind statements are absolutely not allowed.
+            - UNION statements of any kind are absolutely not allowed.
             - Always truthy or always falsy conditions are absolutely not allowed (e.g., WHERE 1=1, WHERE 1=0).
-            - Include descriptive column aliases explaining the potential violation (E.g., "SELECT <column(s)> AS very_short_potential_violation_description> FROM <rest of the query>")
+            - Include descriptive column aliases explaining the potential violation (e.g., "SELECT <column(s)> AS very_short_potential_violation_description FROM <rest of the query>")
             - Always put the alias right after the SELECT clause, not at the end of the query.
 
             Output Format:
